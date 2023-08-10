@@ -27,7 +27,7 @@ services:
     networks:
       default:
         aliases:
-          - pg
+          - ${DB_HOST}
     volumes:
       - "postgres-db:/var/lib/postgresql/data"
   

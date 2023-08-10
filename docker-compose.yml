@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: lms-web-api
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${PORT}:${PORT}"
+    volumes:
+      - .:/usr/src/app
+    command: go run ./cmd/main.go
+    depends_on:
+      - db
+      - adminer
+
+  db:
+    container_name: lms-db
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    networks:
+      default:
+        aliases:
+          - pg
+    volumes:
+      - "postgres-db:/var/lib/postgresql/data"
+  
+  adminer:
+    container_name: lms-adminer
+    image: adminer:standalone
+    restart: on-failure
+    ports:
+      - "8083:8080"
+
+volumes:
+  postgres-db:

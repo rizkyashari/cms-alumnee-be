@@ -3,8 +3,8 @@ package service_auth
 import (
 	"strings"
 
-	"github.com/fadhln/lms-be/delivery/req"
-	"github.com/fadhln/lms-be/delivery/res"
+	"github.com/fadhln/lms-be/delivery/rq"
+	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/auth"
@@ -12,7 +12,8 @@ import (
 )
 
 type AuthService interface {
-	Login(*req.LoginRequest) (*res.TokenResponse, error)
+	Login(*rq.LoginRequest) (*rs.TokenResponse, error)
+	Register(*rq.RegisterRequest) (*rs.StatusResponse, error)
 }
 
 type impService struct {
@@ -25,7 +26,7 @@ func Init(r repo.Repository) AuthService {
 	}
 }
 
-func (s *impService) Login(body *req.LoginRequest) (*res.TokenResponse, error) {
+func (s *impService) Login(body *rq.LoginRequest) (*rs.TokenResponse, error) {
 	if len(body.Email) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
@@ -57,5 +58,5 @@ func (s *impService) Login(body *req.LoginRequest) (*res.TokenResponse, error) {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	return &res.TokenResponse{Jwt: jwt.Token, ExpiresAt: jwt.ExpiresAt}, nil
+	return &rs.TokenResponse{Jwt: jwt.Token, ExpiresAt: jwt.ExpiresAt}, nil
 }

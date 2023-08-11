@@ -6,6 +6,8 @@ import (
 )
 
 type AccountRepo interface {
+	CreateOne(newAccount *model.Account) (*model.Account, error)
+
 	ReadOneByEmail(email string) (*model.Account, error)
 }
 

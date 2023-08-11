@@ -3,8 +3,8 @@ package handler_auth
 import (
 	"net/http"
 
-	"github.com/fadhln/lms-be/delivery/req"
-	"github.com/fadhln/lms-be/delivery/res"
+	"github.com/fadhln/lms-be/delivery/rq"
+	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/service"
 	"github.com/gin-gonic/gin"
 )
@@ -38,22 +38,30 @@ func (h *impHandler) CheckAdmin() gin.HandlerFunc {
 }
 
 func (h *impHandler) Login(c *gin.Context) {
-	var req req.LoginRequest
+	var req rq.LoginRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		res.ErrorResponse(c, err)
+		rs.ErrorResponse(c, err)
 		return
 	}
 
-	resp, err := h.s.Auth().Login(&req)
+	res, err := h.s.Auth().Login(&req)
 	if err != nil {
-		res.ErrorResponse(c, err)
+		rs.ErrorResponse(c, err)
 		return
 	}
 
-	res.SuccessResponse(c, *resp, http.StatusOK)
+	rs.SuccessResponse(c, *res, http.StatusOK)
 }
 
-func (h *impHandler) Register(c *gin.Context)         {}
+func (h *impHandler) Register(c *gin.Context) {
+	var req rq.RegisterRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+}
 func (h *impHandler) CheckEmailExist(c *gin.Context)  {}
 func (h *impHandler) PasswordRecovery(c *gin.Context) {}

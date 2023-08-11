@@ -1,4 +1,4 @@
-package res
+package rs
 
 import "time"
 

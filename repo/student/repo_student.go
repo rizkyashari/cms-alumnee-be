@@ -6,7 +6,7 @@ import (
 )
 
 type StudentRepo interface {
-	CreateOne(newStudent *model.Student) (*model.Student, error)
+	CreateOne(tx *gorm.DB, newStudent *model.Student) error
 }
 
 type impRepo struct {
@@ -17,4 +17,12 @@ func Init(db *gorm.DB) StudentRepo {
 	return &impRepo{
 		db: db,
 	}
+}
+
+func (r *impRepo) CreateOne(tx *gorm.DB, newStudent *model.Student) error {
+	if err := tx.Create(newStudent).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

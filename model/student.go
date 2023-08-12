@@ -4,7 +4,8 @@ import "gorm.io/gorm"
 
 type Student struct {
 	gorm.Model
+	Name        *string
 	AccountID   uint `gorm:"uniqueIndex"`
-	ClassroomID uint
+	ClassroomID *uint
 	Scores      []Score
 }

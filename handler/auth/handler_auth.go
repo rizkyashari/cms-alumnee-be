@@ -62,6 +62,14 @@ func (h *impHandler) Register(c *gin.Context) {
 		return
 	}
 
+	res, err := h.s.Auth().Register(&req)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, *res, http.StatusCreated)
+
 }
 func (h *impHandler) CheckEmailExist(c *gin.Context)  {}
 func (h *impHandler) PasswordRecovery(c *gin.Context) {}

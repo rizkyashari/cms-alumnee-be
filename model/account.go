@@ -6,18 +6,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type AccountType int
-
 const (
-	Adm AccountType = iota // Admin
-	Stu                    // Student
-	Tch                    // Tch
+	Adm int = iota // Admin
+	Stu            // Student
+	Tch            // Tch
 )
+
+func IsValidAccountType(number int) bool {
+	return number >= 0 && number <= int(Tch)
+}
 
 type Account struct {
 	gorm.Model
-	Username    string
-	Email       *string
+	Email       string `gorm:"uniqueIndex"`
+	Username    *string
 	Password    string
 	AccountType int
 	ActivatedAt sql.NullTime

@@ -17,6 +17,7 @@ func InitRouter(db *gorm.DB) *gin.Engine {
 	h := handler
 
 	r.POST("/login", h.Auth.Login)
+	r.POST("/register", h.Auth.Register)
 
 	return r
 }

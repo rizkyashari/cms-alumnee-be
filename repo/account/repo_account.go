@@ -6,7 +6,7 @@ import (
 )
 
 type AccountRepo interface {
-	CreateOne(newAccount *model.Account) (*model.Account, error)
+	CreateOne(tx *gorm.DB, newAccount *model.Account) error
 
 	ReadOneByEmail(email string) (*model.Account, error)
 }
@@ -21,12 +21,20 @@ func Init(db *gorm.DB) AccountRepo {
 	}
 }
 
+func (r *impRepo) CreateOne(tx *gorm.DB, newAccount *model.Account) error {
+	if err := tx.Create(newAccount).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *impRepo) ReadOneByEmail(email string) (*model.Account, error) {
 	var account model.Account
 	if err := r.db.Where("email = ?", email).Find(&account).Error; err != nil {
 		return nil, err
 	}
-	if *account.Email == "" {
+	if account.Email == "" {
 		return nil, gorm.ErrRecordNotFound
 	}
 

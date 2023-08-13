@@ -6,4 +6,4 @@ migrate:
 
 .PHONY: dev
 dev:
-	docker compose run --service-ports -d web air $(ENTRY)
+	docker compose run --service-ports --rm web air $(ENTRY)

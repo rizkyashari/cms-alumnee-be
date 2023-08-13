@@ -12,11 +12,12 @@ import (
 type AuthHandler interface {
 	CheckAuth() gin.HandlerFunc
 	CheckAdmin() gin.HandlerFunc
+	CheckStudent() gin.HandlerFunc
+	CheckTeacher() gin.HandlerFunc
 
 	Login(c *gin.Context)
 	Register(c *gin.Context)
 	CheckEmailExist(c *gin.Context)
-	PasswordRecovery(c *gin.Context)
 }
 
 type impHandler struct {
@@ -34,6 +35,14 @@ func (h *impHandler) CheckAuth() gin.HandlerFunc {
 }
 
 func (h *impHandler) CheckAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {}
+}
+
+func (h *impHandler) CheckStudent() gin.HandlerFunc {
+	return func(c *gin.Context) {}
+}
+
+func (h *impHandler) CheckTeacher() gin.HandlerFunc {
 	return func(c *gin.Context) {}
 }
 
@@ -71,5 +80,4 @@ func (h *impHandler) Register(c *gin.Context) {
 	rs.SuccessResponse(c, *res, http.StatusCreated)
 
 }
-func (h *impHandler) CheckEmailExist(c *gin.Context)  {}
-func (h *impHandler) PasswordRecovery(c *gin.Context) {}
+func (h *impHandler) CheckEmailExist(c *gin.Context) {}

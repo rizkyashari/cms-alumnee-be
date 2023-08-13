@@ -10,6 +10,7 @@ import (
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/auth"
 	"github.com/fadhln/lms-be/util/errmsg"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -89,7 +90,10 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	newID := uuid.New()
+
 	newAccount := model.Account{
+		Base:        model.Base{ID: newID},
 		Email:       email,
 		Password:    hashedPassword,
 		AccountType: body.AccountType,
@@ -100,35 +104,28 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 			return err
 		}
 
-		gotAcc, err := s.repo.Account().ReadOneByEmail(newAccount.Email)
-		if err != nil {
-			return err
-		}
-
-		switch gotAcc.AccountType {
+		switch newAccount.AccountType {
 		case model.Adm:
 			newAdmin := model.Admin{
-				AccountID: gotAcc.ID,
+				AccountID: newID,
 			}
 			if err := s.repo.Admin().CreateOne(tx, &newAdmin); err != nil {
 				return err
 			}
-			break
 
 		case model.Stu:
 			newStudent := model.Student{
-				AccountID: gotAcc.ID,
+				AccountID: newID,
 				Name:      body.Name,
 				Scores:    []model.Score{},
 			}
 			if err := s.repo.Student().CreateOne(tx, &newStudent); err != nil {
 				return err
 			}
-			break
 
 		case model.Tch:
 			newTeacher := model.Teacher{
-				AccountID: gotAcc.ID,
+				AccountID: newID,
 				Name:      body.Name,
 				NIP:       "",
 				Subjects:  []model.Subject{},
@@ -136,7 +133,6 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 			if err := s.repo.Teacher().CreateOne(tx, &newTeacher); err != nil {
 				return err
 			}
-			break
 
 		default:
 			return &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}

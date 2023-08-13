@@ -1,11 +1,12 @@
 package model
 
-import "gorm.io/gorm"
+import "github.com/google/uuid"
 
 type Student struct {
-	gorm.Model
+	Base
 	Name        *string
-	AccountID   uint `gorm:"uniqueIndex"`
-	ClassroomID *uint
+	AccountID   uuid.UUID `gorm:"uniqueIndex"`
+	ClassroomID *uuid.UUID
+	Classroom   Classroom `gorm:"foreignKey:ClassroomID;references:ID"`
 	Scores      []Score
 }

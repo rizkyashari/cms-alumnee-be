@@ -1,7 +1,7 @@
 package model
 
-type School struct {
+type AcademicYear struct {
 	Base
-	Name       string
+	Year       string
 	Classrooms []Classroom
 }

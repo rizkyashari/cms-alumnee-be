@@ -1,15 +1,15 @@
 package model
 
-import "gorm.io/gorm"
+import "github.com/google/uuid"
 
 type Score struct {
-	gorm.Model
-	StudentID       uint
+	Base
+	StudentID       uuid.UUID
 	ScoreComponents []ScoreComponent
 }
 
 type ScoreComponent struct {
-	gorm.Model
-	ScoreID            uint
-	SubjectComponentID uint
+	Base
+	ScoreID            uuid.UUID
+	SubjectComponentID uuid.UUID
 }

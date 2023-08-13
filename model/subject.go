@@ -1,16 +1,18 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+)
 
 type Subject struct {
-	gorm.Model
-	TeacherID         uint
+	Base
+	TeacherID         uuid.UUID
 	Schedules         []Schedule
 	SubjectComponents []SubjectComponent
 }
 
 type SubjectComponent struct {
-	gorm.Model
-	SubjectID       uint
+	Base
+	SubjectID       uuid.UUID
 	ScoreComponents []ScoreComponent
 }

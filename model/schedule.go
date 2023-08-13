@@ -1,9 +1,10 @@
 package model
 
-import "gorm.io/gorm"
+import "github.com/google/uuid"
 
 type Schedule struct {
-	gorm.Model
-	SubjectID   uint
-	ClassroomID uint
+	Base
+	ClassroomID uuid.UUID
+	SubjectID   uuid.UUID
+	Classroom   Classroom `gorm:"foreignKey:ClassroomID;references:ID"`
 }

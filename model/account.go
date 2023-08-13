@@ -2,8 +2,6 @@ package model
 
 import (
 	"database/sql"
-
-	"gorm.io/gorm"
 )
 
 const (
@@ -17,7 +15,7 @@ func IsValidAccountType(number int) bool {
 }
 
 type Account struct {
-	gorm.Model
+	Base
 	Email       string `gorm:"uniqueIndex"`
 	Username    *string
 	Password    string

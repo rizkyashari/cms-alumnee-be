@@ -1,12 +1,11 @@
 package model
 
-import "gorm.io/gorm"
+import "github.com/google/uuid"
 
 type Classroom struct {
-	gorm.Model
-	AcademicYear      string
-	HomeroomTeacherID uint
-	SchoolID          uint
-	Students          []Student
-	Schedules         []Schedule
+	Base
+	TeacherID      uuid.UUID
+	SchoolID       uuid.UUID
+	AcademicYearID uuid.UUID
+	Teacher        Teacher `gorm:"foreignKey:TeacherID;references:ID"`
 }

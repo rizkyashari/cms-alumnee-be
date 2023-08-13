@@ -10,8 +10,15 @@ var (
 	ErrRequestBodyInvalid   = errors.New("request body is invalid")
 	ErrRequestHeaderInvalid = errors.New("request header is invalid")
 	ErrRequestParamsInvalid = errors.New("request parameter is invalid")
-	ErrIsNotAdmin           = errors.New("user is not an admin")
 )
+
+type ErrUserIsNot struct {
+	FieldName string
+}
+
+func (e *ErrUserIsNot) Error() string {
+	return fmt.Sprintf("user is not %s", e.FieldName)
+}
 
 type ErrAlreadyUsed struct {
 	FieldName string

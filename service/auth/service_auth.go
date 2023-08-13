@@ -15,6 +15,7 @@ import (
 )
 
 type AuthService interface {
+	CheckEmailExist(*rq.EmailOnlyRequest) (*rs.IsExistResponsse, error)
 	Login(*rq.LoginRequest) (*rs.TokenResponse, error)
 	Register(*rq.RegisterRequest) (*rs.StatusResponse, error)
 }
@@ -27,6 +28,22 @@ func Init(r repo.Repository) AuthService {
 	return &impService{
 		repo: r,
 	}
+}
+
+func (s *impService) CheckEmailExist(body *rq.EmailOnlyRequest) (*rs.IsExistResponsse, error) {
+	if len(body.Email) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
+	}
+
+	email := strings.ToLower(body.Email)
+
+	if !(util.IsEmailValid(email)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Email"}
+	}
+
+	gotAccount, _ := s.repo.Account().ReadOneByEmail(email)
+
+	return &rs.IsExistResponsse{IsExist: gotAccount != nil}, nil
 }
 
 func (s *impService) Login(body *rq.LoginRequest) (*rs.TokenResponse, error) {
@@ -56,7 +73,7 @@ func (s *impService) Login(body *rq.LoginRequest) (*rs.TokenResponse, error) {
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Password"}
 	}
 
-	jwt, err := auth.GenerateJWT(email)
+	jwt, err := auth.GenerateJWT(gotAccount.Email, gotAccount.AccountType)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -105,7 +122,7 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 		}
 
 		switch newAccount.AccountType {
-		case model.Adm:
+		case model.ADMIN:
 			newAdmin := model.Admin{
 				AccountID: newID,
 			}
@@ -113,7 +130,7 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 				return err
 			}
 
-		case model.Stu:
+		case model.STUDENT:
 			newStudent := model.Student{
 				AccountID: newID,
 				Name:      body.Name,
@@ -123,7 +140,7 @@ func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, err
 				return err
 			}
 
-		case model.Tch:
+		case model.TEACHER:
 			newTeacher := model.Teacher{
 				AccountID: newID,
 				Name:      body.Name,

@@ -10,7 +10,8 @@ import (
 )
 
 type CustomClaim struct {
-	Email string
+	Email       string
+	AccountType int
 	jwt.RegisteredClaims
 }
 
@@ -27,7 +28,7 @@ func getSecret() string {
 	return secret
 }
 
-func GenerateJWT(email string) (*Jwt, error) {
+func GenerateJWT(email string, accountType int) (*Jwt, error) {
 	secret := getSecret()
 
 	durationMin := os.Getenv("JWT_DURATION_MIN")
@@ -42,6 +43,7 @@ func GenerateJWT(email string) (*Jwt, error) {
 
 	claims := CustomClaim{
 		email,
+		accountType,
 		jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(jwtDuration)),
@@ -59,7 +61,7 @@ func GenerateJWT(email string) (*Jwt, error) {
 	return &Jwt, nil
 }
 
-func CheckToken(input string) (string, error) {
+func CheckToken(input string) (string, int, error) {
 	secret := getSecret()
 
 	token, err := jwt.ParseWithClaims(input, &CustomClaim{}, func(tkn *jwt.Token) (interface{}, error) {
@@ -67,8 +69,8 @@ func CheckToken(input string) (string, error) {
 	})
 
 	if claims, ok := token.Claims.(*CustomClaim); ok && token.Valid {
-		return claims.Email, nil
+		return claims.Email, claims.AccountType, nil
 	} else {
-		return "", err
+		return "", 0, err
 	}
 }

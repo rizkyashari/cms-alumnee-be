@@ -5,13 +5,13 @@ import (
 )
 
 const (
-	Adm int = iota // Admin
-	Stu            // Student
-	Tch            // Tch
+	ADMIN   int = iota // Admin
+	STUDENT            // Student
+	TEACHER            // Tch
 )
 
 func IsValidAccountType(number int) bool {
-	return number >= 0 && number <= int(Tch)
+	return number >= 0 && number <= int(TEACHER)
 }
 
 type Account struct {

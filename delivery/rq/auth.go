@@ -16,3 +16,8 @@ type RegisterRequest struct {
 type EmailOnlyRequest struct {
 	Email string `json:"email"`
 }
+
+type EmailAndAccTypeRequest struct {
+	Email       string `json:"email"`
+	AccountType int    `json:"account_type"`
+}

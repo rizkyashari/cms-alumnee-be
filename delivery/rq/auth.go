@@ -12,12 +12,3 @@ type RegisterRequest struct {
 	AccountType     int     `json:"account_type"`
 	Name            *string `json:"name,omitempty"`
 }
-
-type EmailOnlyRequest struct {
-	Email string `json:"email"`
-}
-
-type EmailAndAccTypeRequest struct {
-	Email       string `json:"email"`
-	AccountType int    `json:"account_type"`
-}

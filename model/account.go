@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	ADMIN   int = iota // Admin
-	STUDENT            // Student
-	TEACHER            // Tch
+	ADMIN int = iota
+	STUDENT
+	TEACHER
 )
 
 func IsValidAccountType(number int) bool {

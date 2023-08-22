@@ -5,7 +5,11 @@ import "github.com/google/uuid"
 type Teacher struct {
 	Base
 	AccountID uuid.UUID `gorm:"uniqueIndex"`
-	Name      *string
-	NIP       string
+	SchoolID  *uuid.UUID
+	Name      string
+	NIK       *string
 	Subjects  []Subject
+	// NUPTK     *string
+	// IsPNS     bool `gorm:"default:false"`
+	// Gender    *string
 }

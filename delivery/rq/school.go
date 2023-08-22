@@ -1,5 +1,6 @@
 package rq
 
 type SchoolRequest struct {
-	Name string `json:"name"`
+	ID   *string `json:"id,omitempty"`
+	Name string  `json:"name"`
 }

@@ -2,6 +2,6 @@ package rs
 
 type TeacherResponse struct {
 	Name     string            `json:"name"`
-	NIP      string            `json:"nip"`
+	NIK      *string           `json:"nik,omitempty"`
 	Subjects []SubjectResponse `json:"subject"`
 }

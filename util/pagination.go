@@ -3,6 +3,7 @@ package util
 import (
 	"strings"
 
+	"github.com/fadhln/lms-be/delivery/rq"
 	"gorm.io/gorm"
 )
 
@@ -47,4 +48,32 @@ func Pagination(Limit, Page int, SortBy, SortOrder string, validColumnName []str
 
 		return db.Order((sortBy + " " + sortOrder)).Offset(offset).Limit(limit)
 	}
+}
+
+func GetMaxPage(db *gorm.DB, limit int) int {
+	count := int(db.RowsAffected)
+	maxPage := count / limit
+	if (count % limit) > 0 {
+		maxPage += 1
+	}
+
+	return maxPage
+}
+
+func IsParamValid(params *rq.PaginationParams[interface{}]) bool {
+	if params.Limit <= 0 {
+		return false
+	}
+
+	if params.Page <= 0 {
+		return false
+	}
+
+	if len(params.SortOrder) > 0 {
+		if !((params.SortOrder == "ASC") || (params.SortOrder == "DESC")) {
+			return false
+		}
+	}
+
+	return true
 }

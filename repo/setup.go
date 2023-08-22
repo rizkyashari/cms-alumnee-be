@@ -6,6 +6,7 @@ import (
 	"github.com/fadhln/lms-be/database"
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
+	school "github.com/fadhln/lms-be/repo/school"
 	student "github.com/fadhln/lms-be/repo/student"
 	teacher "github.com/fadhln/lms-be/repo/teacher"
 	"github.com/go-redis/redis/v8"
@@ -17,6 +18,7 @@ type Repository interface {
 
 	Account() account.AccountRepo
 	Admin() admin.AdminRepo
+	School() school.SchoolRepo
 	Student() student.StudentRepo
 	Teacher() teacher.TeacherRepo
 }
@@ -43,6 +45,10 @@ func (r *impRepo) Account() account.AccountRepo {
 
 func (r *impRepo) Admin() admin.AdminRepo {
 	return admin.Init(r.DB)
+}
+
+func (r *impRepo) School() school.SchoolRepo {
+	return school.Init(r.DB)
 }
 
 func (r *impRepo) Student() student.StudentRepo {

@@ -142,10 +142,11 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 			}
 
 		case model.TEACHER:
+			emptystr := ""
 			newTeacher := model.Teacher{
 				AccountID: newID,
-				Name:      body.Name,
-				NIP:       "",
+				Name:      *body.Name,
+				NIK:       &emptystr,
 				Subjects:  []model.Subject{},
 			}
 			if err := s.repo.Teacher().CreateOne(tx, &newTeacher); err != nil {

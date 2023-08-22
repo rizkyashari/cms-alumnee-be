@@ -1,6 +1,8 @@
 package service_account
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/fadhln/lms-be/delivery/rq"
@@ -13,8 +15,8 @@ import (
 )
 
 type AccountService interface {
-	GetDetail(req *rq.EmailOnlyRequest) (*rs.AccountResponse, error)
-	GetDetailWithAccType(req *rq.EmailAndAccTypeRequest) (*rs.AccountResponse, error)
+	GetDetail(context.Context, *rq.EmailOnlyRequest) (*rs.AccountResponse, error)
+	GetDetailWithAccType(context.Context, *rq.EmailAndAccTypeRequest) (*rs.AccountResponse, error)
 }
 
 type impService struct {
@@ -27,11 +29,11 @@ func Init(r repo.Repository) AccountService {
 	}
 }
 
-func (s *impService) GetDetail(req *rq.EmailOnlyRequest) (*rs.AccountResponse, error) {
-	return s.GetDetailWithAccType(&rq.EmailAndAccTypeRequest{Email: req.Email, AccountType: -1})
+func (s *impService) GetDetail(c context.Context, req *rq.EmailOnlyRequest) (*rs.AccountResponse, error) {
+	return s.GetDetailWithAccType(c, &rq.EmailAndAccTypeRequest{Email: req.Email, AccountType: -1})
 }
 
-func (s *impService) GetDetailWithAccType(body *rq.EmailAndAccTypeRequest) (*rs.AccountResponse, error) {
+func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAccTypeRequest) (*rs.AccountResponse, error) {
 	if len(body.Email) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
@@ -42,6 +44,19 @@ func (s *impService) GetDetailWithAccType(body *rq.EmailAndAccTypeRequest) (*rs.
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Email"}
 	}
 
+	var res rs.AccountResponse
+	key := fmt.Sprintf("account:%s", email)
+
+	gotAccount, _ := s.repo.Account().ReadOneRedis(c, key)
+	if gotAccount != nil {
+		err := copier.Copy(&res, gotAccount)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
+		return &res, nil
+	}
+
 	gotAccount, err := s.repo.Account().ReadOneByEmail(email)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
@@ -50,8 +65,6 @@ func (s *impService) GetDetailWithAccType(body *rq.EmailAndAccTypeRequest) (*rs.
 	if (body.AccountType != -1) && (body.AccountType != gotAccount.AccountType) {
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}
 	}
-
-	var res rs.AccountResponse
 
 	switch gotAccount.AccountType {
 	case model.ADMIN:
@@ -89,10 +102,12 @@ func (s *impService) GetDetailWithAccType(body *rq.EmailAndAccTypeRequest) (*rs.
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}
 	}
 
+	s.repo.Account().SetOneRedis(c, key, gotAccount)
+
 	err = copier.Copy(&res, gotAccount)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	return nil, nil
+	return &res, nil
 }

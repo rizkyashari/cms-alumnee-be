@@ -1,6 +1,7 @@
 package service_auth
 
 import (
+	"context"
 	"strings"
 
 	"github.com/fadhln/lms-be/delivery/rq"
@@ -15,9 +16,9 @@ import (
 )
 
 type AuthService interface {
-	CheckEmailExist(*rq.EmailOnlyRequest) (*rs.IsExistResponsse, error)
-	Login(*rq.LoginRequest) (*rs.TokenResponse, error)
-	Register(*rq.RegisterRequest) (*rs.StatusResponse, error)
+	CheckEmailExist(context.Context, *rq.EmailOnlyRequest) (*rs.IsExistResponsse, error)
+	Login(context.Context, *rq.LoginRequest) (*rs.TokenResponse, error)
+	Register(context.Context, *rq.RegisterRequest) (*rs.StatusResponse, error)
 }
 
 type impService struct {
@@ -30,7 +31,7 @@ func Init(r repo.Repository) AuthService {
 	}
 }
 
-func (s *impService) CheckEmailExist(body *rq.EmailOnlyRequest) (*rs.IsExistResponsse, error) {
+func (s *impService) CheckEmailExist(c context.Context, body *rq.EmailOnlyRequest) (*rs.IsExistResponsse, error) {
 	if len(body.Email) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
@@ -46,7 +47,7 @@ func (s *impService) CheckEmailExist(body *rq.EmailOnlyRequest) (*rs.IsExistResp
 	return &rs.IsExistResponsse{IsExist: gotAccount != nil}, nil
 }
 
-func (s *impService) Login(body *rq.LoginRequest) (*rs.TokenResponse, error) {
+func (s *impService) Login(c context.Context, body *rq.LoginRequest) (*rs.TokenResponse, error) {
 	if len(body.Email) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
@@ -81,7 +82,7 @@ func (s *impService) Login(body *rq.LoginRequest) (*rs.TokenResponse, error) {
 	return &rs.TokenResponse{Jwt: jwt.Token, ExpiresAt: jwt.ExpiresAt}, nil
 }
 
-func (s *impService) Register(body *rq.RegisterRequest) (*rs.StatusResponse, error) {
+func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.StatusResponse, error) {
 	if len(body.Email) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}

@@ -27,7 +27,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	r := handler.InitRouter(db)
+	redis := database.ConnectRedis()
+
+	server := database.RepoServer{
+		DB:    db,
+		Redis: redis,
+	}
+
+	r := handler.InitRouter(&server)
 
 	portSetting := ":" + os.Getenv("PORT")
 	err := r.Run(portSetting)

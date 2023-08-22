@@ -1,14 +1,21 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
+
+type RepoServer struct {
+	DB    *gorm.DB
+	Redis *redis.Client
+}
 
 func ConnectDb() *gorm.DB {
 	dsn := fmt.Sprintf(
@@ -33,4 +40,22 @@ func ConnectDb() *gorm.DB {
 	db.Logger = logger.Default.LogMode(logger.Info)
 
 	return db
+}
+
+func ConnectRedis() *redis.Client {
+	config := redis.Options{
+		Addr:     os.Getenv("REDIS_ADDRESS"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0,
+	}
+
+	rdb := redis.NewClient(&config)
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatal("Failed to connect to redis. \n", err)
+		os.Exit(2)
+	}
+
+	log.Println("Redis is connected")
+
+	return rdb
 }

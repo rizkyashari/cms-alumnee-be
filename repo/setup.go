@@ -3,10 +3,12 @@ package repo
 import (
 	"database/sql"
 
+	"github.com/fadhln/lms-be/database"
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
 	student "github.com/fadhln/lms-be/repo/student"
 	teacher "github.com/fadhln/lms-be/repo/teacher"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
@@ -20,12 +22,14 @@ type Repository interface {
 }
 
 type impRepo struct {
-	DB *gorm.DB
+	DB    *gorm.DB
+	Redis *redis.Client
 }
 
-func SetupRepo(db *gorm.DB) Repository {
+func SetupRepo(server *database.RepoServer) Repository {
 	return &impRepo{
-		DB: db,
+		DB:    server.DB,
+		Redis: server.Redis,
 	}
 }
 
@@ -34,7 +38,7 @@ func (r *impRepo) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions
 }
 
 func (r *impRepo) Account() account.AccountRepo {
-	return account.Init(r.DB)
+	return account.Init(r.DB, r.Redis)
 }
 
 func (r *impRepo) Admin() admin.AdminRepo {

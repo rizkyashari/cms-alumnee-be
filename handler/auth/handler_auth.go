@@ -66,7 +66,7 @@ func (h *impHandler) CheckAuth() gin.HandlerFunc {
 			return
 		}
 
-		res, err := h.s.Account().GetDetailWithAccType(
+		res, err := h.s.Account().GetDetailWithAccType(c,
 			&rq.EmailAndAccTypeRequest{
 				Email:       email,
 				AccountType: accountType},
@@ -148,7 +148,7 @@ func (h *impHandler) Login(c *gin.Context) {
 		return
 	}
 
-	res, err := h.s.Auth().Login(&req)
+	res, err := h.s.Auth().Login(c, &req)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -165,7 +165,7 @@ func (h *impHandler) Register(c *gin.Context) {
 		return
 	}
 
-	res, err := h.s.Auth().Register(&req)
+	res, err := h.s.Auth().Register(c, &req)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

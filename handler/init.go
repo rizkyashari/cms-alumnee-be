@@ -1,16 +1,16 @@
 package handler
 
 import (
+	"github.com/fadhln/lms-be/database"
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/service"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func InitRouter(db *gorm.DB) *gin.Engine {
+func InitRouter(server *database.RepoServer) *gin.Engine {
 	r := gin.Default()
 
-	repository := repo.SetupRepo(db)
+	repository := repo.SetupRepo(server)
 	service := service.SetupService(repository)
 	handler := SetupHandler(service)
 

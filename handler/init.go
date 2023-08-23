@@ -20,6 +20,16 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.POST("/login", h.Auth.Login)
 	r.POST("/register", h.Auth.Register)
 
+	r.Use(h.Auth.CheckAuth())
+	admin := r.Group("/4dm1n")
+	{
+		admin.Use(h.Auth.CheckAdmin())
+		admin.GET("/school", h.School.GetAll)
+		admin.GET("/school/:id", h.School.GetDetailByID)
+		admin.POST("/school", h.School.CreateOne)
+		admin.PATCH("/school/:id", h.School.EditOne)
+	}
+
 	return r
 }
 

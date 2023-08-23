@@ -17,9 +17,10 @@ import (
 
 type SchoolService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.School]) (*rs.PaginationResponse[any, rs.SchoolResponse], error)
-	GetDetailByID(c context.Context, id uuid.UUID) (*rs.SchoolResponse, error)
+	GetDetailByID(c context.Context, id string) (*rs.SchoolResponse, error)
 
 	CreateOne(c context.Context, newSchool *rq.SchoolRequest) error
+
 	EditOne(c context.Context, newSchool *rq.SchoolRequest) error
 }
 
@@ -70,12 +71,17 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	return &res, nil
 }
 
-func (s *impService) GetDetailByID(c context.Context, id uuid.UUID) (*rs.SchoolResponse, error) {
-	if id == uuid.Nil {
+func (s *impService) GetDetailByID(c context.Context, id string) (*rs.SchoolResponse, error) {
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+	}
+
+	if parsedID == uuid.Nil {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
 	}
 
-	gotSchool, err := s.repo.School().GetDetailByID(id)
+	gotSchool, err := s.repo.School().GetDetailByID(parsedID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}

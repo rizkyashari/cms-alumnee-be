@@ -1,9 +1,12 @@
 package util
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/fadhln/lms-be/delivery/rq"
+	"github.com/fadhln/lms-be/util/errmsg"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -76,4 +79,21 @@ func IsParamValid(params *rq.PaginationParams[interface{}]) bool {
 	}
 
 	return true
+}
+
+func ParseQuery(c *gin.Context) (limit int, page int, sortBy string, sortOrder string, err error) {
+	limitQuery := c.DefaultQuery("limit", "10")
+	limitInt, err := strconv.Atoi(limitQuery)
+	if err != nil {
+		return 0, 0, "", "", errmsg.ErrRequestParamsInvalid
+	}
+	pageQuery := c.DefaultQuery("page", "1")
+	pageInt, err := strconv.Atoi(pageQuery)
+	if err != nil {
+		return 0, 0, "", "", errmsg.ErrRequestParamsInvalid
+	}
+	sortByQuery := c.DefaultQuery("sortby", "created_at")
+	sortOrderQuery := c.DefaultQuery("order", "desc")
+
+	return limitInt, pageInt, sortByQuery, strings.ToUpper(sortOrderQuery), nil
 }

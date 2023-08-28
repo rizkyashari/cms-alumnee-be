@@ -6,7 +6,6 @@ type Teacher struct {
 	Base
 	AccountID uuid.UUID `gorm:"uniqueIndex"`
 	SchoolID  *uuid.UUID
-	Name      string
 	NIK       *string
 	Subjects  []Subject
 	// NUPTK     *string

@@ -44,7 +44,7 @@ func ConnectDb() *gorm.DB {
 
 func ConnectRedis() *redis.Client {
 	config := redis.Options{
-		Addr:     os.Getenv("REDIS_ADDRESS"),
+		Addr:     fmt.Sprintf("%s:6379", os.Getenv("REDIS_HOST")),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
 	}

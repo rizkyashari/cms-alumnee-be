@@ -20,6 +20,8 @@ type AuthHandler interface {
 	CheckStudent() gin.HandlerFunc
 	CheckTeacher() gin.HandlerFunc
 
+	GetOwnAccountDetail(c *gin.Context)
+
 	Login(c *gin.Context)
 	Register(c *gin.Context)
 	CheckEmailExist(c *gin.Context)
@@ -174,4 +176,15 @@ func (h *impHandler) Register(c *gin.Context) {
 	rs.SuccessResponse(c, *res, http.StatusCreated)
 
 }
+
 func (h *impHandler) CheckEmailExist(c *gin.Context) {}
+
+func (h *impHandler) GetOwnAccountDetail(c *gin.Context) {
+	res, err := h.s.Auth().GetOwnAccountDetail(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, *res, http.StatusOK)
+}

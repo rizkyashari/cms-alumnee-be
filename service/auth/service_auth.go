@@ -11,6 +11,7 @@ import (
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/auth"
 	"github.com/fadhln/lms-be/util/errmsg"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -19,6 +20,7 @@ type AuthService interface {
 	CheckEmailExist(context.Context, *rq.EmailOnlyRequest) (*rs.IsExistResponsse, error)
 	Login(context.Context, *rq.LoginRequest) (*rs.TokenResponse, error)
 	Register(context.Context, *rq.RegisterRequest) (*rs.StatusResponse, error)
+	GetOwnAccountDetail(*gin.Context) (*rs.AccountResponse, error)
 }
 
 type impService struct {
@@ -112,6 +114,7 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 
 	newAccount := model.Account{
 		Base:        model.Base{ID: newID},
+		Name:        body.Name,
 		Email:       email,
 		Password:    hashedPassword,
 		AccountType: body.AccountType,
@@ -134,7 +137,6 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 		case model.STUDENT:
 			newStudent := model.Student{
 				AccountID: newID,
-				Name:      body.Name,
 				Scores:    []model.Score{},
 			}
 			if err := s.repo.Student().CreateOne(tx, &newStudent); err != nil {
@@ -145,7 +147,6 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 			emptystr := ""
 			newTeacher := model.Teacher{
 				AccountID: newID,
-				Name:      *body.Name,
 				NIK:       &emptystr,
 				Subjects:  []model.Subject{},
 			}
@@ -165,4 +166,13 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 	}
 
 	return &rs.StatusResponse{Status: "User registered successfully"}, nil
+}
+
+func (s *impService) GetOwnAccountDetail(c *gin.Context) (*rs.AccountResponse, error) {
+	gotUser, err := util.GetAccountContext(c)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return gotUser, nil
 }

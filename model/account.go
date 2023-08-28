@@ -18,6 +18,8 @@ type Account struct {
 	Base
 	Email       string `gorm:"uniqueIndex"`
 	Username    *string
+	Name        *string
+	Avatar      *string
 	Password    string `json:"-"`
 	AccountType int
 	ActivatedAt sql.NullTime

@@ -13,6 +13,8 @@ type AccountResponse struct {
 	UpdatedAt   time.Time        `json:"updated_at"`
 	Email       string           `json:"email"`
 	Username    string           `json:"username"`
+	Name        string           `json:"name"`
+	Avatar      string           `json:"avatar"`
 	AccountType int              `json:"account_type"`
 	ActivatedAt sql.NullTime     `json:"activated_at"`
 	StudentData *StudentResponse `json:"student_data,omitempty"`

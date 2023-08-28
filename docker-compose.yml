@@ -52,7 +52,7 @@ services:
     networks:
       default:
         aliases:
-          - lms-redis
+          - ${REDIS_HOST}
 
 
 volumes:

@@ -21,6 +21,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.POST("/register", h.Auth.Register)
 
 	r.Use(h.Auth.CheckAuth())
+
+	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
+
 	admin := r.Group("/4dm1n")
 	{
 		admin.Use(h.Auth.CheckAdmin())

@@ -8,6 +8,7 @@ type Classroom struct {
 	TeacherID      uuid.UUID
 	SchoolID       uuid.UUID
 	AcademicYearID uuid.UUID
-	Teacher        Teacher `gorm:"foreignKey:TeacherID;references:ID"`
+	AcademicYear   AcademicYear `gorm:"foreignKey:AcademicYearID;references:ID"`
+	Teacher        Teacher      `gorm:"foreignKey:TeacherID;references:ID"`
 	Schedules      []Schedule
 }

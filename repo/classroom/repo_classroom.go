@@ -40,7 +40,7 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Classroom, error) {
 func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error) {
 	var classrooms []model.Classroom
 
-	chain := r.db
+	chain := r.db.Preload("AcademicYear").Preload("Teacher")
 
 	if params.Data.TeacherID != uuid.Nil {
 		chain = chain.Where(r.db.Where("teacher_id = " + params.Data.TeacherID.String()))

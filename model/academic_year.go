@@ -2,7 +2,6 @@ package model
 
 type AcademicYear struct {
 	Base
-	Year       string
-	IsActive   bool `gorm:"default:false"`
-	Classrooms []Classroom
+	Year     string
+	IsActive bool `gorm:"default:false"`
 }

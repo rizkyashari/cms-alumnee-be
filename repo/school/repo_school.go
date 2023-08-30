@@ -12,10 +12,9 @@ import (
 type SchoolRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.School, error)
 	GetAll(params *rq.PaginationParams[model.School]) (*[]model.School, int, error)
-
 	CreateOne(tx *gorm.DB, newSchool *model.School) error
-
 	UpdateOne(tx *gorm.DB, newSchool *model.School) error
+	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
 type impRepo struct {
@@ -74,7 +73,20 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, newSchool *model.School) error {
 		return &errmsg.ErrIsEmpty{FieldName: "Article"}
 	}
 
-	result := r.db.Model(newSchool).Updates(newSchool)
+	result := tx.Model(newSchool).Updates(newSchool)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (r *impRepo) DeleteOne(tx *gorm.DB, id uuid.UUID) error {
+	if id == uuid.Nil {
+		return &errmsg.ErrIsEmpty{FieldName: "id"}
+	}
+
+	result := tx.Delete(&model.School{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

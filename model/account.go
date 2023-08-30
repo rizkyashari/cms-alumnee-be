@@ -17,7 +17,6 @@ func IsValidAccountType(number int) bool {
 type Account struct {
 	Base
 	Email       string `gorm:"uniqueIndex"`
-	Username    *string
 	Name        *string
 	Avatar      *string
 	Password    string `json:"-"`

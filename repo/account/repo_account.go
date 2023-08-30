@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
+	"github.com/fadhln/lms-be/util"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
@@ -15,9 +17,9 @@ import (
 type AccountRepo interface {
 	SetOneRedis(ctx context.Context, key string, acc *model.Account) error
 	ReadOneRedis(ctx context.Context, key string) (*model.Account, error)
-
+	GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error)
+	GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error)
 	CreateOne(tx *gorm.DB, newAccount *model.Account) error
-
 	ReadOneByEmail(email string) (*model.Account, error)
 }
 
@@ -68,6 +70,62 @@ func (r *impRepo) ReadOneRedis(ctx context.Context, key string) (*model.Account,
 	}
 
 	return &gotAccount, nil
+}
+
+func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
+	var accounts []model.Account
+
+	chain := r.db.Preload("Teacher")
+
+	if len(*params.Data.Name) >= 2 {
+		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
+	}
+
+	maxPage := util.GetMaxPage(chain.Find(&accounts), params.Limit)
+
+	validColumnName := []string{
+		"created_at",
+		"updated_at",
+		"name",
+	}
+
+	result := chain.Scopes(
+		util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).
+		Find(&accounts)
+
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return &accounts, maxPage, nil
+}
+
+func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
+	var accounts []model.Account
+
+	chain := r.db.Preload("Student")
+
+	if len(*params.Data.Name) >= 2 {
+		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
+	}
+
+	maxPage := util.GetMaxPage(chain.Find(&accounts), params.Limit)
+
+	validColumnName := []string{
+		"created_at",
+		"updated_at",
+		"name",
+	}
+
+	result := chain.Scopes(
+		util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).
+		Find(&accounts)
+
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return &accounts, maxPage, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newAccount *model.Account) error {

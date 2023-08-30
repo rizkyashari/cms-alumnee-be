@@ -6,6 +6,7 @@ import (
 
 type Subject struct {
 	Base
+	Name              string
 	TeacherID         uuid.UUID
 	Schedules         []Schedule
 	SubjectComponents []SubjectComponent
@@ -13,6 +14,7 @@ type Subject struct {
 
 type SubjectComponent struct {
 	Base
+	Name            string
 	SubjectID       uuid.UUID
 	ScoreComponents []ScoreComponent
 }

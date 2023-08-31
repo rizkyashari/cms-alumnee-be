@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 type Teacher struct {
 	Base
 	AccountID uuid.UUID `gorm:"uniqueIndex"`
-	SchoolID  *uuid.UUID
+	SchoolID  uuid.UUID
 	NIK       *string
 	Subjects  []Subject
 	// NUPTK     *string

@@ -18,3 +18,7 @@ type EmailAndAccTypeRequest struct {
 type FileUploadRequest struct {
 	File multipart.File `json:"file,omitempty"`
 }
+
+type CSVFileUploadRequest struct {
+	CSVFile *multipart.FileHeader `form:"file"`
+}

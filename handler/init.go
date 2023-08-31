@@ -19,6 +19,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.Use(CORSMiddleware())
 	r.POST("/login", h.Auth.Login)
 	r.POST("/register", h.Auth.Register)
+	r.POST("/classroom/bulk", h.Classroom.CreateMass)
 
 	r.Use(h.Auth.CheckAuth())
 

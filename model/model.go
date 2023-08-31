@@ -3,14 +3,15 @@ package model
 var Entities = []interface{}{
 	&Account{},
 	&Admin{},
-	&Teacher{},
 	&Subject{},
 	&Schedule{},
 	&School{},
+	&Teacher{},
 	&AcademicYear{},
 	&Classroom{},
 	&Student{},
 	&SubjectComponent{},
 	&Score{},
 	&ScoreComponent{},
+	&MassCreate{},
 }

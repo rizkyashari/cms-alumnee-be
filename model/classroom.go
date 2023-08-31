@@ -12,3 +12,21 @@ type Classroom struct {
 	Teacher        Teacher      `gorm:"foreignKey:TeacherID;references:ID"`
 	Schedules      []Schedule
 }
+
+func GetClassroomHeader() []string {
+	return []string{
+		"Name",
+		"TeacherID",
+		"SchoolID",
+		"AcademicYearID",
+	}
+}
+
+func GetClassroomRow(classroom *Classroom) []string {
+	return []string{
+		classroom.Name,
+		classroom.TeacherID.String(),
+		classroom.SchoolID.String(),
+		classroom.AcademicYearID.String(),
+	}
+}

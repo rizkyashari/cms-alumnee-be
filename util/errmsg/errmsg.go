@@ -10,6 +10,7 @@ var (
 	ErrRequestBodyInvalid   = errors.New("request body is invalid")
 	ErrRequestHeaderInvalid = errors.New("request header is invalid")
 	ErrRequestParamsInvalid = errors.New("request parameter is invalid")
+	ErrRequestFileInvalid   = errors.New("request file is invalid")
 )
 
 type ErrUserIsNot struct {

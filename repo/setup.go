@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/fadhln/lms-be/database"
+	acadmicyear "github.com/fadhln/lms-be/repo/academic_year"
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
 	classroom "github.com/fadhln/lms-be/repo/classroom"
@@ -11,6 +12,7 @@ import (
 	school "github.com/fadhln/lms-be/repo/school"
 	student "github.com/fadhln/lms-be/repo/student"
 	teacher "github.com/fadhln/lms-be/repo/teacher"
+	teacherdata "github.com/fadhln/lms-be/repo/teacher_data"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
@@ -19,12 +21,14 @@ type Repository interface {
 	Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) error
 
 	Account() account.AccountRepo
+	AcademicYear() acadmicyear.AcademicYearRepo
 	Admin() admin.AdminRepo
 	Classroom() classroom.ClassroomRepo
 	MassCreate() masscreate.MassCreateRepo
 	School() school.SchoolRepo
 	Student() student.StudentRepo
 	Teacher() teacher.TeacherRepo
+	TeacherData() teacherdata.TeacherDataRepo
 }
 
 type impRepo struct {
@@ -45,6 +49,10 @@ func (r *impRepo) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions
 
 func (r *impRepo) Account() account.AccountRepo {
 	return account.Init(r.DB, r.Redis)
+}
+
+func (r *impRepo) AcademicYear() acadmicyear.AcademicYearRepo {
+	return acadmicyear.Init(r.DB)
 }
 
 func (r *impRepo) Admin() admin.AdminRepo {
@@ -69,4 +77,8 @@ func (r *impRepo) Student() student.StudentRepo {
 
 func (r *impRepo) Teacher() teacher.TeacherRepo {
 	return teacher.Init(r.DB)
+}
+
+func (r *impRepo) TeacherData() teacherdata.TeacherDataRepo {
+	return teacherdata.Init(r.DB)
 }

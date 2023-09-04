@@ -2,16 +2,9 @@ package model
 
 import "strconv"
 
-const (
-	DEST_CLASSROOM int = iota
-	DEST_STUDENT
-	DEST_TEACHER
-	DEST_SUBJECT
-	DEST_SUBJECTCOMP
-)
-
 type MassCreate struct {
 	Base
+	Status         int
 	Destination    int
 	SuccessCount   int
 	ErrorCount     int

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/model"
@@ -96,7 +97,7 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Confirm Password"}
 	}
 
-	if !(model.IsValidAccountType(body.AccountType)) {
+	if !(util.IsValidConstant(body.AccountType, constants.AccountTypeMap)) {
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}
 	}
 
@@ -126,7 +127,7 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 		}
 
 		switch newAccount.AccountType {
-		case model.ADMIN:
+		case constants.ACCOUNT_ADMIN:
 			newAdmin := model.Admin{
 				AccountID: newID,
 			}
@@ -134,7 +135,7 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 				return err
 			}
 
-		case model.STUDENT:
+		case constants.ACCOUNT_STUDENT:
 			newStudent := model.Student{
 				AccountID: newID,
 				Scores:    []model.Score{},
@@ -143,11 +144,9 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 				return err
 			}
 
-		case model.TEACHER:
-			emptystr := ""
+		case constants.ACCOUNT_TEACHER:
 			newTeacher := model.Teacher{
 				AccountID: newID,
-				NIK:       &emptystr,
 				Subjects:  []model.Subject{},
 			}
 			if err := s.repo.Teacher().CreateOne(tx, &newTeacher); err != nil {

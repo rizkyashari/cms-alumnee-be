@@ -18,20 +18,53 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	r.Use(CORSMiddleware())
 	r.POST("/login", h.Auth.Login)
-	r.POST("/register", h.Auth.Register)
-	r.POST("/classroom/bulk", h.Classroom.CreateMass)
+
+	// Register for public is not exist
+	// r.POST("/register", h.Auth.Register)
 
 	r.Use(h.Auth.CheckAuth())
 
 	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
 
+	r.GET("/academic_year", h.AcademicYear.GetAll)
+	r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
+	r.GET("/school", h.School.GetAll)
+	r.GET("/school/:id", h.School.GetDetailByID)
+	r.GET("/teacher", h.Teacher.GetAll)
+	r.GET("/teacher/:account_id", h.Teacher.GetDetailByAccountID)
+	r.GET("/teacher/data/:teacher_id", h.Teacher.GetTeacherDataByTeacherID)
+
 	admin := r.Group("/4dm1n")
 	{
 		admin.Use(h.Auth.CheckAdmin())
-		admin.GET("/school", h.School.GetAll)
-		admin.GET("/school/:id", h.School.GetDetailByID)
-		admin.POST("/school", h.School.CreateOne)
-		admin.PATCH("/school/:id", h.School.EditOne)
+
+		academic_year := admin.Group("/academic_year")
+		{
+			academic_year.POST("/", h.AcademicYear.CreateOne)
+			academic_year.PATCH("/:id/year", h.AcademicYear.EditYear)
+			academic_year.PATCH("/:id/status", h.AcademicYear.EditStatus)
+		}
+
+		school := admin.Group("/school")
+		{
+			school.POST("/", h.School.CreateOne)
+			school.PATCH("/:id", h.School.EditOne)
+		}
+
+		teacher := admin.Group("/teacher")
+		{
+			teacher.POST("/", h.Teacher.CreateOne)
+			teacher.POST("/bulk", h.Teacher.CreateMass)
+			teacher.PATCH("/:id", h.Teacher.EditOne)
+		}
+	}
+
+	teacher := r.Group("/teacher")
+	{
+		teacher.Use(h.Auth.CheckTeacher())
+
+		teacher.GET("/detail", h.Teacher.GetOwnDetail)
+		teacher.GET("/data", h.Teacher.GetOwnTeacherData)
 	}
 
 	return r

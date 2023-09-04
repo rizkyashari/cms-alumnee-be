@@ -9,6 +9,7 @@ import (
 
 type MassCreateService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[any]) (*rs.PaginationResponse[any, rs.MassCreateResponse], error)
+	GetDetailByID(c context.Context, id string) (rs.MassCreateResponse, error)
 }
 
 // TODO: Create implementation

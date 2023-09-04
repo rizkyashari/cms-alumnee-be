@@ -4,12 +4,16 @@ import (
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/util"
+	"github.com/fadhln/lms-be/util/errmsg"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type MassCreateRepo interface {
 	GetAll(params *rq.PaginationParams[model.MassCreate]) (*[]model.MassCreate, int, error)
+	GetDetailByID(id uuid.UUID) (*model.MassCreate, error)
 	CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error
+	UpdateOne(tx *gorm.DB, newCreation *model.MassCreate) error
 }
 
 type impRepo struct {
@@ -44,9 +48,31 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.MassCreate]) (*[]mode
 	return &entries, maxPage, nil
 }
 
+func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.MassCreate, error) {
+	var masscreate model.MassCreate
+	if err := r.db.Where("id = ?", id).First(&masscreate).Error; err != nil {
+		return nil, err
+	}
+
+	return &masscreate, nil
+}
+
 func (r *impRepo) CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error {
 	if err := tx.Create(newCreation).Error; err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *impRepo) UpdateOne(tx *gorm.DB, newCreation *model.MassCreate) error {
+	if newCreation == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Mass Creation"}
+	}
+
+	result := tx.Model(newCreation).Updates(newCreation)
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil

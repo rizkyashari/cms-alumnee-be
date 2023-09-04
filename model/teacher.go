@@ -4,11 +4,8 @@ import "github.com/google/uuid"
 
 type Teacher struct {
 	Base
-	AccountID uuid.UUID `gorm:"uniqueIndex"`
-	SchoolID  uuid.UUID
-	NIK       *string
-	Subjects  []Subject
-	// NUPTK     *string
-	// IsPNS     bool `gorm:"default:false"`
-	// Gender    *string
+	AccountID   uuid.UUID `gorm:"uniqueIndex"`
+	SchoolID    uuid.UUID
+	Subjects    []Subject
+	TeacherData TeacherData
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/model"
@@ -64,13 +65,12 @@ func getClassroomCSV(requestFile *multipart.FileHeader) (*[]rq.ClassroomRequest,
 			continue
 		}
 
+		// TODO: Change TeacherID to teacher email
 		classroom := rq.ClassroomRequest{
 			Name:           &rec[0],
 			AcademicYearID: &rec[1],
 			TeacherID:      &rec[2],
 		}
-
-		fmt.Println(">>>>> classroom.AcademicYearID >>>>>", *classroom.AcademicYearID)
 
 		classrooms = append(classrooms, classroom)
 	}
@@ -201,7 +201,7 @@ func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeade
 		return nil, errmsg.ErrRequestFileInvalid
 	}
 
-	nowStr := time.Now().Format("2006-Jan-02")
+	nowStr := time.Now().Format(constants.FilenameTimeFormat)
 	requestFileName := fmt.Sprintf("classroom-request-%s-%s.csv", nowStr, uuid.New().String())
 	reportFileName := fmt.Sprintf("classroom-report-%s-%s.csv", nowStr, uuid.New().String())
 
@@ -241,7 +241,7 @@ func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeade
 	}
 
 	var newMassCreate = model.MassCreate{
-		Destination:    model.DEST_CLASSROOM,
+		Destination:    constants.DEST_CLASSROOM,
 		RequestFileUrl: requestFileName,
 		ReportFileUrl:  reportFileName,
 		SuccessCount:   successCount,

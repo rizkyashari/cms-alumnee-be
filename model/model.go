@@ -7,6 +7,7 @@ var Entities = []interface{}{
 	&Schedule{},
 	&School{},
 	&Teacher{},
+	&TeacherData{},
 	&AcademicYear{},
 	&Classroom{},
 	&Student{},

@@ -12,3 +12,9 @@ type RegisterRequest struct {
 	AccountType     int     `json:"account_type"`
 	Name            *string `json:"name,omitempty"`
 }
+
+type BaseRegisterRequest struct {
+	Email    string  `json:"email"`
+	Password string  `json:"password"`
+	Name     *string `json:"name,omitempty"`
+}

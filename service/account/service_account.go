@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
-	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
@@ -67,10 +67,10 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 	}
 
 	switch gotAccount.AccountType {
-	case model.ADMIN:
+	case constants.ACCOUNT_ADMIN:
 		break
 
-	case model.STUDENT:
+	case constants.ACCOUNT_STUDENT:
 		gotStudent, err := s.repo.Student().GetDetailByAccountID(gotAccount.ID)
 		if err != nil {
 			return nil, err
@@ -82,9 +82,9 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
-		res = rs.AccountResponse{StudentData: &studentRes}
+		res = rs.AccountResponse{Student: &studentRes}
 
-	case model.TEACHER:
+	case constants.ACCOUNT_TEACHER:
 		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotAccount.ID)
 		if err != nil {
 			return nil, err
@@ -96,7 +96,7 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
-		res = rs.AccountResponse{TeacherData: &teachRes}
+		res = rs.AccountResponse{Teacher: &teachRes}
 
 	default:
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}

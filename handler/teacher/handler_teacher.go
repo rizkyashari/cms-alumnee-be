@@ -1,0 +1,178 @@
+package handler_teacher
+
+import (
+	"net/http"
+
+	"github.com/fadhln/lms-be/delivery/rq"
+	"github.com/fadhln/lms-be/delivery/rs"
+	"github.com/fadhln/lms-be/model"
+	"github.com/fadhln/lms-be/service"
+	"github.com/fadhln/lms-be/util"
+	"github.com/fadhln/lms-be/util/errmsg"
+	"github.com/gin-gonic/gin"
+)
+
+type TeacherHandler interface {
+	GetAll(c *gin.Context)
+	GetDetailByAccountID(c *gin.Context)
+	GetTeacherDataByTeacherID(c *gin.Context)
+	GetOwnDetail(c *gin.Context)
+	GetOwnTeacherData(c *gin.Context)
+
+	CreateOne(c *gin.Context)
+	CreateMass(c *gin.Context)
+
+	EditOne(c *gin.Context)
+}
+
+type impHandler struct {
+	s service.Service
+}
+
+func Init(s service.Service) TeacherHandler {
+	return &impHandler{
+		s: s,
+	}
+}
+
+func (h *impHandler) GetAll(c *gin.Context) {
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+
+	params := rq.PaginationParams[model.Account]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Account{
+			Name: &searchName,
+		},
+	}
+
+	res, err := h.s.Teacher().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetDetailByAccountID(c *gin.Context) {
+	id := c.Param("account_id")
+	res, err := h.s.Teacher().GetDetailByAccountID(c, id)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetTeacherDataByTeacherID(c *gin.Context) {
+	id := c.Param("teacher_id")
+	res, err := h.s.Teacher().GetTeacherDataByTeacherID(c, id)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetOwnDetail(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	res, err := h.s.Teacher().GetDetailByAccountID(c, gotAccount.ID.String())
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetOwnTeacherData(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	res, err := h.s.Teacher().GetTeacherDataByTeacherID(c, gotAccount.Teacher.ID.String())
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) CreateOne(c *gin.Context) {
+	var request rq.TeacherRegisterRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Teacher().CreateOne(c, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusCreated)
+}
+
+func (h *impHandler) CreateMass(c *gin.Context) {
+	schoolID := c.DefaultQuery("school_id", "")
+
+	var csvfile rq.CSVFileUploadRequest
+	if err := c.ShouldBind(&csvfile); err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		return
+	}
+
+	if csvfile.CSVFile == nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		return
+	}
+
+	res, err := h.s.Teacher().CreateMass(c, schoolID, csvfile.CSVFile)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusCreated)
+}
+
+func (h *impHandler) EditOne(c *gin.Context) {
+	id := c.Param("id")
+
+	var request rq.TeacherUpdateRequest = rq.TeacherUpdateRequest{TeacherID: id}
+	err := c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Teacher().EditOne(c, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}

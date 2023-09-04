@@ -14,6 +14,7 @@ type AcademicYearRepo interface {
 	GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, error)
 	CreateOne(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
 	UpdateOne(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
+	UpdateStatus(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -76,6 +77,19 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, year *model.AcademicYear) error {
 	}
 
 	result := tx.Model(year).Updates(year)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (r *impRepo) UpdateStatus(tx *gorm.DB, year *model.AcademicYear) error {
+	if year == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Academic Year"}
+	}
+
+	result := tx.Model(year).Select("IsActive").Updates(year)
 	if result.Error != nil {
 		return result.Error
 	}

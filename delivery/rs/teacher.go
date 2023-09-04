@@ -1,6 +1,15 @@
 package rs
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 type TeacherResponse struct {
-	NIK      *string           `json:"nik,omitempty"`
-	Subjects []SubjectResponse `json:"subject"`
+	ID        uuid.UUID `json:"id"`
+	AccountID uuid.UUID `json:"account_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	SchoolID  uuid.UUID `json:"school_id"`
 }

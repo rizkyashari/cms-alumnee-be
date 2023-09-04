@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/util"
@@ -77,6 +78,8 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 
 	chain := r.db.Preload("Teacher")
 
+	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_TEACHER))
+
 	if len(*params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
 	}
@@ -104,6 +107,8 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 	var accounts []model.Account
 
 	chain := r.db.Preload("Student")
+
+	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_STUDENT))
 
 	if len(*params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
@@ -138,7 +143,7 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newAccount *model.Account) error {
 
 func (r *impRepo) ReadOneByEmail(email string) (*model.Account, error) {
 	var account model.Account
-	if err := r.db.Where("email = ?", email).Find(&account).Error; err != nil {
+	if err := r.db.Where("email = ?", email).First(&account).Error; err != nil {
 		return nil, err
 	}
 	if account.Email == "" {

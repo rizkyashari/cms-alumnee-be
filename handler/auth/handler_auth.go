@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
-	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/service"
 	"github.com/fadhln/lms-be/util"
 	auth_util "github.com/fadhln/lms-be/util/auth"
@@ -94,7 +94,7 @@ func (h *impHandler) CheckAdmin() gin.HandlerFunc {
 			return
 		}
 
-		if gotAccount.AccountType != model.ADMIN {
+		if gotAccount.AccountType != constants.ACCOUNT_ADMIN {
 			rs.ErrorResponse(c, &errmsg.ErrUserIsNot{FieldName: "Admin"})
 			c.Abort()
 			return
@@ -113,7 +113,7 @@ func (h *impHandler) CheckStudent() gin.HandlerFunc {
 			return
 		}
 
-		if gotAccount.AccountType != model.STUDENT {
+		if gotAccount.AccountType != constants.ACCOUNT_STUDENT {
 			rs.ErrorResponse(c, &errmsg.ErrUserIsNot{FieldName: "Student"})
 			c.Abort()
 			return
@@ -132,7 +132,7 @@ func (h *impHandler) CheckTeacher() gin.HandlerFunc {
 			return
 		}
 
-		if gotAccount.AccountType != model.TEACHER {
+		if gotAccount.AccountType != constants.ACCOUNT_TEACHER {
 			rs.ErrorResponse(c, &errmsg.ErrUserIsNot{FieldName: "Teacher"})
 			c.Abort()
 			return
@@ -177,6 +177,7 @@ func (h *impHandler) Register(c *gin.Context) {
 
 }
 
+// TODO: write function
 func (h *impHandler) CheckEmailExist(c *gin.Context) {}
 
 func (h *impHandler) GetOwnAccountDetail(c *gin.Context) {

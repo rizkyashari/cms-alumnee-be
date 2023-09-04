@@ -2,6 +2,7 @@ package repo_teacher
 
 import (
 	"github.com/fadhln/lms-be/model"
+	"github.com/fadhln/lms-be/util/errmsg"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -10,6 +11,8 @@ type TeacherRepo interface {
 	GetDetailByAccountID(id uuid.UUID) (*model.Teacher, error)
 
 	CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error
+
+	UpdateOne(tx *gorm.DB, newTeacher *model.Teacher) error
 }
 
 type impRepo struct {
@@ -31,9 +34,26 @@ func (r *impRepo) GetDetailByAccountID(id uuid.UUID) (*model.Teacher, error) {
 	return &teacher, nil
 }
 
+// TODO: Investigate whether it create a new teacherdata or not
 func (r *impRepo) CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error {
+	newTeacherData := model.TeacherData{}
+	newTeacher.TeacherData = newTeacherData
+
 	if err := tx.Create(newTeacher).Error; err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *impRepo) UpdateOne(tx *gorm.DB, newTeacher *model.Teacher) error {
+	if newTeacher == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Teacher"}
+	}
+
+	result := tx.Model(newTeacher).Updates(newTeacher)
+	if result.Error != nil {
+		return result.Error
 	}
 
 	return nil

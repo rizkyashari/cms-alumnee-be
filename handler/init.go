@@ -22,15 +22,16 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	// Register for public is not exist
 	// r.POST("/register", h.Auth.Register)
 
+	r.GET("/teacher", h.Teacher.GetAll)
+	r.GET("/school", h.School.GetAll)
+
 	r.Use(h.Auth.CheckAuth())
 
 	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
 
 	r.GET("/academic_year", h.AcademicYear.GetAll)
 	r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
-	r.GET("/school", h.School.GetAll)
 	r.GET("/school/:id", h.School.GetDetailByID)
-	r.GET("/teacher", h.Teacher.GetAll)
 	r.GET("/teacher/:account_id", h.Teacher.GetDetailByAccountID)
 	r.GET("/teacher/data/:teacher_id", h.Teacher.GetTeacherDataByTeacherID)
 

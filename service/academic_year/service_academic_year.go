@@ -141,7 +141,7 @@ func (s *impService) EditYear(c context.Context, newYear *rq.AcademicYearRequest
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.AcademicYear().UpdateOne(tx, &year); err != nil {
+		if err := s.repo.AcademicYear().UpdateOne(tx, id, &year); err != nil {
 			return err
 		}
 
@@ -171,7 +171,7 @@ func (s *impService) EditStatus(c context.Context, newYear *rq.AcademicYearReque
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.AcademicYear().UpdateStatus(tx, &year); err != nil {
+		if err := s.repo.AcademicYear().UpdateStatus(tx, id, &year); err != nil {
 			return err
 		}
 

@@ -5,6 +5,7 @@ import "github.com/google/uuid"
 type Classroom struct {
 	Base
 	Name           string
+	Code           string `gorm:"uniqueIndex"`
 	TeacherID      uuid.UUID
 	SchoolID       uuid.UUID
 	AcademicYearID uuid.UUID

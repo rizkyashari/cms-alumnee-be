@@ -16,8 +16,8 @@ type StudentData struct {
 	Religion          *string
 	Nationality       *int
 	EthnicGroup       *string
-	StudentFamilyData StudentFamilyData
-	AddressData       AddressData
+	StudentFamilyData *StudentFamilyData
+	AddressData       *AddressData
 }
 
 type StudentFamilyData struct {

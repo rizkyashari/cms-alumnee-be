@@ -7,6 +7,7 @@ import (
 	auth "github.com/fadhln/lms-be/service/auth"
 	classroom "github.com/fadhln/lms-be/service/classroom"
 	school "github.com/fadhln/lms-be/service/school"
+	student "github.com/fadhln/lms-be/service/student"
 	teacher "github.com/fadhln/lms-be/service/teacher"
 )
 
@@ -16,6 +17,7 @@ type Service interface {
 	AcademicYear() academicyear.AcademicYearService
 	Classroom() classroom.ClassroomService
 	School() school.SchoolService
+	Student() student.StudentService
 	Teacher() teacher.TeacherService
 }
 
@@ -47,6 +49,10 @@ func (s *impService) Classroom() classroom.ClassroomService {
 
 func (s *impService) School() school.SchoolService {
 	return school.Init(s.repo)
+}
+
+func (s *impService) Student() student.StudentService {
+	return student.Init(s.repo)
 }
 
 func (s *impService) Teacher() teacher.TeacherService {

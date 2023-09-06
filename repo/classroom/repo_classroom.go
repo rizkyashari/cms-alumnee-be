@@ -11,10 +11,11 @@ import (
 
 type ClassroomRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.Classroom, error)
+	GetDetailByCode(code string) (*model.Classroom, error)
 	GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error)
 	CreateOne(tx *gorm.DB, newClassroom *model.Classroom) error
 	CreateMass(tx *gorm.DB, newClassrooms *[]model.Classroom) error
-	UpdateOne(tx *gorm.DB, newClassroom *model.Classroom) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newClassroom *model.Classroom) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -31,6 +32,15 @@ func Init(db *gorm.DB) ClassroomRepo {
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Classroom, error) {
 	var classroom model.Classroom
 	if err := r.db.Where("id = ?", id).Find(&classroom).Error; err != nil {
+		return nil, err
+	}
+
+	return &classroom, nil
+}
+
+func (r *impRepo) GetDetailByCode(code string) (*model.Classroom, error) {
+	var classroom model.Classroom
+	if err := r.db.Where("code = ?", code).First(&classroom).Error; err != nil {
 		return nil, err
 	}
 
@@ -91,12 +101,12 @@ func (r *impRepo) CreateMass(tx *gorm.DB, newClassrooms *[]model.Classroom) erro
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, newClassroom *model.Classroom) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newClassroom *model.Classroom) error {
 	if newClassroom == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Classroom"}
 	}
 
-	result := tx.Model(newClassroom).Updates(newClassroom)
+	result := tx.Model(newClassroom).Where("id = ?", id).Updates(newClassroom)
 	if result.Error != nil {
 		return result.Error
 	}

@@ -11,6 +11,7 @@ type ClassroomResponse struct {
 	CreatedAt    time.Time            `json:"created_at"`
 	UpdatedAt    time.Time            `json:"updated_at"`
 	Name         string               `json:"string"`
+	Code         string               `json:"code"`
 	AcademicYear AcademicYearResponse `json:"academic_year"`
 	Teacher      TeacherResponse      `json:"teacher"`
 }

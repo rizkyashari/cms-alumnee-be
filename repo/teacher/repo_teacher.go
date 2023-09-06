@@ -12,7 +12,7 @@ type TeacherRepo interface {
 
 	CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error
 
-	UpdateOne(tx *gorm.DB, newTeacher *model.Teacher) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newTeacher *model.Teacher) error
 }
 
 type impRepo struct {
@@ -34,7 +34,6 @@ func (r *impRepo) GetDetailByAccountID(id uuid.UUID) (*model.Teacher, error) {
 	return &teacher, nil
 }
 
-// TODO: Investigate whether it create a new teacherdata or not
 func (r *impRepo) CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error {
 	newTeacherData := model.TeacherData{}
 	newTeacher.TeacherData = newTeacherData
@@ -46,12 +45,12 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error {
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, newTeacher *model.Teacher) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newTeacher *model.Teacher) error {
 	if newTeacher == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Teacher"}
 	}
 
-	result := tx.Model(newTeacher).Updates(newTeacher)
+	result := tx.Model(newTeacher).Where("id = ?", id).Updates(newTeacher)
 	if result.Error != nil {
 		return result.Error
 	}

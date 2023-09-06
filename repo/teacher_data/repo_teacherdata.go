@@ -9,7 +9,7 @@ import (
 
 type TeacherDataRepo interface {
 	GetTeacherDataByTeacherID(id uuid.UUID) (*model.TeacherData, error)
-	UpdateOne(tx *gorm.DB, newTeacherData *model.TeacherData) error
+	UpdateOne(tx *gorm.DB, teacherID uuid.UUID, newTeacherData *model.TeacherData) error
 }
 
 type impRepo struct {
@@ -24,19 +24,19 @@ func Init(db *gorm.DB) TeacherDataRepo {
 
 func (r *impRepo) GetTeacherDataByTeacherID(id uuid.UUID) (*model.TeacherData, error) {
 	var teacherData model.TeacherData
-	if err := r.db.Where("teacher_id = ?", id).Find(&teacherData).Error; err != nil {
+	if err := r.db.Where("teacher_id = ?", id).First(&teacherData).Error; err != nil {
 		return nil, err
 	}
 
 	return &teacherData, nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, newTeacherData *model.TeacherData) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, teacherID uuid.UUID, newTeacherData *model.TeacherData) error {
 	if newTeacherData == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Teacher Data"}
 	}
 
-	result := tx.Save(newTeacherData)
+	result := tx.Model(newTeacherData).Where("teacher_id = ?", teacherID).Updates(newTeacherData)
 	if result.Error != nil {
 		return result.Error
 	}

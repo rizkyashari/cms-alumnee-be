@@ -22,18 +22,25 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	// Register for public is not exist
 	// r.POST("/register", h.Auth.Register)
 
-	r.GET("/teacher", h.Teacher.GetAll)
-	r.GET("/school", h.School.GetAll)
-
-	r.Use(h.Auth.CheckAuth())
-
-	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
-
 	r.GET("/academic_year", h.AcademicYear.GetAll)
 	r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
+
+	r.GET("/classroom", h.Classroom.GetAll)
+	r.GET("/classroom/:id", h.Classroom.GetDetailByID)
+
+	r.GET("/school", h.School.GetAll)
 	r.GET("/school/:id", h.School.GetDetailByID)
+
+	r.GET("/student", h.Student.GetAll)
+	r.GET("/student/:account_id", h.Student.GetDetailByAccountID)
+	r.GET("/student/data/:student_id", h.Student.GetStudentDataByStudentID)
+
+	r.GET("/teacher", h.Teacher.GetAll)
 	r.GET("/teacher/:account_id", h.Teacher.GetDetailByAccountID)
 	r.GET("/teacher/data/:teacher_id", h.Teacher.GetTeacherDataByTeacherID)
+
+	r.Use(h.Auth.CheckAuth())
+	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
 
 	admin := r.Group("/4dm1n")
 	{
@@ -46,18 +53,45 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			academic_year.PATCH("/:id/status", h.AcademicYear.EditStatus)
 		}
 
+		classroom := admin.Group("/classroom")
+		{
+			classroom.POST("/", h.Classroom.CreateOne)
+			classroom.POST("/bulk", h.Classroom.CreateMass)
+			classroom.PATCH("/:id", h.Classroom.EditOne)
+		}
+
 		school := admin.Group("/school")
 		{
 			school.POST("/", h.School.CreateOne)
 			school.PATCH("/:id", h.School.EditOne)
 		}
 
+		student := r.Group("/student")
+		{
+			student.POST("/", h.Student.CreateOne)
+			student.POST("/bulk", h.Student.CreateMass)
+			student.PATCH("/:student_id", h.Student.EditOne)
+			student.PATCH("/:student_id/family", h.Student.EditFamilyData)
+			student.PATCH("/:student_id/address", h.Student.EditAddressData)
+		}
+
 		teacher := admin.Group("/teacher")
 		{
 			teacher.POST("/", h.Teacher.CreateOne)
 			teacher.POST("/bulk", h.Teacher.CreateMass)
-			teacher.PATCH("/:id", h.Teacher.EditOne)
+			teacher.PATCH("/:teacher_id", h.Teacher.EditOne)
 		}
+	}
+
+	student := r.Group("/student")
+	{
+		student.Use(h.Auth.CheckStudent())
+
+		student.GET("/detail", h.Student.GetOwnDetail)
+		student.GET("/data", h.Student.GetOwnStudentData)
+		student.PATCH("/:student_id", h.Student.EditOne)
+		student.PATCH("/:student_id/family", h.Student.EditFamilyData)
+		student.PATCH("/:student_id/address", h.Student.EditAddressData)
 	}
 
 	teacher := r.Group("/teacher")
@@ -66,6 +100,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 		teacher.GET("/detail", h.Teacher.GetOwnDetail)
 		teacher.GET("/data", h.Teacher.GetOwnTeacherData)
+		teacher.PATCH("/:teacher_id", h.Teacher.EditOne)
 	}
 
 	return r

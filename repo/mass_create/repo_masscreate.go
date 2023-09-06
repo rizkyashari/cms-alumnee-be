@@ -13,7 +13,7 @@ type MassCreateRepo interface {
 	GetAll(params *rq.PaginationParams[model.MassCreate]) (*[]model.MassCreate, int, error)
 	GetDetailByID(id uuid.UUID) (*model.MassCreate, error)
 	CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error
-	UpdateOne(tx *gorm.DB, newCreation *model.MassCreate) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newCreation *model.MassCreate) error
 }
 
 type impRepo struct {
@@ -65,12 +65,12 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error {
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, newCreation *model.MassCreate) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newCreation *model.MassCreate) error {
 	if newCreation == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Mass Creation"}
 	}
 
-	result := tx.Model(newCreation).Updates(newCreation)
+	result := tx.Model(newCreation).Where("id = ?", id).Updates(newCreation)
 	if result.Error != nil {
 		return result.Error
 	}

@@ -5,6 +5,7 @@ import (
 	auth "github.com/fadhln/lms-be/handler/auth"
 	classroom "github.com/fadhln/lms-be/handler/classroom"
 	school "github.com/fadhln/lms-be/handler/school"
+	student "github.com/fadhln/lms-be/handler/student"
 	teacher "github.com/fadhln/lms-be/handler/teacher"
 	"github.com/fadhln/lms-be/service"
 )
@@ -16,6 +17,7 @@ type Handler struct {
 	AcademicYear academicyear.AcademicYearHandler
 	Classroom    classroom.ClassroomHandler
 	School       school.SchoolHandler
+	Student      student.StudentHandler
 	Teacher      teacher.TeacherHandler
 }
 
@@ -26,6 +28,7 @@ func SetupHandler(s service.Service) *Handler {
 		AcademicYear: academicyear.Init(s),
 		Classroom:    classroom.Init(s),
 		School:       school.Init(s),
+		Student:      student.Init(s),
 		Teacher:      teacher.Init(s),
 	}
 }

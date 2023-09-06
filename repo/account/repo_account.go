@@ -12,6 +12,7 @@ import (
 	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/util"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -76,7 +77,26 @@ func (r *impRepo) ReadOneRedis(ctx context.Context, key string) (*model.Account,
 func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
 	var accounts []model.Account
 
-	chain := r.db.Preload("Teacher")
+	var preloadTeacherArgs []any
+	if params.Data.Teacher.SchoolID != uuid.Nil {
+		schoolIdArgs := []any{"school_id = ?", params.Data.Teacher.SchoolID.String()}
+		preloadTeacherArgs = append(preloadTeacherArgs, schoolIdArgs...)
+	}
+
+	chain := r.db.Preload("Teacher", preloadTeacherArgs...)
+
+	var preloadTeacherDataArgs []any
+	if params.Data.Teacher.TeacherData.Gender != nil {
+		genderArgs := []any{"gender = (?)", params.Data.Teacher.TeacherData.Gender}
+		preloadTeacherDataArgs = append(preloadTeacherDataArgs, genderArgs...)
+	}
+
+	if params.Data.Teacher.TeacherData.EmploymentStatus != nil {
+		employmentStatusArgs := []any{"employment_status = (?)", params.Data.Teacher.TeacherData.EmploymentStatus}
+		preloadTeacherDataArgs = append(preloadTeacherDataArgs, employmentStatusArgs...)
+	}
+
+	chain = chain.Preload("Teacher.TeacherData", preloadTeacherDataArgs...)
 
 	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_TEACHER))
 
@@ -106,7 +126,21 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
 	var accounts []model.Account
 
-	chain := r.db.Preload("Student")
+	var preloadStudentArgs []any
+	if params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
+		classromIdArgs := []any{"classroom_id = ?", params.Data.Student.ClassroomID.String()}
+		preloadStudentArgs = append(preloadStudentArgs, classromIdArgs...)
+	}
+
+	chain := r.db.Preload("Student", preloadStudentArgs...)
+
+	var preloadStudentDataArgs []any
+	if params.Data.Student.StudentData.Gender != nil {
+		genderArgs := []any{"gender = (?)", params.Data.Student.StudentData.Gender}
+		preloadStudentDataArgs = append(preloadStudentDataArgs, genderArgs...)
+	}
+
+	chain = chain.Preload("Student.StudentData", preloadStudentDataArgs...)
 
 	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_STUDENT))
 

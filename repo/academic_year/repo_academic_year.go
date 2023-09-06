@@ -13,8 +13,8 @@ type AcademicYearRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.AcademicYear, error)
 	GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, error)
 	CreateOne(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
-	UpdateOne(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
-	UpdateStatus(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newAcademicYear *model.AcademicYear) error
+	UpdateStatus(tx *gorm.DB, id uuid.UUID, newAcademicYear *model.AcademicYear) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -71,12 +71,12 @@ func (r *impRepo) CreateOne(tx *gorm.DB, year *model.AcademicYear) error {
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, year *model.AcademicYear) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, year *model.AcademicYear) error {
 	if year == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Academic Year"}
 	}
 
-	result := tx.Model(year).Updates(year)
+	result := tx.Model(year).Where("id = ?", id).Updates(year)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -84,12 +84,12 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, year *model.AcademicYear) error {
 	return nil
 }
 
-func (r *impRepo) UpdateStatus(tx *gorm.DB, year *model.AcademicYear) error {
+func (r *impRepo) UpdateStatus(tx *gorm.DB, id uuid.UUID, year *model.AcademicYear) error {
 	if year == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Academic Year"}
 	}
 
-	result := tx.Model(year).Select("IsActive").Updates(year)
+	result := tx.Model(year).Where("id = ?", id).Select("IsActive").Updates(year)
 	if result.Error != nil {
 		return result.Error
 	}

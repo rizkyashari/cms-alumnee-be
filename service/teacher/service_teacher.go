@@ -33,7 +33,7 @@ type TeacherService interface {
 	CreateOneWithDetail(c context.Context, newTeacher *rq.TeacherRegisterWithDetailRequest) error
 	CreateMass(c *gin.Context, school_id string, requestFile *multipart.FileHeader) (*rs.MassCreateResponse, error)
 
-	EditOne(c context.Context, newTeacher *rq.TeacherUpdateRequest) error
+	EditOne(c context.Context, teacherID string, newTeacher *rq.TeacherUpdateRequest) error
 }
 
 type impService struct {
@@ -301,6 +301,10 @@ func (s *impService) CreateOne(c context.Context, body *rq.TeacherRegisterReques
 		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
 	}
 
+	if parsedSchoolID == uuid.Nil {
+		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
+	}
+
 	email := strings.ToLower(body.Account.Email)
 	if !(util.IsEmailValid(email)) {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Email"}
@@ -421,7 +425,7 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.TeacherRegi
 
 		newTeacherData.ID = gotTeacherData.ID
 
-		if err := s.repo.TeacherData().UpdateOne(tx, newTeacherData); err != nil {
+		if err := s.repo.TeacherData().UpdateOne(tx, newTeacherID, newTeacherData); err != nil {
 			return err
 		}
 
@@ -440,7 +444,7 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Teacher
 		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
 
 		s.repo.Transaction(func(tx *gorm.DB) error {
-			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate); err != nil {
+			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
 				return err
 			}
 
@@ -482,7 +486,7 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Teacher
 	newMassCreate.ErrorMessages = string(errMsgsStr)
 
 	s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate); err != nil {
+		if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
 			return err
 		}
 
@@ -546,8 +550,8 @@ func (s *impService) CreateMass(c *gin.Context, school_id string, requestFile *m
 
 }
 
-func (s *impService) EditOne(c context.Context, body *rq.TeacherUpdateRequest) error {
-	parsedTeacherID, err := uuid.Parse(body.TeacherID)
+func (s *impService) EditOne(c context.Context, teacherID string, body *rq.TeacherUpdateRequest) error {
+	parsedTeacherID, err := uuid.Parse(teacherID)
 	if err != nil {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
 	}
@@ -574,7 +578,7 @@ func (s *impService) EditOne(c context.Context, body *rq.TeacherUpdateRequest) e
 		}
 
 		err = s.repo.Transaction(func(tx *gorm.DB) error {
-			if err := s.repo.Teacher().UpdateOne(tx, &newTeacher); err != nil {
+			if err := s.repo.Teacher().UpdateOne(tx, parsedTeacherID, &newTeacher); err != nil {
 				return err
 			}
 
@@ -593,7 +597,7 @@ func (s *impService) EditOne(c context.Context, body *rq.TeacherUpdateRequest) e
 
 	if isUpdateTeacherData {
 		err = s.repo.Transaction(func(tx *gorm.DB) error {
-			if err := s.repo.TeacherData().UpdateOne(tx, newTeacherData); err != nil {
+			if err := s.repo.TeacherData().UpdateOne(tx, parsedTeacherID, newTeacherData); err != nil {
 				return err
 			}
 

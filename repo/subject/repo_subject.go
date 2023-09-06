@@ -13,7 +13,7 @@ type SubjectRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.Subject, error)
 	GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, error)
 	CreateOne(tx *gorm.DB, newSubject *model.Subject) error
-	UpdateOne(tx *gorm.DB, newSubject *model.Subject) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newSubject *model.Subject) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -76,12 +76,12 @@ func (r *impRepo) CreateOne(tx *gorm.DB, subject *model.Subject) error {
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, subject *model.Subject) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, subject *model.Subject) error {
 	if subject == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Subject"}
 	}
 
-	result := tx.Model(subject).Updates(subject)
+	result := tx.Model(subject).Where("id = ?", id).Updates(subject)
 	if result.Error != nil {
 		return result.Error
 	}

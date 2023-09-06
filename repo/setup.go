@@ -11,6 +11,7 @@ import (
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	school "github.com/fadhln/lms-be/repo/school"
 	student "github.com/fadhln/lms-be/repo/student"
+	studentdata "github.com/fadhln/lms-be/repo/student_data"
 	teacher "github.com/fadhln/lms-be/repo/teacher"
 	teacherdata "github.com/fadhln/lms-be/repo/teacher_data"
 	"github.com/go-redis/redis/v8"
@@ -27,6 +28,7 @@ type Repository interface {
 	MassCreate() masscreate.MassCreateRepo
 	School() school.SchoolRepo
 	Student() student.StudentRepo
+	StudentData() studentdata.StudentDataRepo
 	Teacher() teacher.TeacherRepo
 	TeacherData() teacherdata.TeacherDataRepo
 }
@@ -73,6 +75,10 @@ func (r *impRepo) School() school.SchoolRepo {
 
 func (r *impRepo) Student() student.StudentRepo {
 	return student.Init(r.DB)
+}
+
+func (r *impRepo) StudentData() studentdata.StudentDataRepo {
+	return studentdata.Init(r.DB)
 }
 
 func (r *impRepo) Teacher() teacher.TeacherRepo {

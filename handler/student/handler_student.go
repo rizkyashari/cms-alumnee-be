@@ -1,4 +1,4 @@
-package handler_teacher
+package handler_student
 
 import (
 	"net/http"
@@ -15,24 +15,26 @@ import (
 	"github.com/google/uuid"
 )
 
-type TeacherHandler interface {
+type StudentHandler interface {
 	GetAll(c *gin.Context)
 	GetDetailByAccountID(c *gin.Context)
-	GetTeacherDataByTeacherID(c *gin.Context)
+	GetStudentDataByStudentID(c *gin.Context)
 	GetOwnDetail(c *gin.Context)
-	GetOwnTeacherData(c *gin.Context)
+	GetOwnStudentData(c *gin.Context)
 
 	CreateOne(c *gin.Context)
 	CreateMass(c *gin.Context)
 
 	EditOne(c *gin.Context)
+	EditFamilyData(c *gin.Context)
+	EditAddressData(c *gin.Context)
 }
 
 type impHandler struct {
 	s service.Service
 }
 
-func Init(s service.Service) TeacherHandler {
+func Init(s service.Service) StudentHandler {
 	return &impHandler{
 		s: s,
 	}
@@ -46,9 +48,8 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	}
 
 	searchName := c.DefaultQuery("name", "")
-	schoolId := c.DefaultQuery("school_id", "")
+	classroom_id := c.DefaultQuery("classroom_id", "")
 	gender := c.DefaultQuery("gender", "")
-	employmentStatus := c.DefaultQuery("employment_status", "")
 
 	params := rq.PaginationParams[model.Account]{
 		Limit:     limit,
@@ -60,26 +61,19 @@ func (h *impHandler) GetAll(c *gin.Context) {
 		},
 	}
 
-	if len(schoolId) >= 2 {
-		parsedSchoolID, _ := uuid.Parse(schoolId)
-		params.Data.Teacher.SchoolID = parsedSchoolID
+	if len(classroom_id) >= 2 {
+		parsedClassroomID, _ := uuid.Parse(classroom_id)
+		params.Data.Student.ClassroomID = &parsedClassroomID
 	}
 
 	if len(gender) >= 1 {
 		genderInt, err := strconv.Atoi(gender)
 		if err == nil && util.IsValidConstant(genderInt, constants.GenderMap) {
-			params.Data.Teacher.TeacherData.Gender = &genderInt
+			params.Data.Student.StudentData.Gender = &genderInt
 		}
 	}
 
-	if len(employmentStatus) >= 1 {
-		statusInt, err := strconv.Atoi(employmentStatus)
-		if err == nil && util.IsValidConstant(statusInt, constants.TeacherStatusMap) {
-			params.Data.Teacher.TeacherData.EmploymentStatus = &statusInt
-		}
-	}
-
-	res, err := h.s.Teacher().GetAll(c, &params)
+	res, err := h.s.Student().GetAll(c, &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -90,7 +84,7 @@ func (h *impHandler) GetAll(c *gin.Context) {
 
 func (h *impHandler) GetDetailByAccountID(c *gin.Context) {
 	id := c.Param("account_id")
-	res, err := h.s.Teacher().GetDetailByAccountID(c, id)
+	res, err := h.s.Student().GetDetailByAccountID(c, id)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -99,9 +93,9 @@ func (h *impHandler) GetDetailByAccountID(c *gin.Context) {
 	rs.SuccessResponse(c, res, http.StatusOK)
 }
 
-func (h *impHandler) GetTeacherDataByTeacherID(c *gin.Context) {
-	id := c.Param("teacher_id")
-	res, err := h.s.Teacher().GetTeacherDataByTeacherID(c, id)
+func (h *impHandler) GetStudentDataByStudentID(c *gin.Context) {
+	id := c.Param("student_id")
+	res, err := h.s.Student().GetStudentDataByStudentID(c, id)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -117,7 +111,7 @@ func (h *impHandler) GetOwnDetail(c *gin.Context) {
 		return
 	}
 
-	res, err := h.s.Teacher().GetDetailByAccountID(c, gotAccount.ID.String())
+	res, err := h.s.Student().GetDetailByAccountID(c, gotAccount.ID.String())
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -126,14 +120,14 @@ func (h *impHandler) GetOwnDetail(c *gin.Context) {
 	rs.SuccessResponse(c, res, http.StatusOK)
 }
 
-func (h *impHandler) GetOwnTeacherData(c *gin.Context) {
+func (h *impHandler) GetOwnStudentData(c *gin.Context) {
 	gotAccount, err := util.GetAccountContext(c)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
 
-	res, err := h.s.Teacher().GetTeacherDataByTeacherID(c, gotAccount.Teacher.ID.String())
+	res, err := h.s.Student().GetStudentDataByStudentID(c, gotAccount.Student.ID.String())
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -143,14 +137,14 @@ func (h *impHandler) GetOwnTeacherData(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
-	var request rq.TeacherRegisterRequest
+	var request rq.StudentRegisterRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
 
-	err = h.s.Teacher().CreateOne(c, &request)
+	err = h.s.Student().CreateOne(c, &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -160,8 +154,6 @@ func (h *impHandler) CreateOne(c *gin.Context) {
 }
 
 func (h *impHandler) CreateMass(c *gin.Context) {
-	schoolID := c.DefaultQuery("school_id", "")
-
 	var csvfile rq.CSVFileUploadRequest
 	if err := c.ShouldBind(&csvfile); err != nil {
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
@@ -173,7 +165,7 @@ func (h *impHandler) CreateMass(c *gin.Context) {
 		return
 	}
 
-	res, err := h.s.Teacher().CreateMass(c, schoolID, csvfile.CSVFile)
+	res, err := h.s.Student().CreateMass(c, csvfile.CSVFile)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -183,9 +175,9 @@ func (h *impHandler) CreateMass(c *gin.Context) {
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
-	teacherID := c.Param("teacher_id")
+	studentID := c.Param("student_id")
 
-	var request rq.TeacherUpdateRequest
+	var request rq.StudentUpdateRequest
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
@@ -193,7 +185,47 @@ func (h *impHandler) EditOne(c *gin.Context) {
 		return
 	}
 
-	err = h.s.Teacher().EditOne(c, teacherID, &request)
+	err = h.s.Student().EditOne(c, studentID, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditFamilyData(c *gin.Context) {
+	studentID := c.Param("student_id")
+
+	var request rq.StudentFamilyDataUpdateRequest
+	err := c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Student().EditFamilyData(c, studentID, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditAddressData(c *gin.Context) {
+	studentID := c.Param("student_id")
+
+	var request rq.AddressDataUpdateRequest
+	err := c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Student().EditAddressData(c, studentID, &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

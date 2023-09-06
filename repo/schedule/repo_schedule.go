@@ -14,7 +14,7 @@ type ScheduleRepo interface {
 	GetAll(params *rq.ScheduleParams) (*[]model.Schedule, error)
 	CreateOne(tx *gorm.DB, newSchedule *model.Schedule) error
 	CreateMass(tx *gorm.DB, newSchedule *[]model.Schedule) error
-	UpdateOne(tx *gorm.DB, newSchedule *model.Schedule) error
+	UpdateOne(tx *gorm.DB, id uuid.UUID, newSchedule *model.Schedule) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -84,12 +84,12 @@ func (r *impRepo) CreateMass(tx *gorm.DB, newSchedule *[]model.Schedule) error {
 	return nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, newSchedule *model.Schedule) error {
+func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newSchedule *model.Schedule) error {
 	if newSchedule == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Schedule"}
 	}
 
-	result := tx.Model(newSchedule).Updates(newSchedule)
+	result := tx.Model(newSchedule).Where("id = ?", id).Updates(newSchedule)
 	if result.Error != nil {
 		return result.Error
 	}

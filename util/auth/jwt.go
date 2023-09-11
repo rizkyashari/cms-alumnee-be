@@ -67,6 +67,9 @@ func CheckToken(input string) (string, int, error) {
 	token, err := jwt.ParseWithClaims(input, &CustomClaim{}, func(tkn *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
+	if err != nil {
+		return "", 0, err
+	}
 
 	if claims, ok := token.Claims.(*CustomClaim); ok && token.Valid {
 		return claims.Email, claims.AccountType, nil

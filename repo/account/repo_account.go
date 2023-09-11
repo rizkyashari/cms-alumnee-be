@@ -78,7 +78,7 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 	var accounts []model.Account
 
 	var preloadTeacherArgs []any
-	if params.Data.Teacher.SchoolID != uuid.Nil {
+	if params.Data.Teacher != nil && params.Data.Teacher.SchoolID != uuid.Nil {
 		schoolIdArgs := []any{"school_id = ?", params.Data.Teacher.SchoolID.String()}
 		preloadTeacherArgs = append(preloadTeacherArgs, schoolIdArgs...)
 	}
@@ -86,12 +86,12 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 	chain := r.db.Preload("Teacher", preloadTeacherArgs...)
 
 	var preloadTeacherDataArgs []any
-	if params.Data.Teacher.TeacherData.Gender != nil {
+	if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.Gender != nil {
 		genderArgs := []any{"gender = (?)", params.Data.Teacher.TeacherData.Gender}
 		preloadTeacherDataArgs = append(preloadTeacherDataArgs, genderArgs...)
 	}
 
-	if params.Data.Teacher.TeacherData.EmploymentStatus != nil {
+	if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.EmploymentStatus != nil {
 		employmentStatusArgs := []any{"employment_status = (?)", params.Data.Teacher.TeacherData.EmploymentStatus}
 		preloadTeacherDataArgs = append(preloadTeacherDataArgs, employmentStatusArgs...)
 	}

@@ -30,7 +30,7 @@ func Init(db *gorm.DB) AcademicYearRepo {
 
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.AcademicYear, error) {
 	var year model.AcademicYear
-	if err := r.db.Where("id = ?", id).Find(&year).Error; err != nil {
+	if err := r.db.Where("id = ?", id).First(&year).Error; err != nil {
 		return nil, err
 	}
 
@@ -81,6 +81,10 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, year *model.AcademicYear)
 		return result.Error
 	}
 
+	if result.RowsAffected != 1 {
+		return gorm.ErrRecordNotFound
+	}
+
 	return nil
 }
 
@@ -92,6 +96,10 @@ func (r *impRepo) UpdateStatus(tx *gorm.DB, id uuid.UUID, year *model.AcademicYe
 	result := tx.Model(year).Where("id = ?", id).Select("IsActive").Updates(year)
 	if result.Error != nil {
 		return result.Error
+	}
+
+	if result.RowsAffected != 1 {
+		return gorm.ErrRecordNotFound
 	}
 
 	return nil

@@ -66,7 +66,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			school.PATCH("/:id", h.School.EditOne)
 		}
 
-		student := r.Group("/student")
+		student := admin.Group("/student")
 		{
 			student.POST("/", h.Student.CreateOne)
 			student.POST("/bulk", h.Student.CreateMass)
@@ -83,24 +83,24 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		}
 	}
 
-	student := r.Group("/student")
+	student := r.Group("/s")
 	{
 		student.Use(h.Auth.CheckStudent())
 
 		student.GET("/detail", h.Student.GetOwnDetail)
 		student.GET("/data", h.Student.GetOwnStudentData)
-		student.PATCH("/:student_id", h.Student.EditOne)
-		student.PATCH("/:student_id/family", h.Student.EditFamilyData)
-		student.PATCH("/:student_id/address", h.Student.EditAddressData)
+		student.PATCH("/student/:student_id", h.Student.EditOne)
+		student.PATCH("/student/:student_id/family", h.Student.EditFamilyData)
+		student.PATCH("/student/:student_id/address", h.Student.EditAddressData)
 	}
 
-	teacher := r.Group("/teacher")
+	teacher := r.Group("/t")
 	{
 		teacher.Use(h.Auth.CheckTeacher())
 
-		teacher.GET("/detail", h.Teacher.GetOwnDetail)
-		teacher.GET("/data", h.Teacher.GetOwnTeacherData)
-		teacher.PATCH("/:teacher_id", h.Teacher.EditOne)
+		teacher.GET("/teacher/detail", h.Teacher.GetOwnDetail)
+		teacher.GET("/teacher/data", h.Teacher.GetOwnTeacherData)
+		teacher.PATCH("/teacher/:teacher_id", h.Teacher.EditOne)
 	}
 
 	return r

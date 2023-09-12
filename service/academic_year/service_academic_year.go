@@ -56,6 +56,18 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	if gotYears == nil {
+		return &rs.PaginationResponse[any, rs.AcademicYearResponse]{
+			Data: []rs.AcademicYearResponse{},
+		}, nil
+	}
+
+	if len(*gotYears) < 1 {
+		return &rs.PaginationResponse[any, rs.AcademicYearResponse]{
+			Data: []rs.AcademicYearResponse{},
+		}, nil
+	}
+
 	var datares []rs.AcademicYearResponse
 	err = copier.Copy(&datares, gotYears)
 	if err != nil {
@@ -97,6 +109,10 @@ func (s *impService) GetDetailByID(c context.Context, id string) (*rs.AcademicYe
 }
 
 func (s *impService) CreateOne(c context.Context, newYear *rq.AcademicYearRequest) error {
+	if newYear.Year == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Year"}
+	}
+
 	if len(*newYear.Year) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Year"}
 	}
@@ -122,12 +138,16 @@ func (s *impService) CreateOne(c context.Context, newYear *rq.AcademicYearReques
 }
 
 func (s *impService) EditYear(c context.Context, newYear *rq.AcademicYearRequest) error {
-	if newYear.ID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "ID"}
+	if newYear.Year == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Year"}
 	}
 
 	if len(*newYear.Year) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Year"}
+	}
+
+	if newYear.ID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "ID"}
 	}
 
 	id, err := uuid.Parse(*newYear.ID)

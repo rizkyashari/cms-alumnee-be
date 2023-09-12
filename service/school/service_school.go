@@ -55,6 +55,18 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	if gotSchools == nil {
+		return &rs.PaginationResponse[any, rs.SchoolResponse]{
+			Data: []rs.SchoolResponse{},
+		}, nil
+	}
+
+	if len(*gotSchools) < 1 {
+		return &rs.PaginationResponse[any, rs.SchoolResponse]{
+			Data: []rs.SchoolResponse{},
+		}, nil
+	}
+
 	var datares []rs.SchoolResponse
 	err = copier.Copy(&datares, gotSchools)
 	if err != nil {
@@ -120,12 +132,12 @@ func (s *impService) CreateOne(c context.Context, newSchool *rq.SchoolRequest) e
 }
 
 func (s *impService) EditOne(c context.Context, newSchool *rq.SchoolRequest) error {
-	if newSchool.ID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "ID"}
-	}
-
 	if len(newSchool.Name) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
+	}
+
+	if newSchool.ID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "ID"}
 	}
 
 	id, err := uuid.Parse(*newSchool.ID)

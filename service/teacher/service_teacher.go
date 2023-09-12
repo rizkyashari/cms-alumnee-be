@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"os"
@@ -208,9 +209,36 @@ func getTeacherDataFromRequest(body *rq.TeacherUpdateRequest) (*model.TeacherDat
 }
 
 func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model.Account]) (*rs.PaginationResponse[any, rs.AccountResponse], error) {
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
 	gotAccounts, maxPage, err := s.repo.Account().GetAllTeacher(params)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := rs.PaginationResponse[any, rs.AccountResponse]{}
+			return &res, nil
+		}
+
 		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if gotAccounts == nil {
+		return &rs.PaginationResponse[any, rs.AccountResponse]{
+			Data: []rs.AccountResponse{},
+		}, nil
+	}
+
+	if len(*gotAccounts) < 1 {
+		return &rs.PaginationResponse[any, rs.AccountResponse]{
+			Data: []rs.AccountResponse{},
+		}, nil
 	}
 
 	var response []rs.AccountResponse
@@ -362,6 +390,10 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.TeacherRegi
 		return &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
 
+	if body.Data.SchoolID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "School ID"}
+	}
+
 	parsedSchoolID, err := uuid.Parse(*body.Data.SchoolID)
 	if err != nil {
 		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
@@ -441,6 +473,20 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.TeacherRegi
 }
 
 func (s *impService) processMassCreate(c context.Context, requests *[]rq.TeacherRegisterWithDetailRequest, reportFileName string, newMassCreate *model.MassCreate) {
+	if requests == nil {
+		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
+
+		s.repo.Transaction(func(tx *gorm.DB) error {
+			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		return
+	}
+
 	if len(*requests) >= 350 {
 		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
 

@@ -10,7 +10,7 @@ import (
 )
 
 type MassCreateRepo interface {
-	GetAll(params *rq.PaginationParams[model.MassCreate]) (*[]model.MassCreate, int, error)
+	GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, error)
 	GetDetailByID(id uuid.UUID) (*model.MassCreate, error)
 	CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newCreation *model.MassCreate) error
@@ -26,7 +26,7 @@ func Init(db *gorm.DB) MassCreateRepo {
 	}
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.MassCreate]) (*[]model.MassCreate, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, error) {
 	var entries []model.MassCreate
 
 	chain := r.db

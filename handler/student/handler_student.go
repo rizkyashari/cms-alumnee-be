@@ -28,6 +28,10 @@ type StudentHandler interface {
 	EditOne(c *gin.Context)
 	EditFamilyData(c *gin.Context)
 	EditAddressData(c *gin.Context)
+
+	EditOwnData(c *gin.Context)
+	EditOwnFamilyData(c *gin.Context)
+	EditOwnAddressData(c *gin.Context)
 }
 
 type impHandler struct {
@@ -226,6 +230,78 @@ func (h *impHandler) EditAddressData(c *gin.Context) {
 	}
 
 	err = h.s.Student().EditAddressData(c, studentID, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditOwnData(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	var request rq.StudentUpdateRequest
+	err = c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Student().EditOne(c, gotAccount.Student.ID.String(), &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditOwnFamilyData(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	var request rq.StudentFamilyDataUpdateRequest
+	err = c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Student().EditFamilyData(c, gotAccount.Student.ID.String(), &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditOwnAddressData(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	var request rq.AddressDataUpdateRequest
+	err = c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Student().EditAddressData(c, gotAccount.Student.ID.String(), &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

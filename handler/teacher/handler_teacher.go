@@ -26,6 +26,8 @@ type TeacherHandler interface {
 	CreateMass(c *gin.Context)
 
 	EditOne(c *gin.Context)
+
+	EditOwnData(c *gin.Context)
 }
 
 type impHandler struct {
@@ -197,6 +199,30 @@ func (h *impHandler) EditOne(c *gin.Context) {
 	}
 
 	err = h.s.Teacher().EditOne(c, teacherID, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditOwnData(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	var request rq.TeacherUpdateRequest
+	err = c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Teacher().EditOne(c, gotAccount.Teacher.ID.String(), &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

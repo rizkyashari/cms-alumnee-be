@@ -86,11 +86,19 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var response []rs.ClassroomResponse
-	err = copier.Copy(&response, gotClassrooms)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
+	if gotClassrooms == nil {
+		return &rs.PaginationResponse[any, rs.ClassroomResponse]{
+			Data: []rs.ClassroomResponse{},
+		}, nil
 	}
+
+	if len(*gotClassrooms) < 1 {
+		return &rs.PaginationResponse[any, rs.ClassroomResponse]{
+			Data: []rs.ClassroomResponse{},
+		}, nil
+	}
+
+	var response []rs.ClassroomResponse
 
 	for _, classroom := range *gotClassrooms {
 		var tempResponse rs.ClassroomResponse
@@ -152,8 +160,16 @@ func (s *impService) GetDetailByID(c context.Context, id string) (*rs.ClassroomR
 }
 
 func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequest) error {
+	if newClassroom.Name == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Name"}
+	}
+
 	if len(*newClassroom.Name) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
+	}
+
+	if newClassroom.AcademicYearID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Academic Year ID"}
 	}
 
 	parsedAcademicYearID, err := uuid.Parse(*newClassroom.AcademicYearID)
@@ -163,6 +179,10 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 
 	if parsedAcademicYearID == uuid.Nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Academic Year ID"}
+	}
+
+	if newClassroom.SchoolID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "School ID"}
 	}
 
 	parsedSchoolID, err := uuid.Parse(*newClassroom.SchoolID)
@@ -196,6 +216,10 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 
 		gotTeacherID := gotTeacher.ID.String()
 		newClassroom.TeacherID = &gotTeacherID
+	}
+
+	if newClassroom.TeacherID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
 	}
 
 	parsedTeacherID, err := uuid.Parse(*newClassroom.TeacherID)
@@ -236,6 +260,20 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 }
 
 func (s *impService) processMassCreate(c context.Context, requests *[]rq.ClassroomRequest, reportFileName string, newMassCreate *model.MassCreate) {
+	if requests == nil {
+		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
+
+		s.repo.Transaction(func(tx *gorm.DB) error {
+			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		return
+	}
+
 	if len(*requests) >= 350 {
 		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
 
@@ -339,6 +377,10 @@ func (s *impService) CreateMass(c *gin.Context, academicYearID string, schoolID 
 }
 
 func (s *impService) EditOne(c context.Context, newClassroom *rq.ClassroomRequest) error {
+	if newClassroom.ID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "id"}
+	}
+
 	parsedID, err := uuid.Parse(*newClassroom.ID)
 	if err != nil {
 		return &errmsg.ErrFieldIsWrong{FieldName: "id"}

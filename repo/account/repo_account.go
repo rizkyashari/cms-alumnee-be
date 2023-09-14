@@ -127,7 +127,7 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 	var accounts []model.Account
 
 	var preloadStudentArgs []any
-	if params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
+	if params.Data.Student != nil && params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
 		classromIdArgs := []any{"classroom_id = ?", params.Data.Student.ClassroomID.String()}
 		preloadStudentArgs = append(preloadStudentArgs, classromIdArgs...)
 	}
@@ -135,7 +135,7 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 	chain := r.db.Preload("Student", preloadStudentArgs...)
 
 	var preloadStudentDataArgs []any
-	if params.Data.Student.StudentData.Gender != nil {
+	if params.Data.Student != nil && params.Data.Student.StudentData.Gender != nil {
 		genderArgs := []any{"gender = (?)", params.Data.Student.StudentData.Gender}
 		preloadStudentDataArgs = append(preloadStudentDataArgs, genderArgs...)
 	}
@@ -144,7 +144,7 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 
 	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_STUDENT))
 
-	if len(*params.Data.Name) >= 2 {
+	if params.Data.Name != nil && len(*params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
 	}
 

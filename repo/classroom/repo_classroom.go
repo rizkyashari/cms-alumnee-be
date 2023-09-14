@@ -53,15 +53,15 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 	chain := r.db.Preload("AcademicYear").Preload("Teacher")
 
 	if params.Data.TeacherID != uuid.Nil {
-		chain = chain.Where(r.db.Where("teacher_id = " + params.Data.TeacherID.String()))
+		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
 	}
 
 	if params.Data.SchoolID != uuid.Nil {
-		chain = chain.Where(r.db.Where("school_id = " + params.Data.SchoolID.String()))
+		chain = chain.Where(r.db.Where(`school_id = ?`, params.Data.SchoolID.String()))
 	}
 
 	if params.Data.AcademicYearID != uuid.Nil {
-		chain = chain.Where(r.db.Where("academic_year_id = " + params.Data.AcademicYearID.String()))
+		chain = chain.Where(r.db.Where("academic_year_id = ?", params.Data.AcademicYearID.String()))
 	}
 
 	if len(params.Data.Name) >= 2 {

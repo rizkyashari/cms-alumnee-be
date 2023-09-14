@@ -15,6 +15,12 @@ type SubjectRepo interface {
 	CreateOne(tx *gorm.DB, newSubject *model.Subject) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newSubject *model.Subject) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
+
+	GetComponentDetailByComponentID(componentId uuid.UUID) (*model.SubjectComponent, error)
+	GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, error)
+	CreateOneComponent(tx *gorm.DB, newSubjectComp *model.SubjectComponent) error
+	UpdateOneComponent(tx *gorm.DB, componentId uuid.UUID, newSubjectComp *model.SubjectComponent) error
+	DeleteOneComponent(tx *gorm.DB, id uuid.UUID) error
 }
 
 type impRepo struct {
@@ -95,6 +101,81 @@ func (r *impRepo) DeleteOne(tx *gorm.DB, id uuid.UUID) error {
 	}
 
 	result := tx.Delete(&model.Subject{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (r *impRepo) GetComponentDetailByComponentID(componentId uuid.UUID) (*model.SubjectComponent, error) {
+	var SubjectComponent model.SubjectComponent
+	if err := r.db.Where("id = ?", componentId).Find(&SubjectComponent).Error; err != nil {
+		return nil, err
+	}
+
+	return &SubjectComponent, nil
+}
+
+func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, error) {
+	var subjectComps []model.SubjectComponent
+
+	chain := r.db
+
+	if len(params.Data.Name) >= 2 {
+		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))
+	}
+
+	if params.Data.SubjectID != uuid.Nil {
+		chain = chain.Where(r.db.Where("subject_id = " + params.Data.SubjectID.String()))
+	}
+
+	maxPage := util.GetMaxPage(chain.Find(&subjectComps), params.Limit)
+
+	validColumnName := []string{
+		"created_at",
+		"updated_at",
+		"name",
+	}
+
+	result := chain.Scopes(
+		util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).
+		Find(&subjectComps)
+
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return &subjectComps, maxPage, nil
+}
+
+func (r *impRepo) CreateOneComponent(tx *gorm.DB, newSubjectComp *model.SubjectComponent) error {
+	if err := tx.Create(newSubjectComp).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *impRepo) UpdateOneComponent(tx *gorm.DB, componentId uuid.UUID, newSubjectComp *model.SubjectComponent) error {
+	if newSubjectComp == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject Component"}
+	}
+
+	result := tx.Model(newSubjectComp).Where("id = ?", componentId).Updates(newSubjectComp)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (r *impRepo) DeleteOneComponent(tx *gorm.DB, id uuid.UUID) error {
+	if id == uuid.Nil {
+		return &errmsg.ErrIsEmpty{FieldName: "id"}
+	}
+
+	result := tx.Delete(&model.SubjectComponent{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

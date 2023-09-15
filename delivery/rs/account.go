@@ -16,6 +16,6 @@ type AccountResponse struct {
 	Avatar      string           `json:"avatar"`
 	AccountType int              `json:"account_type"`
 	ActivatedAt sql.NullTime     `json:"activated_at"`
-	Student     *StudentResponse `json:"student_data,omitempty"`
-	Teacher     *TeacherResponse `json:"teacher_data,omitempty"`
+	Student     *StudentResponse `json:"student,omitempty"`
+	Teacher     *TeacherResponse `json:"teacher,omitempty"`
 }

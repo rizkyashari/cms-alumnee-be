@@ -45,14 +45,22 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Subject, error) {
 func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, error) {
 	var subjects []model.Subject
 
-	chain := r.db
+	chain := r.db.Preload("SubjectComponent")
 
 	if len(params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))
 	}
 
 	if params.Data.TeacherID != uuid.Nil {
-		chain = chain.Where(r.db.Where("teacher_id = " + params.Data.TeacherID.String()))
+		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
+	}
+
+	if len(params.Data.Schedules) > 0 {
+		scheduleParams := params.Data.Schedules[0]
+		if scheduleParams.ClassroomID != uuid.Nil {
+			chain = chain.Where(r.db.Where("id = (?)",
+				r.db.Debug().Model(&model.Schedule{}).Where("classroom_id = ?", scheduleParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+		}
 	}
 
 	maxPage := util.GetMaxPage(chain.Find(&subjects), params.Limit)

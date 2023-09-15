@@ -108,3 +108,54 @@ var MassCreateStatusMap = map[int]bool{
 	MASS_CREATE_STATUS_DONE:       true,
 	MASS_CREATE_STATUS_FAILED:     true,
 }
+
+///
+
+const (
+	_ int = iota
+	TYPE_REWARD
+	TYPE_PUNISHMENT
+)
+
+var RewardPunishmentTypeMap = map[int]bool{
+	TYPE_REWARD:     true,
+	TYPE_PUNISHMENT: true,
+}
+
+///
+
+const (
+	_ int = iota
+	FEEDBACK_SCORE_STRONGLY_DISAGREE
+	FEEDBACK_SCORE_DISAGREE
+	FEEDBACK_SCORE_NEUTRAL
+	FEEDBACK_SCORE_AGREE
+	FEEDBACK_SCORE_STRONGLY_AGREE
+)
+
+var FeedbackScoreValueMap = map[int]bool{
+	FEEDBACK_SCORE_STRONGLY_DISAGREE: true,
+	FEEDBACK_SCORE_DISAGREE:          true,
+	FEEDBACK_SCORE_NEUTRAL:           true,
+	FEEDBACK_SCORE_AGREE:             true,
+	FEEDBACK_SCORE_STRONGLY_AGREE:    true,
+}
+
+///
+
+const (
+	_ int = iota
+	ATTENDANCE_STATUS_ATTEND
+	ATTENDANCE_STATUS_ABSENT_PERMITTED
+	ATTENDANCE_STATUS_ABSENT_SICK
+	ATTENDANCE_STATUS_ABSENT_NO_REMARK
+	ATTENDANCE_STATUS_OTHER
+)
+
+var AttendanceStatusMap = map[int]bool{
+	ATTENDANCE_STATUS_ATTEND:           true,
+	ATTENDANCE_STATUS_ABSENT_PERMITTED: true,
+	ATTENDANCE_STATUS_ABSENT_SICK:      true,
+	ATTENDANCE_STATUS_ABSENT_NO_REMARK: true,
+	ATTENDANCE_STATUS_OTHER:            true,
+}

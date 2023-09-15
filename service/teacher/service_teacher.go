@@ -255,8 +255,18 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		if err != nil {
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
-
 		tempAccount.Teacher = &tempTeacher
+
+		if tempAccount.Teacher != nil {
+			var tempTeacherData rs.TeacherDataResponse
+			err = copier.Copy(&tempTeacherData, account.Teacher.TeacherData)
+			if err != nil {
+				return nil, &errmsg.ErrInternal{Err: err}
+			}
+			if tempTeacherData.ID != uuid.Nil {
+				tempAccount.Teacher.TeacherData = &tempTeacherData
+			}
+		}
 
 		response = append(response, tempAccount)
 	}

@@ -12,6 +12,7 @@ import (
 	school "github.com/fadhln/lms-be/repo/school"
 	student "github.com/fadhln/lms-be/repo/student"
 	studentdata "github.com/fadhln/lms-be/repo/student_data"
+	subject "github.com/fadhln/lms-be/repo/subject"
 	teacher "github.com/fadhln/lms-be/repo/teacher"
 	teacherdata "github.com/fadhln/lms-be/repo/teacher_data"
 	"github.com/go-redis/redis/v8"
@@ -29,6 +30,7 @@ type Repository interface {
 	School() school.SchoolRepo
 	Student() student.StudentRepo
 	StudentData() studentdata.StudentDataRepo
+	Subject() subject.SubjectRepo
 	Teacher() teacher.TeacherRepo
 	TeacherData() teacherdata.TeacherDataRepo
 }
@@ -79,6 +81,10 @@ func (r *impRepo) Student() student.StudentRepo {
 
 func (r *impRepo) StudentData() studentdata.StudentDataRepo {
 	return studentdata.Init(r.DB)
+}
+
+func (r *impRepo) Subject() subject.SubjectRepo {
+	return subject.Init(r.DB)
 }
 
 func (r *impRepo) Teacher() teacher.TeacherRepo {

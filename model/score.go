@@ -4,12 +4,8 @@ import "github.com/google/uuid"
 
 type Score struct {
 	Base
-	StudentID       uuid.UUID
-	ScoreComponents []ScoreComponent
-}
-
-type ScoreComponent struct {
-	Base
-	ScoreID            uuid.UUID
+	StudentID          uuid.UUID
 	SubjectComponentID uuid.UUID
+	Value              float64
+	SubjectComponent   SubjectComponent
 }

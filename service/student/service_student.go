@@ -245,7 +245,22 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
+		var tempStudentData rs.StudentDataResponse
+		err = copier.Copy(&tempStudentData, account.Student.StudentData)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
 		tempAccount.Student = &tempStudent
+
+		if tempAccount.Student != nil {
+			var tempStudentData rs.StudentDataResponse
+			err = copier.Copy(&tempStudentData, account.Student.StudentData)
+			if err != nil {
+				return nil, &errmsg.ErrInternal{Err: err}
+			}
+			tempAccount.Student.StudentData = &tempStudentData
+		}
 
 		response = append(response, tempAccount)
 	}
@@ -364,6 +379,7 @@ func (s *impService) CreateOne(c context.Context, body *rq.StudentRegisterReques
 	}
 
 	newID := uuid.New()
+	newStudentID := uuid.New()
 
 	newAccount := model.Account{
 		Base:        model.Base{ID: newID},
@@ -374,8 +390,10 @@ func (s *impService) CreateOne(c context.Context, body *rq.StudentRegisterReques
 	}
 
 	newStudent := model.Student{
+		Base:        model.Base{ID: newStudentID},
 		AccountID:   newID,
 		ClassroomID: &parsedClassroomID,
+		StudentData: model.StudentData{StudentID: newStudentID},
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {

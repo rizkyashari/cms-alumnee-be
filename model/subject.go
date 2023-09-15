@@ -14,7 +14,8 @@ type Subject struct {
 
 type SubjectComponent struct {
 	Base
-	Name            string
-	SubjectID       uuid.UUID
-	ScoreComponents []ScoreComponent
+	Name       string
+	Percentage int
+	SubjectID  uuid.UUID
+	Scores     []Score
 }

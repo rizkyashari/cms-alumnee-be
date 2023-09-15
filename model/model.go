@@ -16,6 +16,5 @@ var Entities = []interface{}{
 	&AddressData{},
 	&SubjectComponent{},
 	&Score{},
-	&ScoreComponent{},
 	&MassCreate{},
 }

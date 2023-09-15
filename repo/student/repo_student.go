@@ -35,12 +35,6 @@ func (r *impRepo) GetDetailByAccountID(id uuid.UUID) (*model.Student, error) {
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newStudent *model.Student) error {
-	newStudentData := model.StudentData{
-		StudentFamilyData: &model.StudentFamilyData{},
-		AddressData:       &model.AddressData{},
-	}
-	newStudent.StudentData = newStudentData
-
 	if err := tx.Create(newStudent).Error; err != nil {
 		return err
 	}

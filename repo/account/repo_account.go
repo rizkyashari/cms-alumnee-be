@@ -83,7 +83,7 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 		preloadTeacherArgs = append(preloadTeacherArgs, schoolIdArgs...)
 	}
 
-	chain := r.db.Preload("Teacher", preloadTeacherArgs...)
+	chain := r.db.Preload("Teacher.TeacherData", preloadTeacherArgs...)
 
 	var preloadTeacherDataArgs []any
 	if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.Gender != nil {
@@ -132,7 +132,7 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 		preloadStudentArgs = append(preloadStudentArgs, classromIdArgs...)
 	}
 
-	chain := r.db.Preload("Student", preloadStudentArgs...)
+	chain := r.db.Preload("Student.StudentData", preloadStudentArgs...)
 
 	var preloadStudentDataArgs []any
 	if params.Data.Student != nil && params.Data.Student.StudentData.Gender != nil {

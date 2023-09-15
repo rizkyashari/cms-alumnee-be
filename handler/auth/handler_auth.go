@@ -87,7 +87,7 @@ func (h *impHandler) CheckAuth() gin.HandlerFunc {
 
 func (h *impHandler) CheckAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		gotAccount, err := util.GetAccountContext(c)
+		gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_ADMIN)
 		if err != nil {
 			rs.ErrorResponse(c, err)
 			c.Abort()
@@ -106,7 +106,7 @@ func (h *impHandler) CheckAdmin() gin.HandlerFunc {
 
 func (h *impHandler) CheckStudent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		gotAccount, err := util.GetAccountContext(c)
+		gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 		if err != nil {
 			rs.ErrorResponse(c, err)
 			c.Abort()
@@ -125,7 +125,7 @@ func (h *impHandler) CheckStudent() gin.HandlerFunc {
 
 func (h *impHandler) CheckTeacher() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		gotAccount, err := util.GetAccountContext(c)
+		gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 		if err != nil {
 			rs.ErrorResponse(c, err)
 			c.Abort()

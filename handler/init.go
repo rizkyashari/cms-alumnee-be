@@ -39,6 +39,11 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.GET("/teacher/:account_id", h.Teacher.GetDetailByAccountID)
 	r.GET("/teacher/data/:teacher_id", h.Teacher.GetTeacherDataByTeacherID)
 
+	r.GET("/subject", h.Subject.GetAll)
+	r.GET("/subject/:id", h.Subject.GetDetailByID)
+	r.GET("/subject/:subject_id/component", h.Subject.GetAllSubjectComponentBySubjectID)
+	r.GET("/subject-component/:subject_component_id", h.Subject.GetSubjectComponentDetailByID)
+
 	r.Use(h.Auth.CheckAuth())
 	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
 
@@ -87,6 +92,15 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			teacher.POST("/bulk", h.Teacher.CreateMass)
 			teacher.PATCH("/:teacher_id", h.Teacher.EditOne)
 		}
+
+		subject := admin.Group("/subject")
+		{
+			subject.POST("/", h.Subject.CreateOne)
+			subject.PATCH("/:id", h.Subject.EditOne)
+
+			subject.POST("/component", h.Subject.CreateOneSubjectComponent)
+			subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponent)
+		}
 	}
 
 	student := r.Group("/s")
@@ -98,6 +112,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		student.PATCH("/data", h.Student.EditOwnData)
 		student.PATCH("/data/family", h.Student.EditOwnFamilyData)
 		student.PATCH("/data/address", h.Student.EditOwnAddressData)
+
+		student.GET("/subject", h.Subject.GetAllOwnStudent)
 	}
 
 	teacher := r.Group("/t")
@@ -107,6 +123,16 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		teacher.GET("/detail", h.Teacher.GetOwnDetail)
 		teacher.GET("/data", h.Teacher.GetOwnTeacherData)
 		teacher.PATCH("/data", h.Teacher.EditOwnData)
+
+		subject := teacher.Group("/subject")
+		{
+			subject.GET("/", h.Subject.GetAllOwnTeacher)
+
+			subject.PATCH("/:id", h.Subject.EditOneWithValidation)
+
+			subject.POST("/component", h.Subject.CreateOneSubjectComponentWithValidation)
+			subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponentWithValidation)
+		}
 	}
 
 	return r

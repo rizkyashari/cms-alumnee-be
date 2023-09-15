@@ -29,9 +29,12 @@ type SubjectService interface {
 
 	CreateOne(c context.Context, newSubject *rq.SubjectRequest) error
 	CreateOneSubjectComponent(c context.Context, newSubjectComp *rq.SubjectComponentRequest) error
+	CreateOneSubjectComponentWithValidation(c context.Context, teacherId string, newSubjectComp *rq.SubjectComponentRequest) error
 
 	EditOne(c context.Context, subjectID string, newSubject *rq.SubjectRequest) error
+	EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error
 	EditOneSubjectComponent(c context.Context, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
+	EditOneSubjectComponentWithValidation(c context.Context, teacherId string, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
 }
 
 type impService struct {
@@ -404,6 +407,23 @@ func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp
 	return nil
 }
 
+func (s *impService) CreateOneSubjectComponentWithValidation(c context.Context, teacherId string, newSubjectComp *rq.SubjectComponentRequest) error {
+	if newSubjectComp.SubjectID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+	}
+
+	gotSubject, err := s.GetDetailByID(c, *newSubjectComp.SubjectID)
+	if err != nil {
+		return err
+	}
+
+	if gotSubject.TeacherID.String() != teacherId {
+		return &errmsg.ErrUserIsNot{FieldName: "Subject Teacher"}
+	}
+
+	return s.CreateOneSubjectComponent(c, newSubjectComp)
+}
+
 func (s *impService) EditOne(c context.Context, subjectID string, body *rq.SubjectRequest) error {
 	if len(subjectID) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
@@ -454,6 +474,19 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 	}
 
 	return nil
+}
+
+func (s *impService) EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error {
+	gotSubject, err := s.GetDetailByID(c, subjectID)
+	if err != nil {
+		return err
+	}
+
+	if gotSubject.TeacherID.String() != teacherId {
+		return &errmsg.ErrUserIsNot{FieldName: "Subject Teacher"}
+	}
+
+	return s.EditOne(c, subjectID, newSubject)
 }
 
 func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID string, body *rq.SubjectComponentRequest) error {
@@ -527,4 +560,23 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 	}
 
 	return nil
+}
+
+func (s *impService) EditOneSubjectComponentWithValidation(c context.Context, teacherId string, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error {
+	gotSubjectComponent, err := s.GetSubjectComponentDetailByID(c, subjectCompID)
+	if err != nil {
+		return err
+	}
+
+	gotSubject, err := s.GetDetailByID(c, gotSubjectComponent.SubjectID.String())
+	if err != nil {
+		return err
+	}
+
+	if gotSubject.TeacherID.String() != teacherId {
+		return &errmsg.ErrUserIsNot{FieldName: "Subject Teacher"}
+	}
+
+	return s.EditOneSubjectComponent(c, subjectCompID, newSubjectComp)
+
 }

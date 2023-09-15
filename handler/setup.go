@@ -7,6 +7,7 @@ import (
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
 	school "github.com/fadhln/lms-be/handler/school"
 	student "github.com/fadhln/lms-be/handler/student"
+	subject "github.com/fadhln/lms-be/handler/subject"
 	teacher "github.com/fadhln/lms-be/handler/teacher"
 	"github.com/fadhln/lms-be/service"
 )
@@ -20,6 +21,7 @@ type Handler struct {
 	MassCreate   masscreate.MassCreateHandler
 	School       school.SchoolHandler
 	Student      student.StudentHandler
+	Subject      subject.SubjectHandler
 	Teacher      teacher.TeacherHandler
 }
 
@@ -32,6 +34,7 @@ func SetupHandler(s service.Service) *Handler {
 		MassCreate:   masscreate.Init(s),
 		School:       school.Init(s),
 		Student:      student.Init(s),
+		Subject:      subject.Init(s),
 		Teacher:      teacher.Init(s),
 	}
 }

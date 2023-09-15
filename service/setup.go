@@ -9,6 +9,7 @@ import (
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
 	school "github.com/fadhln/lms-be/service/school"
 	student "github.com/fadhln/lms-be/service/student"
+	subject "github.com/fadhln/lms-be/service/subject"
 	teacher "github.com/fadhln/lms-be/service/teacher"
 )
 
@@ -20,6 +21,7 @@ type Service interface {
 	MassCreate() masscreate.MassCreateService
 	School() school.SchoolService
 	Student() student.StudentService
+	Subject() subject.SubjectService
 	Teacher() teacher.TeacherService
 }
 
@@ -59,6 +61,10 @@ func (s *impService) School() school.SchoolService {
 
 func (s *impService) Student() student.StudentService {
 	return student.Init(s.repo)
+}
+
+func (s *impService) Subject() subject.SubjectService {
+	return subject.Init(s.repo)
 }
 
 func (s *impService) Teacher() teacher.TeacherService {

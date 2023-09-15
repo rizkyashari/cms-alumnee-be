@@ -116,7 +116,7 @@ func (h *impHandler) GetTeacherDataByTeacherID(c *gin.Context) {
 }
 
 func (h *impHandler) GetOwnDetail(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -132,7 +132,7 @@ func (h *impHandler) GetOwnDetail(c *gin.Context) {
 }
 
 func (h *impHandler) GetOwnTeacherData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -208,7 +208,7 @@ func (h *impHandler) EditOne(c *gin.Context) {
 }
 
 func (h *impHandler) EditOwnData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

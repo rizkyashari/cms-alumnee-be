@@ -168,7 +168,7 @@ func (s *impService) Register(c context.Context, body *rq.RegisterRequest) (*rs.
 }
 
 func (s *impService) GetOwnAccountDetail(c *gin.Context) (*rs.AccountResponse, error) {
-	gotUser, err := util.GetAccountContext(c)
+	gotUser, err := util.GetAccountContext(c, 0)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}

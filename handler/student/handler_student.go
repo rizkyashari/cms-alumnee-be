@@ -109,7 +109,7 @@ func (h *impHandler) GetStudentDataByStudentID(c *gin.Context) {
 }
 
 func (h *impHandler) GetOwnDetail(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -125,7 +125,7 @@ func (h *impHandler) GetOwnDetail(c *gin.Context) {
 }
 
 func (h *impHandler) GetOwnStudentData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -239,7 +239,7 @@ func (h *impHandler) EditAddressData(c *gin.Context) {
 }
 
 func (h *impHandler) EditOwnData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -263,7 +263,7 @@ func (h *impHandler) EditOwnData(c *gin.Context) {
 }
 
 func (h *impHandler) EditOwnFamilyData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -287,7 +287,7 @@ func (h *impHandler) EditOwnFamilyData(c *gin.Context) {
 }
 
 func (h *impHandler) EditOwnAddressData(c *gin.Context) {
-	gotAccount, err := util.GetAccountContext(c)
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

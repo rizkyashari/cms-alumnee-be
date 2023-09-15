@@ -475,6 +475,7 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.StudentRegi
 		Base:        model.Base{ID: newStudentID},
 		AccountID:   newAccountID,
 		ClassroomID: &parsedClassroomID,
+		StudentData: model.StudentData{StudentID: newStudentID},
 	}
 
 	newStudentData, _, err := getStudentDataFromRequest(&body.Data)

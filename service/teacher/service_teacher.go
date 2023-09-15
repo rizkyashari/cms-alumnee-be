@@ -362,6 +362,7 @@ func (s *impService) CreateOne(c context.Context, body *rq.TeacherRegisterReques
 	}
 
 	newID := uuid.New()
+	newTeacherID := uuid.New()
 
 	newAccount := model.Account{
 		Base:        model.Base{ID: newID},
@@ -372,8 +373,10 @@ func (s *impService) CreateOne(c context.Context, body *rq.TeacherRegisterReques
 	}
 
 	newTeacher := model.Teacher{
-		AccountID: newID,
-		SchoolID:  parsedSchoolID,
+		Base:        model.Base{ID: newTeacherID},
+		AccountID:   newID,
+		SchoolID:    parsedSchoolID,
+		TeacherData: model.TeacherData{TeacherID: newTeacherID},
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {

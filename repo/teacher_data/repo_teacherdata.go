@@ -9,6 +9,7 @@ import (
 
 type TeacherDataRepo interface {
 	GetTeacherDataByTeacherID(id uuid.UUID) (*model.TeacherData, error)
+	CreateOne(tx *gorm.DB, newTeacherData *model.TeacherData) error
 	UpdateOne(tx *gorm.DB, teacherID uuid.UUID, newTeacherData *model.TeacherData) error
 }
 
@@ -29,6 +30,14 @@ func (r *impRepo) GetTeacherDataByTeacherID(id uuid.UUID) (*model.TeacherData, e
 	}
 
 	return &teacherData, nil
+}
+
+func (r *impRepo) CreateOne(tx *gorm.DB, newTeacherData *model.TeacherData) error {
+	if err := tx.Create(newTeacherData).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *impRepo) UpdateOne(tx *gorm.DB, teacherID uuid.UUID, newTeacherData *model.TeacherData) error {

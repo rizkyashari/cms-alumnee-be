@@ -9,6 +9,7 @@ import (
 
 type StudentDataRepo interface {
 	GetStudentDataByStudentID(id uuid.UUID) (*model.StudentData, error)
+	CreateOne(tx *gorm.DB, newStudentData *model.StudentData) error
 	UpdateOne(tx *gorm.DB, studentID uuid.UUID, newStudentData *model.StudentData) error
 	UpdateOneStudentFamilyData(tx *gorm.DB, studentDataID uuid.UUID, newStudentFamilyData *model.StudentFamilyData) error
 	UpdateOneAddressData(tx *gorm.DB, studentDataID uuid.UUID, newAddressData *model.AddressData) error
@@ -34,6 +35,14 @@ func (r *impRepo) GetStudentDataByStudentID(id uuid.UUID) (*model.StudentData, e
 	}
 
 	return &studentData, nil
+}
+
+func (r *impRepo) CreateOne(tx *gorm.DB, newStudentData *model.StudentData) error {
+	if err := tx.Create(newStudentData).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *impRepo) UpdateOne(tx *gorm.DB, studentID uuid.UUID, newStudentData *model.StudentData) error {

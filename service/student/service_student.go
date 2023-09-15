@@ -475,7 +475,6 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.StudentRegi
 		Base:        model.Base{ID: newStudentID},
 		AccountID:   newAccountID,
 		ClassroomID: &parsedClassroomID,
-		StudentData: model.StudentData{StudentID: newStudentID},
 	}
 
 	newStudentData, _, err := getStudentDataFromRequest(&body.Data)
@@ -494,14 +493,7 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.StudentRegi
 			return err
 		}
 
-		gotStudentData, err := s.repo.StudentData().GetStudentDataByStudentID(newStudentID)
-		if err != nil {
-			return err
-		}
-
-		newStudentData.ID = gotStudentData.ID
-
-		if err := s.repo.StudentData().UpdateOne(tx, newStudentID, newStudentData); err != nil {
+		if err := s.repo.StudentData().CreateOne(tx, newStudentData); err != nil {
 			return err
 		}
 

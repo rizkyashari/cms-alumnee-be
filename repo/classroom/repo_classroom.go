@@ -31,7 +31,9 @@ func Init(db *gorm.DB) ClassroomRepo {
 
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Classroom, error) {
 	var classroom model.Classroom
-	if err := r.db.Where("id = ?", id).Find(&classroom).Error; err != nil {
+
+	chain := r.db.Preload("AcademicYear").Preload("Teacher").Preload("Teacher.TeacherData")
+	if err := chain.Where("id = ?", id).Find(&classroom).Error; err != nil {
 		return nil, err
 	}
 
@@ -40,7 +42,9 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Classroom, error) {
 
 func (r *impRepo) GetDetailByCode(code string) (*model.Classroom, error) {
 	var classroom model.Classroom
-	if err := r.db.Where("code = ?", code).First(&classroom).Error; err != nil {
+
+	chain := r.db.Preload("AcademicYear").Preload("Teacher").Preload("Teacher.TeacherData")
+	if err := chain.Where("code = ?", code).First(&classroom).Error; err != nil {
 		return nil, err
 	}
 
@@ -50,7 +54,7 @@ func (r *impRepo) GetDetailByCode(code string) (*model.Classroom, error) {
 func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error) {
 	var classrooms []model.Classroom
 
-	chain := r.db.Preload("AcademicYear").Preload("Teacher")
+	chain := r.db.Preload("AcademicYear").Preload("Teacher").Preload("Teacher.TeacherData")
 
 	if params.Data.TeacherID != uuid.Nil {
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))

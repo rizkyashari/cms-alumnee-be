@@ -119,7 +119,15 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
+		var tempTeacherData rs.TeacherDataResponse
+		err = copier.Copy(&tempTeacher, classroom.Teacher.TeacherData)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
 		tempResponse.AcademicYear = tempAcademicYear
+
+		tempTeacher.TeacherData = &tempTeacherData
 		tempResponse.Teacher = tempTeacher
 
 		response = append(response, tempResponse)
@@ -150,13 +158,36 @@ func (s *impService) GetDetailByID(c context.Context, id string) (*rs.ClassroomR
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var res rs.ClassroomResponse
-	err = copier.Copy(&res, gotClassroom)
+	var tempResponse rs.ClassroomResponse
+	err = copier.Copy(&tempResponse, gotClassroom)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	return &res, nil
+	var tempAcademicYear rs.AcademicYearResponse
+	err = copier.Copy(&tempAcademicYear, gotClassroom.AcademicYear)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempTeacher rs.TeacherResponse
+	err = copier.Copy(&tempTeacher, gotClassroom.Teacher)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempTeacherData rs.TeacherDataResponse
+	err = copier.Copy(&tempTeacher, gotClassroom.Teacher.TeacherData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	tempResponse.AcademicYear = tempAcademicYear
+
+	tempTeacher.TeacherData = &tempTeacherData
+	tempResponse.Teacher = tempTeacher
+
+	return &tempResponse, nil
 }
 
 func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequest) error {

@@ -15,6 +15,7 @@ import (
 
 type SubjectHandler interface {
 	GetAll(c *gin.Context)
+	GetAllByClassroomID(c *gin.Context)
 	GetAllOwnTeacher(c *gin.Context)
 	GetAllOwnStudent(c *gin.Context)
 	GetDetailByID(c *gin.Context)
@@ -63,6 +64,36 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	}
 
 	res, err := h.s.Subject().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllByClassroomID(c *gin.Context) {
+	classroomID := c.Param("classroom_id")
+
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+
+	params := rq.PaginationParams[model.Subject]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Subject{
+			Name: searchName,
+		},
+	}
+
+	res, err := h.s.Subject().GetAllSubjectByClassroomID(c, classroomID, &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

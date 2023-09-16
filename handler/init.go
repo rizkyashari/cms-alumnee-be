@@ -40,6 +40,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.GET("/teacher/data/:teacher_id", h.Teacher.GetTeacherDataByTeacherID)
 
 	r.GET("/subject", h.Subject.GetAll)
+	r.GET("/subject/by-classroom/:classroom_id", h.Subject.GetAllByClassroomID)
 	r.GET("/subject/:id", h.Subject.GetDetailByID)
 	r.GET("/subject/:id/component", h.Subject.GetAllSubjectComponentBySubjectID)
 	r.GET("/subject-component/:subject_component_id", h.Subject.GetSubjectComponentDetailByID)

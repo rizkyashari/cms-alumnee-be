@@ -4,14 +4,14 @@ import "github.com/google/uuid"
 
 type Classroom struct {
 	Base
-	Name           string
-	Code           string `gorm:"uniqueIndex"`
-	TeacherID      uuid.UUID
-	SchoolID       uuid.UUID
-	AcademicYearID uuid.UUID
-	AcademicYear   AcademicYear `gorm:"foreignKey:AcademicYearID;references:ID"`
-	Teacher        Teacher      `gorm:"foreignKey:TeacherID;references:ID"`
-	Schedules      []Schedule
+	Name                      string
+	Code                      string `gorm:"uniqueIndex"`
+	TeacherID                 uuid.UUID
+	SchoolID                  uuid.UUID
+	AcademicYearID            uuid.UUID
+	AcademicYear              AcademicYear `gorm:"foreignKey:AcademicYearID;references:ID"`
+	Teacher                   Teacher      `gorm:"foreignKey:TeacherID;references:ID"`
+	RelationClassroomSubjects []RelationClassroomSubject
 }
 
 func GetClassroomHeader() []string {

@@ -6,10 +6,10 @@ import (
 
 type Subject struct {
 	Base
-	Name              string
-	TeacherID         uuid.UUID
-	Schedules         []Schedule
-	SubjectComponents []SubjectComponent
+	Name                      string
+	TeacherID                 uuid.UUID
+	RelationClassroomSubjects []RelationClassroomSubject
+	SubjectComponents         []SubjectComponent
 }
 
 type SubjectComponent struct {

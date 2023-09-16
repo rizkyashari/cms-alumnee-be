@@ -55,11 +55,11 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
 	}
 
-	if len(params.Data.Schedules) > 0 {
-		scheduleParams := params.Data.Schedules[0]
-		if scheduleParams.ClassroomID != uuid.Nil {
+	if len(params.Data.RelationClassroomSubjects) > 0 {
+		relationParams := params.Data.RelationClassroomSubjects[0]
+		if relationParams.ClassroomID != uuid.Nil {
 			chain = chain.Where(r.db.Where("id = (?)",
-				r.db.Debug().Model(&model.Schedule{}).Where("classroom_id = ?", scheduleParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", relationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
 		}
 	}
 

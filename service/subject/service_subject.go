@@ -143,7 +143,7 @@ func (s *impService) GetAllSubjectByClassroomID(c context.Context, classroomID s
 	}
 
 	newParams := *params
-	newParams.Data.Schedules = []model.Schedule{
+	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
 		{ClassroomID: parsedClassroomID},
 	}
 

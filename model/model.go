@@ -4,6 +4,7 @@ var Entities = []interface{}{
 	&Account{},
 	&Admin{},
 	&Subject{},
+	&RelationClassroomSubject{},
 	&Schedule{},
 	&School{},
 	&Teacher{},

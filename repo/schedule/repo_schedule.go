@@ -41,13 +41,16 @@ func (r *impRepo) GetAll(params *rq.ScheduleParams) (*[]model.Schedule, error) {
 	var schedules []model.Schedule
 
 	chain := r.db
+	if params.Data != nil {
+		if params.Data.RelationClassroomSubject.ClassroomID != uuid.Nil {
+			chain = chain.Where(r.db.Where("relation_classroom_subject__id = (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", params.Data.RelationClassroomSubject.ClassroomID).Select("id")))
+		}
 
-	if params.Data.ClassroomID != uuid.Nil {
-		chain = chain.Where(r.db.Where("classroom_id = ?", params.Data.ClassroomID.String()))
-	}
-
-	if params.Data.SubjectID != uuid.Nil {
-		chain = chain.Where(r.db.Where("subject_id = ?", params.Data.SubjectID.String()))
+		if params.Data.RelationClassroomSubject.SubjectID != uuid.Nil {
+			chain = chain.Where(r.db.Where("relation_classroom_subject_id = (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id = ?", params.Data.RelationClassroomSubject.SubjectID).Select("id")))
+		}
 	}
 
 	chain.Where(r.db.Where("start >= ?", params.Start))

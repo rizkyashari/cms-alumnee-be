@@ -36,6 +36,10 @@ type SubjectService interface {
 	EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error
 	EditOneSubjectComponent(c context.Context, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
 	EditOneSubjectComponentWithValidation(c context.Context, teacherId string, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
+
+	// GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error)
+	// AssignClassroomsToSubject(c context.Context, subjectID string, classroomIDs []string) error
+	// RemoveClassroomsFromSubject(c context.Context, subjectID string, classroomIDs []string) error
 }
 
 type impService struct {
@@ -97,6 +101,8 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		if err != nil {
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
+
+		response = append(response, tempResponse)
 	}
 
 	res := rs.PaginationResponse[any, rs.SubjectResponse]{
@@ -646,3 +652,7 @@ func (s *impService) EditOneSubjectComponentWithValidation(c context.Context, te
 	return s.EditOneSubjectComponent(c, subjectCompID, newSubjectComp)
 
 }
+
+// func (s *impService) GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
+
+// }

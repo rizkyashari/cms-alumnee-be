@@ -394,6 +394,22 @@ func (s *impService) EditOne(c context.Context, newClassroom *rq.ClassroomReques
 		Base: model.Base{ID: parsedID},
 	}
 
+	if newClassroom.Name != nil {
+		if len(*newClassroom.Name) < 3 {
+			return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
+		}
+
+		classroom.Name = *newClassroom.Name
+	}
+
+	if newClassroom.Code != nil {
+		if len(*newClassroom.Code) < 3 {
+			return &errmsg.ErrFieldIsWrong{FieldName: "Code"}
+		}
+
+		classroom.Code = strings.ToUpper(*newClassroom.Code)
+	}
+
 	if newClassroom.AcademicYearID != nil {
 		parsedAcademicYearID, err := uuid.Parse(*newClassroom.AcademicYearID)
 		if err != nil {

@@ -41,7 +41,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	r.GET("/subject", h.Subject.GetAll)
 	r.GET("/subject/:id", h.Subject.GetDetailByID)
-	r.GET("/subject/:subject_id/component", h.Subject.GetAllSubjectComponentBySubjectID)
+	r.GET("/subject/:id/component", h.Subject.GetAllSubjectComponentBySubjectID)
 	r.GET("/subject-component/:subject_component_id", h.Subject.GetSubjectComponentDetailByID)
 
 	r.Use(h.Auth.CheckAuth())

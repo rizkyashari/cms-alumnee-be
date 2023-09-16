@@ -179,7 +179,7 @@ func (h *impHandler) GetAllSubjectComponent(c *gin.Context) {
 }
 
 func (h *impHandler) GetAllSubjectComponentBySubjectID(c *gin.Context) {
-	subjectId := c.Param("subject_id")
+	subjectId := c.Param("id")
 
 	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
 	if err != nil {

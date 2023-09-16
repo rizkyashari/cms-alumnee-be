@@ -19,6 +19,7 @@ import (
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/auth"
 	"github.com/fadhln/lms-be/util/errmsg"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
@@ -282,16 +283,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 }
 
 func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.TeacherResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedAccountID, err := serviceutil.GetUUIDFromStringWithValidation("Account ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(parsedID)
+	gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(*parsedAccountID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -306,16 +303,12 @@ func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.Tea
 }
 
 func (s *impService) GetTeacherDataByTeacherID(c context.Context, id string) (*rs.TeacherDataResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotTeacherData, err := s.repo.TeacherData().GetTeacherDataByTeacherID(parsedID)
+	gotTeacherData, err := s.repo.TeacherData().GetTeacherDataByTeacherID(*parsedTeacherID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -334,13 +327,9 @@ func (s *impService) CreateOne(c context.Context, body *rq.TeacherRegisterReques
 		return &errmsg.ErrIsEmpty{FieldName: "Email"}
 	}
 
-	parsedSchoolID, err := uuid.Parse(body.Data.SchoolID)
+	parsedSchoolID, err := serviceutil.GetUUIDFromStringWithValidation("School ID", &body.Data.SchoolID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
-	}
-
-	if parsedSchoolID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
+		return err
 	}
 
 	email := strings.ToLower(body.Account.Email)
@@ -375,7 +364,7 @@ func (s *impService) CreateOne(c context.Context, body *rq.TeacherRegisterReques
 	newTeacher := model.Teacher{
 		Base:        model.Base{ID: newTeacherID},
 		AccountID:   newID,
-		SchoolID:    parsedSchoolID,
+		SchoolID:    *parsedSchoolID,
 		TeacherData: model.TeacherData{TeacherID: newTeacherID},
 	}
 

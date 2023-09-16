@@ -72,6 +72,23 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))
 	}
 
+	// For future reference: index 0 is for include, index 1 is for exclude
+	if len(params.Data.RelationClassroomSubjects) >= 1 {
+		relationParams := params.Data.RelationClassroomSubjects[0]
+		if relationParams.SubjectID != uuid.Nil {
+			chain = chain.Where(r.db.Where("id = (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id = ?", relationParams.SubjectID).Distinct("classroom_id").Select("classroom_id")))
+		}
+	}
+
+	if len(params.Data.RelationClassroomSubjects) >= 2 {
+		excludeRelationParams := params.Data.RelationClassroomSubjects[1]
+		if excludeRelationParams.SubjectID != uuid.Nil {
+			chain = chain.Where(r.db.Where("id = (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id != ?", excludeRelationParams.SubjectID).Distinct("classroom_id").Select("classroom_id")))
+		}
+	}
+
 	maxPage := util.GetMaxPage(chain.Find(&classrooms), params.Limit)
 
 	validColumnName := []string{

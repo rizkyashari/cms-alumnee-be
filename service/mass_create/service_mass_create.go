@@ -11,7 +11,7 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
-	"github.com/google/uuid"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 )
@@ -29,6 +29,24 @@ func Init(r repo.Repository) MassCreateService {
 	return &impService{
 		repo: r,
 	}
+}
+
+func (s *impService) convertToResponse(record *model.MassCreate) (*rs.MassCreateResponse, error) {
+	var tempResponse rs.MassCreateResponse
+
+	err := copier.Copy(&tempResponse, record)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	errMsgsStr := record.ErrorMessages
+	var errMsg []model.ErrorMsg
+
+	json.Unmarshal([]byte(errMsgsStr), &errMsg)
+
+	tempResponse.ErrorMessages = errMsg
+
+	return &tempResponse, nil
 }
 
 func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[any]) (*rs.PaginationResponse[any, rs.MassCreateResponse], error) {
@@ -67,20 +85,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[any])
 	var response []rs.MassCreateResponse
 
 	for _, record := range *gotRecords {
-		var tempResponse rs.MassCreateResponse
-
-		err = copier.Copy(&tempResponse, record)
+		tempResponse, err := s.convertToResponse(&record)
 		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
+			return nil, err
 		}
 
-		errMsgsStr := record.ErrorMessages
-		var errMsg []model.ErrorMsg
-
-		json.Unmarshal([]byte(errMsgsStr), &errMsg)
-
-		tempResponse.ErrorMessages = errMsg
-		response = append(response, tempResponse)
+		response = append(response, *tempResponse)
 	}
 
 	res := rs.PaginationResponse[any, rs.MassCreateResponse]{
@@ -94,25 +104,20 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[any])
 }
 
 func (s *impService) GetDetailByID(c context.Context, id string) (*rs.MassCreateResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedMassCreateID, err := serviceutil.GetUUIDFromStringWithValidation("Mass Create ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotRecords, err := s.repo.MassCreate().GetDetailByID(parsedID)
+	gotRecords, err := s.repo.MassCreate().GetDetailByID(*parsedMassCreateID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var res rs.MassCreateResponse
-	err = copier.Copy(&res, gotRecords)
+	res, err := s.convertToResponse(gotRecords)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
+		return nil, err
 	}
 
-	return &res, nil
+	return res, nil
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
-	"github.com/google/uuid"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 )
@@ -84,16 +84,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 }
 
 func (s *impService) GetDetailByID(c context.Context, id string) (*rs.SchoolResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedSchoolID, err := serviceutil.GetUUIDFromStringWithValidation("School ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotSchool, err := s.repo.School().GetDetailByID(parsedID)
+	gotSchool, err := s.repo.School().GetDetailByID(*parsedSchoolID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -136,17 +132,13 @@ func (s *impService) EditOne(c context.Context, newSchool *rq.SchoolRequest) err
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
 	}
 
-	if newSchool.ID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "ID"}
-	}
-
-	id, err := uuid.Parse(*newSchool.ID)
+	parsedSchoolID, err := serviceutil.GetUUIDFromStringWithValidation("School ID", newSchool.ID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
+		return err
 	}
 
 	school := model.School{
-		Base: model.Base{ID: id},
+		Base: model.Base{ID: *parsedSchoolID},
 		Name: newSchool.Name,
 	}
 

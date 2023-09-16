@@ -19,6 +19,7 @@ import (
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/auth"
 	"github.com/fadhln/lms-be/util/errmsg"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
@@ -197,6 +198,39 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 	return &newStudentData, isUpdate, nil
 }
 
+func (s *impService) convertToAccountResponse(studentAccount *model.Account) (*rs.AccountResponse, error) {
+	var tempAccount rs.AccountResponse
+	err := copier.Copy(&tempAccount, studentAccount)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempStudent rs.StudentResponse
+	err = copier.Copy(&tempStudent, studentAccount.Student)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempStudentData rs.StudentDataResponse
+	err = copier.Copy(&tempStudentData, studentAccount.Student.StudentData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	tempAccount.Student = &tempStudent
+
+	if tempAccount.Student != nil {
+		var tempStudentData rs.StudentDataResponse
+		err = copier.Copy(&tempStudentData, studentAccount.Student.StudentData)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+		tempAccount.Student.StudentData = &tempStudentData
+	}
+
+	return &tempAccount, nil
+}
+
 func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model.Account]) (*rs.PaginationResponse[any, rs.AccountResponse], error) {
 	checkParam := rq.PaginationParams[any]{
 		Limit:     params.Limit,
@@ -233,36 +267,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	var response []rs.AccountResponse
 
 	for _, account := range *gotAccounts {
-		var tempAccount rs.AccountResponse
-		err = copier.Copy(&tempAccount, account)
+		tempAccount, err := s.convertToAccountResponse(&account)
 		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
+			return nil, err
 		}
 
-		var tempStudent rs.StudentResponse
-		err = copier.Copy(&tempStudent, account.Student)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		var tempStudentData rs.StudentDataResponse
-		err = copier.Copy(&tempStudentData, account.Student.StudentData)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		tempAccount.Student = &tempStudent
-
-		if tempAccount.Student != nil {
-			var tempStudentData rs.StudentDataResponse
-			err = copier.Copy(&tempStudentData, account.Student.StudentData)
-			if err != nil {
-				return nil, &errmsg.ErrInternal{Err: err}
-			}
-			tempAccount.Student.StudentData = &tempStudentData
-		}
-
-		response = append(response, tempAccount)
+		response = append(response, *tempAccount)
 	}
 
 	res := rs.PaginationResponse[any, rs.AccountResponse]{
@@ -276,16 +286,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 }
 
 func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.StudentResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedStudentID, err := serviceutil.GetUUIDFromStringWithValidation("Student ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotStudent, err := s.repo.Student().GetDetailByAccountID(parsedID)
+	gotStudent, err := s.repo.Student().GetDetailByAccountID(*parsedStudentID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -300,16 +306,12 @@ func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.Stu
 }
 
 func (s *impService) GetStudentDataByStudentID(c context.Context, id string) (*rs.StudentDataResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedStudentID, err := serviceutil.GetUUIDFromStringWithValidation("Student ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotStudentData, err := s.repo.StudentData().GetStudentDataByStudentID(parsedID)
+	gotStudentData, err := s.repo.StudentData().GetStudentDataByStudentID(*parsedStudentID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -351,13 +353,9 @@ func (s *impService) CreateOne(c context.Context, body *rq.StudentRegisterReques
 		body.Data.ClassroomID = &classroomID
 	}
 
-	parsedClassroomID, err := uuid.Parse(*body.Data.ClassroomID)
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", body.Data.ClassroomID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
-	}
-
-	if parsedClassroomID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
+		return err
 	}
 
 	email := strings.ToLower(body.Account.Email)
@@ -392,7 +390,7 @@ func (s *impService) CreateOne(c context.Context, body *rq.StudentRegisterReques
 	newStudent := model.Student{
 		Base:        model.Base{ID: newStudentID},
 		AccountID:   newID,
-		ClassroomID: &parsedClassroomID,
+		ClassroomID: parsedClassroomID,
 		StudentData: model.StudentData{StudentID: newStudentID},
 	}
 
@@ -429,17 +427,9 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.StudentRegi
 		body.Data.ClassroomID = &classroomID
 	}
 
-	if body.Data.ClassroomID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-	}
-
-	parsedClassroomID, err := uuid.Parse(*body.Data.ClassroomID)
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", body.Data.ClassroomID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
-	}
-
-	if parsedClassroomID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
+		return err
 	}
 
 	email := strings.ToLower(body.Account.Email)
@@ -474,7 +464,7 @@ func (s *impService) CreateOneWithDetail(c context.Context, body *rq.StudentRegi
 	newStudent := model.Student{
 		Base:        model.Base{ID: newStudentID},
 		AccountID:   newAccountID,
-		ClassroomID: &parsedClassroomID,
+		ClassroomID: parsedClassroomID,
 	}
 
 	newStudentData, _, err := getStudentDataFromRequest(&body.Data)
@@ -625,13 +615,9 @@ func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeade
 }
 
 func (s *impService) EditOne(c context.Context, studentID string, body *rq.StudentUpdateRequest) error {
-	parsedStudentID, err := uuid.Parse(studentID)
+	parsedStudentID, err := serviceutil.GetUUIDFromStringWithValidation("Student ID", &studentID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-	}
-
-	if parsedStudentID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
+		return err
 	}
 
 	if body.ClassroomID != nil || body.ClassroomCode != nil {
@@ -655,13 +641,13 @@ func (s *impService) EditOne(c context.Context, studentID string, body *rq.Stude
 
 		newStudent := model.Student{
 			Base: model.Base{
-				ID: parsedStudentID,
+				ID: *parsedStudentID,
 			},
 			ClassroomID: &parsedClassroomID,
 		}
 
 		err = s.repo.Transaction(func(tx *gorm.DB) error {
-			if err := s.repo.Student().UpdateOne(tx, parsedStudentID, &newStudent); err != nil {
+			if err := s.repo.Student().UpdateOne(tx, *parsedStudentID, &newStudent); err != nil {
 				return err
 			}
 
@@ -680,7 +666,7 @@ func (s *impService) EditOne(c context.Context, studentID string, body *rq.Stude
 
 	if isUpdateData {
 		err = s.repo.Transaction(func(tx *gorm.DB) error {
-			if err := s.repo.StudentData().UpdateOne(tx, parsedStudentID, newStudentData); err != nil {
+			if err := s.repo.StudentData().UpdateOne(tx, *parsedStudentID, newStudentData); err != nil {
 				return err
 			}
 
@@ -696,13 +682,9 @@ func (s *impService) EditOne(c context.Context, studentID string, body *rq.Stude
 }
 
 func (s *impService) EditFamilyData(c context.Context, studentID string, body *rq.StudentFamilyDataUpdateRequest) error {
-	parsedStudentID, err := uuid.Parse(studentID)
+	parsedStudentID, err := serviceutil.GetUUIDFromStringWithValidation("Student ID", &studentID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-	}
-
-	if parsedStudentID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
+		return err
 	}
 
 	var newFamilyData model.StudentFamilyData
@@ -712,7 +694,7 @@ func (s *impService) EditFamilyData(c context.Context, studentID string, body *r
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.StudentData().UpdateOneStudentFamilyData(tx, parsedStudentID, &newFamilyData); err != nil {
+		if err := s.repo.StudentData().UpdateOneStudentFamilyData(tx, *parsedStudentID, &newFamilyData); err != nil {
 			return err
 		}
 
@@ -727,13 +709,9 @@ func (s *impService) EditFamilyData(c context.Context, studentID string, body *r
 }
 
 func (s *impService) EditAddressData(c context.Context, studentID string, body *rq.AddressDataUpdateRequest) error {
-	parsedStudentID, err := uuid.Parse(studentID)
+	parsedStudentID, err := serviceutil.GetUUIDFromStringWithValidation("Student ID", &studentID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-	}
-
-	if parsedStudentID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
+		return err
 	}
 
 	var newAddressData model.AddressData
@@ -743,7 +721,7 @@ func (s *impService) EditAddressData(c context.Context, studentID string, body *
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.StudentData().UpdateOneAddressData(tx, parsedStudentID, &newAddressData); err != nil {
+		if err := s.repo.StudentData().UpdateOneAddressData(tx, *parsedStudentID, &newAddressData); err != nil {
 			return err
 		}
 

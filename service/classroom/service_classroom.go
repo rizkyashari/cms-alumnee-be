@@ -17,6 +17,7 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
@@ -25,6 +26,9 @@ import (
 
 type ClassroomService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error)
+	GetAllClassroomByTeacherID(c context.Context, teacherID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error)
+	GetAllClassroomBySubjectID(c context.Context, subjectID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error)
+
 	GetDetailByID(c context.Context, id string) (*rs.ClassroomResponse, error)
 
 	CreateOne(c context.Context, newClassroom *rq.ClassroomRequest) error
@@ -33,6 +37,10 @@ type ClassroomService interface {
 	EditOne(c context.Context, newClassroom *rq.ClassroomRequest) error
 
 	DeleteOne(c context.Context, id string) error
+
+	GetAllClassroomNotInSubject(c context.Context, subjectID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error)
+	AssignSubjectsToClassroom(c context.Context, classroomID string, subjectIDs []string) error
+	RemoveSubjectsFromClassroom(c context.Context, classroomID string, subjectIDs []string) error
 }
 
 type impService struct {
@@ -80,7 +88,51 @@ func getClassroomCSV(requestFile *multipart.FileHeader, academicYearID string, s
 	return &classrooms, nil
 }
 
+func (s *impService) convertToResponse(classroom *model.Classroom) (*rs.ClassroomResponse, error) {
+	var tempResponse rs.ClassroomResponse
+
+	err := copier.Copy(&tempResponse, classroom)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempAcademicYear rs.AcademicYearResponse
+	err = copier.Copy(&tempAcademicYear, classroom.AcademicYear)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempTeacher rs.TeacherResponse
+	err = copier.Copy(&tempTeacher, classroom.Teacher)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempTeacherData rs.TeacherDataResponse
+	err = copier.Copy(&tempTeacher, classroom.Teacher.TeacherData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	tempResponse.AcademicYear = tempAcademicYear
+
+	tempTeacher.TeacherData = &tempTeacherData
+	tempResponse.Teacher = tempTeacher
+
+	return &tempResponse, nil
+}
+
 func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error) {
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
 	gotClassrooms, maxPage, err := s.repo.Classroom().GetAll(params)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
@@ -101,36 +153,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	var response []rs.ClassroomResponse
 
 	for _, classroom := range *gotClassrooms {
-		var tempResponse rs.ClassroomResponse
-		err = copier.Copy(&tempResponse, classroom)
+		tempResponse, err := s.convertToResponse(&classroom)
 		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
+			return nil, err
 		}
 
-		var tempAcademicYear rs.AcademicYearResponse
-		err = copier.Copy(&tempAcademicYear, classroom.AcademicYear)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		var tempTeacher rs.TeacherResponse
-		err = copier.Copy(&tempTeacher, classroom.Teacher)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		var tempTeacherData rs.TeacherDataResponse
-		err = copier.Copy(&tempTeacher, classroom.Teacher.TeacherData)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		tempResponse.AcademicYear = tempAcademicYear
-
-		tempTeacher.TeacherData = &tempTeacherData
-		tempResponse.Teacher = tempTeacher
-
-		response = append(response, tempResponse)
+		response = append(response, *tempResponse)
 	}
 
 	res := rs.PaginationResponse[any, rs.ClassroomResponse]{
@@ -143,51 +171,49 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	return &res, nil
 }
 
+func (s *impService) GetAllClassroomByTeacherID(c context.Context, teacherID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error) {
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
+	if err != nil {
+		return nil, err
+	}
+
+	newParams := *params
+	newParams.Data.TeacherID = *parsedTeacherID
+
+	return s.GetAll(c, &newParams)
+}
+
+func (s *impService) GetAllClassroomBySubjectID(c context.Context, subjectID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error) {
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	newParams := *params
+	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
+		{SubjectID: *parsedSubjectID},
+	}
+
+	return s.GetAll(c, &newParams)
+}
+
 func (s *impService) GetDetailByID(c context.Context, id string) (*rs.ClassroomResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotClassroom, err := s.repo.Classroom().GetDetailByID(parsedID)
+	gotClassroom, err := s.repo.Classroom().GetDetailByID(*parsedID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var tempResponse rs.ClassroomResponse
-	err = copier.Copy(&tempResponse, gotClassroom)
+	tempResponse, err := s.convertToResponse(gotClassroom)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
+		return nil, err
 	}
 
-	var tempAcademicYear rs.AcademicYearResponse
-	err = copier.Copy(&tempAcademicYear, gotClassroom.AcademicYear)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	var tempTeacher rs.TeacherResponse
-	err = copier.Copy(&tempTeacher, gotClassroom.Teacher)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	var tempTeacherData rs.TeacherDataResponse
-	err = copier.Copy(&tempTeacher, gotClassroom.Teacher.TeacherData)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	tempResponse.AcademicYear = tempAcademicYear
-
-	tempTeacher.TeacherData = &tempTeacherData
-	tempResponse.Teacher = tempTeacher
-
-	return &tempResponse, nil
+	return tempResponse, nil
 }
 
 func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequest) error {
@@ -199,30 +225,19 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
 	}
 
-	if newClassroom.AcademicYearID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Academic Year ID"}
-	}
-
-	parsedAcademicYearID, err := uuid.Parse(*newClassroom.AcademicYearID)
+	parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year ID", newClassroom.AcademicYearID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Academic Year ID"}
+		return err
 	}
 
-	if parsedAcademicYearID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Academic Year ID"}
-	}
-
-	if newClassroom.SchoolID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "School ID"}
-	}
-
-	parsedSchoolID, err := uuid.Parse(*newClassroom.SchoolID)
+	parsedSchoolID, err := serviceutil.GetUUIDFromStringWithValidation("School ID", newClassroom.SchoolID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "School ID"}
+		return err
 	}
 
-	if parsedSchoolID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "School ID"}
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", newClassroom.TeacherID)
+	if err != nil {
+		return err
 	}
 
 	if newClassroom.TeacherEmail != nil {
@@ -253,15 +268,6 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
 	}
 
-	parsedTeacherID, err := uuid.Parse(*newClassroom.TeacherID)
-	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-	}
-
-	if parsedTeacherID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
-	}
-
 	if newClassroom.Code == nil {
 		randomCode := util.RandString(6)
 		newClassroom.Code = &randomCode
@@ -269,9 +275,9 @@ func (s *impService) CreateOne(c context.Context, newClassroom *rq.ClassroomRequ
 
 	classroom := model.Classroom{
 		Name:           *newClassroom.Name,
-		AcademicYearID: parsedAcademicYearID,
-		TeacherID:      parsedTeacherID,
-		SchoolID:       parsedSchoolID,
+		AcademicYearID: *parsedAcademicYearID,
+		TeacherID:      *parsedTeacherID,
+		SchoolID:       *parsedSchoolID,
 		Code:           *newClassroom.Code,
 	}
 
@@ -434,7 +440,7 @@ func (s *impService) EditOne(c context.Context, newClassroom *rq.ClassroomReques
 	}
 
 	if newClassroom.Code != nil {
-		if len(*newClassroom.Code) < 3 {
+		if len(*newClassroom.Code) != 6 {
 			return &errmsg.ErrFieldIsWrong{FieldName: "Code"}
 		}
 
@@ -442,29 +448,21 @@ func (s *impService) EditOne(c context.Context, newClassroom *rq.ClassroomReques
 	}
 
 	if newClassroom.AcademicYearID != nil {
-		parsedAcademicYearID, err := uuid.Parse(*newClassroom.AcademicYearID)
+		parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year", newClassroom.AcademicYearID)
 		if err != nil {
-			return &errmsg.ErrFieldIsWrong{FieldName: "Academic Year ID"}
+			return err
 		}
 
-		if parsedAcademicYearID == uuid.Nil {
-			return &errmsg.ErrIsEmpty{FieldName: "Academic Year ID"}
-		}
-
-		classroom.AcademicYearID = parsedAcademicYearID
+		classroom.AcademicYearID = *parsedAcademicYearID
 	}
 
 	if newClassroom.TeacherID != nil {
-		parsedTeacherID, err := uuid.Parse(*newClassroom.TeacherID)
+		parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", newClassroom.TeacherID)
 		if err != nil {
-			return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
+			return err
 		}
 
-		if parsedTeacherID == uuid.Nil {
-			return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
-		}
-
-		classroom.TeacherID = parsedTeacherID
+		classroom.TeacherID = *parsedTeacherID
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
@@ -497,6 +495,89 @@ func (s *impService) DeleteOne(c context.Context, id string) error {
 			return err
 		}
 
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+func (s *impService) GetAllClassroomNotInSubject(c context.Context, subjectID string, params *rq.PaginationParams[model.Classroom]) (*rs.PaginationResponse[any, rs.ClassroomResponse], error) {
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	newParams := *params
+	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
+		{}, {SubjectID: *parsedSubjectID},
+	}
+
+	return s.GetAll(c, &newParams)
+}
+
+func (s *impService) AssignSubjectsToClassroom(c context.Context, classroomID string, subjectIDs []string) error {
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
+	if err != nil {
+		return err
+	}
+
+	parsedSubjectIDs := []uuid.UUID{}
+	for _, subjectID := range subjectIDs {
+		parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
+		if err != nil {
+			return err
+		}
+
+		parsedSubjectIDs = append(parsedSubjectIDs, *parsedSubjectID)
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		for _, parsedSubjectID := range parsedSubjectIDs {
+			newRelation := model.RelationClassroomSubject{
+				ClassroomID: *parsedClassroomID,
+				SubjectID:   parsedSubjectID,
+			}
+
+			if err := s.repo.RelationClassroomSubject().CreateOne(tx, &newRelation); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+func (s *impService) RemoveSubjectsFromClassroom(c context.Context, classroomID string, subjectIDs []string) error {
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
+	if err != nil {
+		return err
+	}
+
+	parsedSubjectIDs := []uuid.UUID{}
+	for _, subjectID := range subjectIDs {
+		parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
+		if err != nil {
+			return err
+		}
+
+		parsedSubjectIDs = append(parsedSubjectIDs, *parsedSubjectID)
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		for _, parsedSubjectID := range parsedSubjectIDs {
+			if err := s.repo.RelationClassroomSubject().DeleteOne(tx, *parsedClassroomID, parsedSubjectID); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 

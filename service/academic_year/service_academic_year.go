@@ -10,7 +10,7 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
-	"github.com/google/uuid"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 )
@@ -85,16 +85,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 }
 
 func (s *impService) GetDetailByID(c context.Context, id string) (*rs.AcademicYearResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotYear, err := s.repo.AcademicYear().GetDetailByID(parsedID)
+	gotYear, err := s.repo.AcademicYear().GetDetailByID(*parsedAcademicYearID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -146,22 +142,18 @@ func (s *impService) EditYear(c context.Context, newYear *rq.AcademicYearRequest
 		return &errmsg.ErrFieldIsWrong{FieldName: "Year"}
 	}
 
-	if newYear.ID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "ID"}
-	}
-
-	id, err := uuid.Parse(*newYear.ID)
+	parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year ID", newYear.ID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
+		return err
 	}
 
 	year := model.AcademicYear{
-		Base: model.Base{ID: id},
+		Base: model.Base{ID: *parsedAcademicYearID},
 		Year: *newYear.Year,
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.AcademicYear().UpdateOne(tx, id, &year); err != nil {
+		if err := s.repo.AcademicYear().UpdateOne(tx, *parsedAcademicYearID, &year); err != nil {
 			return err
 		}
 
@@ -176,22 +168,18 @@ func (s *impService) EditYear(c context.Context, newYear *rq.AcademicYearRequest
 }
 
 func (s *impService) EditStatus(c context.Context, newYear *rq.AcademicYearRequest) error {
-	if newYear.ID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "ID"}
-	}
-
-	id, err := uuid.Parse(*newYear.ID)
+	parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year ID", newYear.ID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
+		return err
 	}
 
 	year := model.AcademicYear{
-		Base:     model.Base{ID: id},
+		Base:     model.Base{ID: *parsedAcademicYearID},
 		IsActive: *newYear.IsActive,
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.AcademicYear().UpdateStatus(tx, id, &year); err != nil {
+		if err := s.repo.AcademicYear().UpdateStatus(tx, *parsedAcademicYearID, &year); err != nil {
 			return err
 		}
 

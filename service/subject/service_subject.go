@@ -10,6 +10,7 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -52,6 +53,22 @@ func Init(r repo.Repository) SubjectService {
 	}
 }
 
+func (s *impService) convertToResponse(subject *model.Subject) (*rs.SubjectResponse, error) {
+	var tempResponse rs.SubjectResponse
+	err := copier.Copy(&tempResponse, subject)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempSubjectComponent rs.SubjectComponentResponse
+	err = copier.Copy(&tempSubjectComponent, subject.SubjectComponents)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &tempResponse, nil
+}
+
 func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
 	checkParam := rq.PaginationParams[any]{
 		Limit:     params.Limit,
@@ -90,19 +107,12 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	var response []rs.SubjectResponse
 
 	for _, subject := range *gotSubjects {
-		var tempResponse rs.SubjectResponse
-		err = copier.Copy(&tempResponse, subject)
+		tempResponse, err := s.convertToResponse(&subject)
 		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
+			return nil, err
 		}
 
-		var tempSubjectComponent rs.SubjectComponentResponse
-		err = copier.Copy(&tempSubjectComponent, subject.SubjectComponents)
-		if err != nil {
-			return nil, &errmsg.ErrInternal{Err: err}
-		}
-
-		response = append(response, tempResponse)
+		response = append(response, *tempResponse)
 	}
 
 	res := rs.PaginationResponse[any, rs.SubjectResponse]{
@@ -116,77 +126,48 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 }
 
 func (s *impService) GetAllSubjectByTeacherID(c context.Context, teacherID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
-	if len(teacherID) < 3 {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
-	}
-
-	parsedTeacherID, err := uuid.Parse(teacherID)
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedTeacherID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
+		return nil, err
 	}
 
 	newParams := *params
-	newParams.Data.TeacherID = parsedTeacherID
+	newParams.Data.TeacherID = *parsedTeacherID
 
 	return s.GetAll(c, &newParams)
 }
 
 func (s *impService) GetAllSubjectByClassroomID(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
-	if len(classroomID) < 3 {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-	}
-
-	parsedClassroomID, err := uuid.Parse(classroomID)
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedClassroomID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		return nil, err
 	}
 
 	newParams := *params
 	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
-		{ClassroomID: parsedClassroomID},
+		{ClassroomID: *parsedClassroomID},
 	}
 
 	return s.GetAll(c, &newParams)
 }
 
 func (s *impService) GetDetailByID(c context.Context, id string) (*rs.SubjectResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotSubject, err := s.repo.Subject().GetDetailByID(parsedID)
+	gotSubject, err := s.repo.Subject().GetDetailByID(*parsedSubjectID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var res rs.SubjectResponse
-	err = copier.Copy(&res, gotSubject)
+	res, err := s.convertToResponse(gotSubject)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
+		return nil, err
 	}
 
-	var tempComponents []rs.SubjectComponentResponse
-	err = copier.Copy(&tempComponents, gotSubject.SubjectComponents)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	res.SubjectComponents = tempComponents
-
-	return &res, nil
+	return res, nil
 }
 
 func (s *impService) GetAllSubjectComponent(c context.Context, params *rq.PaginationParams[model.SubjectComponent]) (*rs.PaginationResponse[any, rs.SubjectComponentResponse], error) {
@@ -241,36 +222,24 @@ func (s *impService) GetAllSubjectComponent(c context.Context, params *rq.Pagina
 }
 
 func (s *impService) GetAllSubjectComponentBySubjectID(c context.Context, subjectID string, params *rq.PaginationParams[model.SubjectComponent]) (*rs.PaginationResponse[any, rs.SubjectComponentResponse], error) {
-	if len(subjectID) < 3 {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
-	}
-
-	parsedSubjectID, err := uuid.Parse(subjectID)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	if parsedSubjectID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-	}
-
 	newParams := *params
-	newParams.Data.SubjectID = parsedSubjectID
+	newParams.Data.SubjectID = *parsedSubjectID
 
 	return s.GetAllSubjectComponent(c, &newParams)
 }
 
 func (s *impService) GetSubjectComponentDetailByID(c context.Context, id string) (*rs.SubjectComponentResponse, error) {
-	parsedID, err := uuid.Parse(id)
+	parsedSubjectComponentID, err := serviceutil.GetUUIDFromStringWithValidation("Subject Component ID", &id)
 	if err != nil {
-		return nil, &errmsg.ErrFieldIsWrong{FieldName: "id"}
+		return nil, err
 	}
 
-	if parsedID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "id"}
-	}
-
-	gotSubjectComponent, err := s.repo.Subject().GetComponentDetailByComponentID(parsedID)
+	gotSubjectComponent, err := s.repo.Subject().GetComponentDetailByComponentID(*parsedSubjectComponentID)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -293,21 +262,13 @@ func (s *impService) CreateOne(c context.Context, newSubject *rq.SubjectRequest)
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
 	}
 
-	if newSubject.TeacherID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
-	}
-
-	parsedTeacherID, err := uuid.Parse(*newSubject.TeacherID)
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", newSubject.TeacherID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedTeacherID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
+		return err
 	}
 
 	subject := model.Subject{
-		TeacherID: parsedTeacherID,
+		TeacherID: *parsedTeacherID,
 		Name:      *newSubject.Name,
 	}
 
@@ -327,13 +288,9 @@ func (s *impService) CreateOne(c context.Context, newSubject *rq.SubjectRequest)
 }
 
 func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID string, newSubject *rq.SubjectRequest) error {
-	parsedClassroomID, err := uuid.Parse(classroomID)
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedClassroomID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
+		return err
 	}
 
 	if newSubject.Name == nil {
@@ -344,20 +301,12 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
 	}
 
-	if newSubject.TeacherID == nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
-	}
-
-	parsedTeacherID, err := uuid.Parse(*newSubject.TeacherID)
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", newSubject.TeacherID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
+		return err
 	}
 
-	if parsedTeacherID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-	}
-
-	gotClassroom, err := s.repo.Classroom().GetDetailByID(parsedClassroomID)
+	gotClassroom, err := s.repo.Classroom().GetDetailByID(*parsedClassroomID)
 	if err != nil {
 		return &errmsg.ErrInternal{Err: err}
 	}
@@ -366,7 +315,7 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 
 	subject := model.Subject{
 		Base:      model.Base{ID: newSubjectID},
-		TeacherID: parsedTeacherID,
+		TeacherID: *parsedTeacherID,
 		Name:      *newSubject.Name,
 		RelationClassroomSubjects: []model.RelationClassroomSubject{
 			{
@@ -444,13 +393,9 @@ func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp
 		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
 	}
 
-	parsedSubjectID, err := uuid.Parse(*newSubjectComp.SubjectID)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", newSubjectComp.SubjectID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedSubjectID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
+		return err
 	}
 
 	err = s.validateSubjectComponentPercentage(c, newSubjectComp.Percentage, *newSubjectComp.SubjectID)
@@ -460,7 +405,7 @@ func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp
 
 	subjectComp := model.SubjectComponent{
 		Name:       *newSubjectComp.Name,
-		SubjectID:  parsedSubjectID,
+		SubjectID:  *parsedSubjectID,
 		Percentage: *newSubjectComp.Percentage,
 	}
 
@@ -497,17 +442,9 @@ func (s *impService) CreateOneSubjectComponentWithValidation(c context.Context, 
 }
 
 func (s *impService) EditOne(c context.Context, subjectID string, body *rq.SubjectRequest) error {
-	if len(subjectID) <= 3 {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
-	}
-
-	parsedSubjectID, err := uuid.Parse(subjectID)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
-	}
-
-	if parsedSubjectID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
+		return err
 	}
 
 	var newSubject model.Subject
@@ -521,20 +458,16 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 	}
 
 	if body.TeacherID != nil {
-		parsedTeacherID, err := uuid.Parse(*body.TeacherID)
+		parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", body.TeacherID)
 		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
+			return err
 		}
 
-		if parsedTeacherID == uuid.Nil {
-			return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
-		}
-
-		newSubject.TeacherID = parsedTeacherID
+		newSubject.TeacherID = *parsedTeacherID
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.Subject().UpdateOne(tx, parsedSubjectID, &newSubject); err != nil {
+		if err := s.repo.Subject().UpdateOne(tx, *parsedSubjectID, &newSubject); err != nil {
 			return err
 		}
 
@@ -566,13 +499,9 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 		return &errmsg.ErrFieldIsWrong{FieldName: "Subject Component ID"}
 	}
 
-	parsedSubjectComponentID, err := uuid.Parse(subjectCompID)
+	parsedSubjectComponentID, err := serviceutil.GetUUIDFromStringWithValidation("Subject Component", &subjectCompID)
 	if err != nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject Component ID"}
-	}
-
-	if parsedSubjectComponentID == uuid.Nil {
-		return &errmsg.ErrFieldIsWrong{FieldName: "Subject Component ID"}
+		return err
 	}
 
 	var newSubjectComponent model.SubjectComponent
@@ -586,16 +515,12 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 	}
 
 	if body.SubjectID != nil {
-		parsedSubjectID, err := uuid.Parse(*body.SubjectID)
+		parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", body.SubjectID)
 		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
+			return err
 		}
 
-		if parsedSubjectID == uuid.Nil {
-			return &errmsg.ErrFieldIsWrong{FieldName: "Subject ID"}
-		}
-
-		newSubjectComponent.SubjectID = parsedSubjectID
+		newSubjectComponent.SubjectID = *parsedSubjectID
 	}
 
 	if body.Percentage != nil {
@@ -620,7 +545,7 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.Subject().UpdateOneComponent(tx, parsedSubjectComponentID, &newSubjectComponent); err != nil {
+		if err := s.repo.Subject().UpdateOneComponent(tx, *parsedSubjectComponentID, &newSubjectComponent); err != nil {
 			return err
 		}
 
@@ -658,18 +583,14 @@ func (s *impService) GetAllSubjectNotInClassroom(c context.Context, classroomID 
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
 	}
 
-	parsedClassroomID, err := uuid.Parse(classroomID)
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedClassroomID == uuid.Nil {
-		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		return nil, err
 	}
 
 	newParams := *params
 	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
-		{}, {ClassroomID: parsedClassroomID},
+		{}, {ClassroomID: *parsedClassroomID},
 	}
 
 	return s.GetAll(c, &newParams)
@@ -680,38 +601,26 @@ func (s *impService) AssignClassroomsToSubject(c context.Context, subjectID stri
 		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
 	}
 
-	parsedSubjectID, err := uuid.Parse(subjectID)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedSubjectID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+		return err
 	}
 
 	parsedClassroomIDs := []uuid.UUID{}
 	for _, classroomID := range classroomIDs {
-		if len(classroomID) < 3 {
-			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-		}
-
-		parsedClassroomID, err := uuid.Parse(classroomID)
+		parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
+			return err
 		}
 
-		if parsedClassroomID == uuid.Nil {
-			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-		}
-
-		parsedClassroomIDs = append(parsedClassroomIDs, parsedClassroomID)
+		parsedClassroomIDs = append(parsedClassroomIDs, *parsedClassroomID)
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
 		for _, parsedClassroomID := range parsedClassroomIDs {
 			newRelation := model.RelationClassroomSubject{
 				ClassroomID: parsedClassroomID,
-				SubjectID:   parsedSubjectID,
+				SubjectID:   *parsedSubjectID,
 			}
 
 			if err := s.repo.RelationClassroomSubject().CreateOne(tx, &newRelation); err != nil {
@@ -733,36 +642,24 @@ func (s *impService) RemoveClassroomsFromSubject(c context.Context, subjectID st
 		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
 	}
 
-	parsedSubjectID, err := uuid.Parse(subjectID)
+	parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
 	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
-	if parsedSubjectID == uuid.Nil {
-		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+		return err
 	}
 
 	parsedClassroomIDs := []uuid.UUID{}
 	for _, classroomID := range classroomIDs {
-		if len(classroomID) < 3 {
-			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-		}
-
-		parsedClassroomID, err := uuid.Parse(classroomID)
+		parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
+			return err
 		}
 
-		if parsedClassroomID == uuid.Nil {
-			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
-		}
-
-		parsedClassroomIDs = append(parsedClassroomIDs, parsedClassroomID)
+		parsedClassroomIDs = append(parsedClassroomIDs, *parsedClassroomID)
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
 		for _, parsedClassroomID := range parsedClassroomIDs {
-			if err := s.repo.RelationClassroomSubject().DeleteOne(tx, parsedClassroomID, parsedSubjectID); err != nil {
+			if err := s.repo.RelationClassroomSubject().DeleteOne(tx, parsedClassroomID, *parsedSubjectID); err != nil {
 				return err
 			}
 		}

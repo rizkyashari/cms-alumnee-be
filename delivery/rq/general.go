@@ -6,6 +6,10 @@ type IDOnlyRequest struct {
 	ID string `json:"id"`
 }
 
+type IDsRequest struct {
+	IDs []string `json:"ids"`
+}
+
 type EmailOnlyRequest struct {
 	Email string `json:"email"`
 }

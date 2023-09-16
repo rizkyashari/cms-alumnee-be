@@ -41,6 +41,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	r.GET("/subject", h.Subject.GetAll)
 	r.GET("/subject/by-classroom/:classroom_id", h.Subject.GetAllByClassroomID)
+	r.GET("/subject/notin-classroom/:classroom_id", h.Subject.GetAllNotInClassroomID)
 	r.GET("/subject/:id", h.Subject.GetDetailByID)
 	r.GET("/subject/:id/component", h.Subject.GetAllSubjectComponentBySubjectID)
 	r.GET("/subject-component/:subject_component_id", h.Subject.GetSubjectComponentDetailByID)
@@ -99,9 +100,12 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			subject.POST("/", h.Subject.CreateOne)
 			subject.POST("/with-classroom/:classroom_id", h.Subject.CreateOneWithClassroomID)
 			subject.PATCH("/:id", h.Subject.EditOne)
+			subject.POST("/:id/classroom", h.Subject.AssignClassroomsToSubject)
+			subject.DELETE("/:id/classroom", h.Subject.RemoveClassroomsFromSubject)
 
 			subject.POST("/component", h.Subject.CreateOneSubjectComponent)
 			subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponent)
+
 		}
 	}
 

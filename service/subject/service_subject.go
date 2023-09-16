@@ -37,9 +37,9 @@ type SubjectService interface {
 	EditOneSubjectComponent(c context.Context, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
 	EditOneSubjectComponentWithValidation(c context.Context, teacherId string, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
 
-	// GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error)
-	// AssignClassroomsToSubject(c context.Context, subjectID string, classroomIDs []string) error
-	// RemoveClassroomsFromSubject(c context.Context, subjectID string, classroomIDs []string) error
+	GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error)
+	AssignClassroomsToSubject(c context.Context, subjectID string, classroomIDs []string) error
+	RemoveClassroomsFromSubject(c context.Context, subjectID string, classroomIDs []string) error
 }
 
 type impService struct {
@@ -653,6 +653,125 @@ func (s *impService) EditOneSubjectComponentWithValidation(c context.Context, te
 
 }
 
-// func (s *impService) GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
+func (s *impService) GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error) {
+	if len(classroomID) < 3 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+	}
 
-// }
+	parsedClassroomID, err := uuid.Parse(classroomID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if parsedClassroomID == uuid.Nil {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+	}
+
+	newParams := *params
+	newParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
+		{}, {ClassroomID: parsedClassroomID},
+	}
+
+	return s.GetAll(c, &newParams)
+}
+
+func (s *impService) AssignClassroomsToSubject(c context.Context, subjectID string, classroomIDs []string) error {
+	if len(subjectID) < 3 {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+	}
+
+	parsedSubjectID, err := uuid.Parse(subjectID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if parsedSubjectID == uuid.Nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+	}
+
+	parsedClassroomIDs := []uuid.UUID{}
+	for _, classroomID := range classroomIDs {
+		if len(classroomID) < 3 {
+			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		}
+
+		parsedClassroomID, err := uuid.Parse(classroomID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+
+		if parsedClassroomID == uuid.Nil {
+			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		}
+
+		parsedClassroomIDs = append(parsedClassroomIDs, parsedClassroomID)
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		for _, parsedClassroomID := range parsedClassroomIDs {
+			newRelation := model.RelationClassroomSubject{
+				ClassroomID: parsedClassroomID,
+				SubjectID:   parsedSubjectID,
+			}
+
+			if err := s.repo.RelationClassroomSubject().CreateOne(tx, &newRelation); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+func (s *impService) RemoveClassroomsFromSubject(c context.Context, subjectID string, classroomIDs []string) error {
+	if len(subjectID) < 3 {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+	}
+
+	parsedSubjectID, err := uuid.Parse(subjectID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if parsedSubjectID == uuid.Nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
+	}
+
+	parsedClassroomIDs := []uuid.UUID{}
+	for _, classroomID := range classroomIDs {
+		if len(classroomID) < 3 {
+			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		}
+
+		parsedClassroomID, err := uuid.Parse(classroomID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+
+		if parsedClassroomID == uuid.Nil {
+			return &errmsg.ErrIsEmpty{FieldName: "Classroom ID"}
+		}
+
+		parsedClassroomIDs = append(parsedClassroomIDs, parsedClassroomID)
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		for _, parsedClassroomID := range parsedClassroomIDs {
+			if err := s.repo.RelationClassroomSubject().DeleteOne(tx, parsedClassroomID, parsedSubjectID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
+}

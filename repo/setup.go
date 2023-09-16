@@ -9,6 +9,7 @@ import (
 	admin "github.com/fadhln/lms-be/repo/admin"
 	classroom "github.com/fadhln/lms-be/repo/classroom"
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
+	relationclassroomsubject "github.com/fadhln/lms-be/repo/relation_classroom_subject"
 	school "github.com/fadhln/lms-be/repo/school"
 	student "github.com/fadhln/lms-be/repo/student"
 	studentdata "github.com/fadhln/lms-be/repo/student_data"
@@ -27,6 +28,7 @@ type Repository interface {
 	Admin() admin.AdminRepo
 	Classroom() classroom.ClassroomRepo
 	MassCreate() masscreate.MassCreateRepo
+	RelationClassroomSubject() relationclassroomsubject.RelationClassroomSubjectRepo
 	School() school.SchoolRepo
 	Student() student.StudentRepo
 	StudentData() studentdata.StudentDataRepo
@@ -69,6 +71,10 @@ func (r *impRepo) Classroom() classroom.ClassroomRepo {
 
 func (r *impRepo) MassCreate() masscreate.MassCreateRepo {
 	return masscreate.Init(r.DB)
+}
+
+func (r *impRepo) RelationClassroomSubject() relationclassroomsubject.RelationClassroomSubjectRepo {
+	return relationclassroomsubject.Init(r.DB)
 }
 
 func (r *impRepo) School() school.SchoolRepo {

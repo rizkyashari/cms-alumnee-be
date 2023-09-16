@@ -16,6 +16,7 @@ import (
 type SubjectHandler interface {
 	GetAll(c *gin.Context)
 	GetAllByClassroomID(c *gin.Context)
+	GetAllNotInClassroomID(c *gin.Context)
 	GetAllOwnTeacher(c *gin.Context)
 	GetAllOwnStudent(c *gin.Context)
 	GetDetailByID(c *gin.Context)
@@ -33,6 +34,9 @@ type SubjectHandler interface {
 	EditOneWithValidation(c *gin.Context)
 	EditOneSubjectComponent(c *gin.Context)
 	EditOneSubjectComponentWithValidation(c *gin.Context)
+
+	AssignClassroomsToSubject(c *gin.Context)
+	RemoveClassroomsFromSubject(c *gin.Context)
 }
 
 type impHandler struct {
@@ -95,6 +99,36 @@ func (h *impHandler) GetAllByClassroomID(c *gin.Context) {
 	}
 
 	res, err := h.s.Subject().GetAllSubjectByClassroomID(c, classroomID, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllNotInClassroomID(c *gin.Context) {
+	classroomID := c.Param("classroom_id")
+
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+
+	params := rq.PaginationParams[model.Subject]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Subject{
+			Name: searchName,
+		},
+	}
+
+	res, err := h.s.Subject().GetAllSubjectNotInClassroom(c, classroomID, &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -417,4 +451,42 @@ func (h *impHandler) EditOneSubjectComponentWithValidation(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) AssignClassroomsToSubject(c *gin.Context) {
+	subjectId := c.Param("id")
+
+	var request rq.IDsRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Subject().AssignClassroomsToSubject(c, subjectId, request.IDs)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) RemoveClassroomsFromSubject(c *gin.Context) {
+	subjectId := c.Param("id")
+
+	var request rq.IDsRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Subject().RemoveClassroomsFromSubject(c, subjectId, request.IDs)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusNoContent)
 }

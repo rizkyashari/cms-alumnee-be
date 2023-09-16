@@ -57,15 +57,21 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
 	}
 
-	if len(params.Data.RelationClassroomSubjects) > 0 {
-		// For future reference: index 0 is for include, index 1 is for exclude
-
+	// For future reference: index 0 is for include, index 1 is for exclude
+	if len(params.Data.RelationClassroomSubjects) >= 1 {
 		relationParams := params.Data.RelationClassroomSubjects[0]
 		if relationParams.ClassroomID != uuid.Nil {
 			chain = chain.Where(r.db.Where("id = (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", relationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
 		}
+	}
 
+	if len(params.Data.RelationClassroomSubjects) >= 2 {
+		excludeRelationParams := params.Data.RelationClassroomSubjects[1]
+		if excludeRelationParams.ClassroomID != uuid.Nil {
+			chain = chain.Where(r.db.Where("id = (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id != ?", excludeRelationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+		}
 	}
 
 	maxPage := util.GetMaxPage(chain.Find(&subjects), params.Limit)

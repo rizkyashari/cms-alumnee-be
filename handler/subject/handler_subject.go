@@ -25,6 +25,7 @@ type SubjectHandler interface {
 	GetSubjectComponentDetailByID(c *gin.Context)
 
 	CreateOne(c *gin.Context)
+	CreateOneWithClassroomID(c *gin.Context)
 	CreateOneSubjectComponent(c *gin.Context)
 	CreateOneSubjectComponentWithValidation(c *gin.Context)
 
@@ -259,6 +260,25 @@ func (h *impHandler) CreateOne(c *gin.Context) {
 	}
 
 	err = h.s.Subject().CreateOne(c, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusCreated)
+}
+
+func (h *impHandler) CreateOneWithClassroomID(c *gin.Context) {
+	classroomID := c.Param("classroom_id")
+
+	var request rq.SubjectRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Subject().CreateOneWithClassroomID(c, classroomID, &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

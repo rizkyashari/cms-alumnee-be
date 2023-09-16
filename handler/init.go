@@ -97,6 +97,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		subject := admin.Group("/subject")
 		{
 			subject.POST("/", h.Subject.CreateOne)
+			subject.POST("/with-classroom/:classroom_id", h.Subject.CreateOneWithClassroomID)
 			subject.PATCH("/:id", h.Subject.EditOne)
 
 			subject.POST("/component", h.Subject.CreateOneSubjectComponent)

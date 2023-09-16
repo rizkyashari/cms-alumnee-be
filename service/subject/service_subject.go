@@ -28,6 +28,7 @@ type SubjectService interface {
 	GetSubjectComponentDetailByID(c context.Context, id string) (*rs.SubjectComponentResponse, error)
 
 	CreateOne(c context.Context, newSubject *rq.SubjectRequest) error
+	CreateOneWithClassroomID(c context.Context, classroomID string, newSubject *rq.SubjectRequest) error
 	CreateOneSubjectComponent(c context.Context, newSubjectComp *rq.SubjectComponentRequest) error
 	CreateOneSubjectComponentWithValidation(c context.Context, teacherId string, newSubjectComp *rq.SubjectComponentRequest) error
 
@@ -302,6 +303,71 @@ func (s *impService) CreateOne(c context.Context, newSubject *rq.SubjectRequest)
 	subject := model.Subject{
 		TeacherID: parsedTeacherID,
 		Name:      *newSubject.Name,
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		if err := s.repo.Subject().CreateOne(tx, &subject); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID string, newSubject *rq.SubjectRequest) error {
+	parsedClassroomID, err := uuid.Parse(classroomID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if parsedClassroomID == uuid.Nil {
+		return &errmsg.ErrFieldIsWrong{FieldName: "Classroom ID"}
+	}
+
+	if newSubject.Name == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Name"}
+	}
+
+	if len(*newSubject.Name) <= 3 {
+		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
+	}
+
+	if newSubject.TeacherID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Teacher ID"}
+	}
+
+	parsedTeacherID, err := uuid.Parse(*newSubject.TeacherID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if parsedTeacherID == uuid.Nil {
+		return &errmsg.ErrFieldIsWrong{FieldName: "Teacher ID"}
+	}
+
+	gotClassroom, err := s.repo.Classroom().GetDetailByID(parsedClassroomID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	newSubjectID := uuid.New()
+
+	subject := model.Subject{
+		Base:      model.Base{ID: newSubjectID},
+		TeacherID: parsedTeacherID,
+		Name:      *newSubject.Name,
+		RelationClassroomSubjects: []model.RelationClassroomSubject{
+			{
+				SubjectID:   newSubjectID,
+				ClassroomID: gotClassroom.ID,
+			},
+		},
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {

@@ -16,6 +16,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	h := handler
 
+	r.Static("/file", "file")
+
 	r.Use(CORSMiddleware())
 	r.POST("/login", h.Auth.Login)
 
@@ -48,10 +50,16 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	r.Use(h.Auth.CheckAuth())
 	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
+	r.POST("/avatar", h.Account.UploadOwnAvatar)
 
 	admin := r.Group("/4dm1n")
 	{
 		admin.Use(h.Auth.CheckAdmin())
+
+		account := admin.Group("/account")
+		{
+			account.POST("/:account_id/avatar", h.Account.UploadAvatar)
+		}
 
 		mass_create := admin.Group("/mass_create")
 		{

@@ -1,3 +1,5 @@
 .env
 tmp/
 file/**/*.csv
+vips-*/
+vips-*

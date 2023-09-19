@@ -23,6 +23,10 @@ type FileUploadRequest struct {
 	File multipart.File `json:"file,omitempty"`
 }
 
+type ImageUploadRequest struct {
+	ImageFile *multipart.FileHeader `form:"file"`
+}
+
 type CSVFileUploadRequest struct {
 	CSVFile *multipart.FileHeader `form:"file"`
 }

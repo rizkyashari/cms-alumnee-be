@@ -2,6 +2,7 @@ package handler
 
 import (
 	academicyear "github.com/fadhln/lms-be/handler/academic_year"
+	account "github.com/fadhln/lms-be/handler/account"
 	auth "github.com/fadhln/lms-be/handler/auth"
 	classroom "github.com/fadhln/lms-be/handler/classroom"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
@@ -15,6 +16,7 @@ import (
 type Handler struct {
 	s service.Service
 
+	Account      account.AccountHandler
 	Auth         auth.AuthHandler
 	AcademicYear academicyear.AcademicYearHandler
 	Classroom    classroom.ClassroomHandler
@@ -28,6 +30,7 @@ type Handler struct {
 func SetupHandler(s service.Service) *Handler {
 	return &Handler{
 		s:            s,
+		Account:      account.Init(s),
 		Auth:         auth.Init(s),
 		AcademicYear: academicyear.Init(s),
 		Classroom:    classroom.Init(s),

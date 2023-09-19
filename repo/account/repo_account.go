@@ -11,6 +11,7 @@ import (
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/util"
+	"github.com/fadhln/lms-be/util/errmsg"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,6 +24,8 @@ type AccountRepo interface {
 	GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error)
 	CreateOne(tx *gorm.DB, newAccount *model.Account) error
 	ReadOneByEmail(email string) (*model.Account, error)
+	ReadOneByID(id uuid.UUID) (*model.Account, error)
+	UpdateOne(tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error
 }
 
 type impRepo struct {
@@ -185,4 +188,29 @@ func (r *impRepo) ReadOneByEmail(email string) (*model.Account, error) {
 	}
 
 	return &account, nil
+}
+
+func (r *impRepo) ReadOneByID(accountID uuid.UUID) (*model.Account, error) {
+	var account model.Account
+	if err := r.db.Where("id = ?", accountID).First(&account).Error; err != nil {
+		return nil, err
+	}
+	if account.Email == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &account, nil
+}
+
+func (r *impRepo) UpdateOne(tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error {
+	if newAccount == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Account"}
+	}
+
+	result := tx.Model(newAccount).Where("id = ?", accountID).Updates(newAccount)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }

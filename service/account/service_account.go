@@ -3,18 +3,27 @@ package service_account
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
+	"os"
 	"strings"
 
 	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
+	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/util"
+	avatarutil "github.com/fadhln/lms-be/util/avatar_util"
 	"github.com/fadhln/lms-be/util/errmsg"
+	serviceutil "github.com/fadhln/lms-be/util/service_util"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 )
 
 type AccountService interface {
+	UploadAvatar(c *gin.Context, accountID string, requestFile *multipart.FileHeader) error
 	GetDetail(context.Context, *rq.EmailOnlyRequest) (*rs.AccountResponse, error)
 	GetDetailWithAccType(context.Context, *rq.EmailAndAccTypeRequest) (*rs.AccountResponse, error)
 }
@@ -27,6 +36,55 @@ func Init(r repo.Repository) AccountService {
 	return &impService{
 		repo: r,
 	}
+}
+
+func (s *impService) UploadAvatar(c *gin.Context, accountID string, requestFile *multipart.FileHeader) error {
+	parsedAccountID, err := serviceutil.GetUUIDFromStringWithValidation("Account ID", &accountID)
+	if err != nil {
+		return nil
+	}
+
+	gotAccount, err := s.repo.Account().ReadOneByID(*parsedAccountID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if gotAccount == nil {
+		return gorm.ErrRecordNotFound
+	}
+
+	newID := uuid.New()
+
+	requestFileName := "temp-" + newID.String() + requestFile.Filename
+	err = c.SaveUploadedFile(requestFile, requestFileName)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+	defer os.Remove(requestFileName)
+
+	gotProcessedAvatar, err := avatarutil.ProcessAvatar(requestFileName)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		newAccount := model.Account{
+			Base:   model.Base{ID: gotAccount.ID},
+			Avatar: gotProcessedAvatar,
+		}
+
+		if err := s.repo.Account().UpdateOne(tx, *parsedAccountID, &newAccount); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
 }
 
 func (s *impService) GetDetail(c context.Context, req *rq.EmailOnlyRequest) (*rs.AccountResponse, error) {

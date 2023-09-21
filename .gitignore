@@ -1,5 +1,7 @@
 .env
 tmp/
 file/**/*.csv
+file/**/*.jpg
+file/**/*.webp
 vips-*/
 vips-*

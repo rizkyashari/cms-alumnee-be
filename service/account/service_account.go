@@ -56,11 +56,11 @@ func (s *impService) UploadAvatar(c *gin.Context, accountID string, requestFile 
 	newID := uuid.New()
 
 	requestFileName := "temp-" + newID.String() + requestFile.Filename
-	err = c.SaveUploadedFile(requestFile, requestFileName)
+	err = c.SaveUploadedFile(requestFile, "./file/image/"+requestFileName)
 	if err != nil {
 		return &errmsg.ErrInternal{Err: err}
 	}
-	defer os.Remove(requestFileName)
+	defer os.Remove("./file/image/" + requestFileName)
 
 	gotProcessedAvatar, err := avatarutil.ProcessAvatar(requestFileName)
 	if err != nil {
@@ -120,6 +120,11 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	err = copier.Copy(&res, gotAccount)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
 	if (body.AccountType != -1) && (body.AccountType != gotAccount.AccountType) {
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}
 	}
@@ -140,7 +145,8 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
-		res = rs.AccountResponse{Student: &studentRes}
+		gotAccount.Student = gotStudent
+		res.Student = &studentRes
 
 	case constants.ACCOUNT_TEACHER:
 		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotAccount.ID)
@@ -154,18 +160,14 @@ func (s *impService) GetDetailWithAccType(c context.Context, body *rq.EmailAndAc
 			return nil, &errmsg.ErrInternal{Err: err}
 		}
 
-		res = rs.AccountResponse{Teacher: &teachRes}
+		gotAccount.Teacher = gotTeacher
+		res.Teacher = &teachRes
 
 	default:
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Account Type"}
 	}
 
 	s.repo.Account().SetOneRedis(c, key, gotAccount)
-
-	err = copier.Copy(&res, gotAccount)
-	if err != nil {
-		return nil, &errmsg.ErrInternal{Err: err}
-	}
 
 	return &res, nil
 }

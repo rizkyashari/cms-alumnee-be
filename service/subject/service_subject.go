@@ -3,6 +3,7 @@ package service_subject
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
@@ -354,7 +355,9 @@ func (s *impService) validateSubjectComponentPercentage(c context.Context, perce
 	}
 
 	getAllComponentParams := rq.PaginationParams[model.SubjectComponent]{
-		Limit: 999,
+		Page:      1,
+		SortOrder: "ASC",
+		Limit:     999,
 	}
 
 	gotAllComponentFromSubject, err := s.GetAllSubjectComponentBySubjectID(c, subjectID, &getAllComponentParams)
@@ -377,6 +380,7 @@ func (s *impService) validateSubjectComponentPercentage(c context.Context, perce
 }
 
 func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp *rq.SubjectComponentRequest) error {
+	fmt.Println("--- d")
 	if newSubjectComp.Name == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Name"}
 	}
@@ -428,15 +432,18 @@ func (s *impService) CreateOneSubjectComponentWithValidation(c context.Context, 
 	if newSubjectComp.SubjectID == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
 	}
+	fmt.Println("--- a")
 
 	gotSubject, err := s.GetDetailByID(c, *newSubjectComp.SubjectID)
 	if err != nil {
 		return err
 	}
+	fmt.Println("--- b")
 
 	if gotSubject.TeacherID.String() != teacherId {
 		return &errmsg.ErrUserIsNot{FieldName: "Subject Teacher"}
 	}
+	fmt.Println("--- c")
 
 	return s.CreateOneSubjectComponent(c, newSubjectComp)
 }

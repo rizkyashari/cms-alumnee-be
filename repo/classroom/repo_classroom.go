@@ -76,7 +76,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 	if len(params.Data.RelationClassroomSubjects) >= 1 {
 		relationParams := params.Data.RelationClassroomSubjects[0]
 		if relationParams.SubjectID != uuid.Nil {
-			chain = chain.Where(r.db.Where("id = (?)",
+			chain = chain.Where(r.db.Where("id IN (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id = ?", relationParams.SubjectID).Distinct("classroom_id").Select("classroom_id")))
 		}
 	}
@@ -84,7 +84,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 	if len(params.Data.RelationClassroomSubjects) >= 2 {
 		excludeRelationParams := params.Data.RelationClassroomSubjects[1]
 		if excludeRelationParams.SubjectID != uuid.Nil {
-			chain = chain.Where(r.db.Where("id = (?)",
+			chain = chain.Where(r.db.Where("id IN (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id != ?", excludeRelationParams.SubjectID).Distinct("classroom_id").Select("classroom_id")))
 		}
 	}

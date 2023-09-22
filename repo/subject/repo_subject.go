@@ -61,7 +61,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 	if len(params.Data.RelationClassroomSubjects) >= 1 {
 		relationParams := params.Data.RelationClassroomSubjects[0]
 		if relationParams.ClassroomID != uuid.Nil {
-			chain = chain.Where(r.db.Where("id = (?)",
+			chain = chain.Where(r.db.Where("id IN (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", relationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
 		}
 	}
@@ -69,7 +69,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 	if len(params.Data.RelationClassroomSubjects) >= 2 {
 		excludeRelationParams := params.Data.RelationClassroomSubjects[1]
 		if excludeRelationParams.ClassroomID != uuid.Nil {
-			chain = chain.Where(r.db.Where("id = (?)",
+			chain = chain.Where(r.db.Where("id IN (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id != ?", excludeRelationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
 		}
 	}
@@ -146,7 +146,7 @@ func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectCompo
 	}
 
 	if params.Data.SubjectID != uuid.Nil {
-		chain = chain.Where(r.db.Where("subject_id = " + params.Data.SubjectID.String()))
+		chain = chain.Where(r.db.Where("subject_id = ?", params.Data.SubjectID.String()))
 	}
 
 	maxPage := util.GetMaxPage(chain.Find(&subjectComps), params.Limit)

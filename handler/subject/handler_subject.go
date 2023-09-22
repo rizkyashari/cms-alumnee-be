@@ -1,6 +1,7 @@
 package handler_subject
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/fadhln/lms-be/constants"
@@ -339,25 +340,26 @@ func (h *impHandler) CreateOneSubjectComponent(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOneSubjectComponentWithValidation(c *gin.Context) {
+	fmt.Println("----- 1 -----")
 	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
-
+	fmt.Println("----- 2 -----")
 	var request rq.SubjectComponentRequest
 	err = c.ShouldBindJSON(&request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
-
+	fmt.Println("----- 3 -----")
 	err = h.s.Subject().CreateOneSubjectComponentWithValidation(c, gotAccount.Teacher.ID.String(), &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
-
+	fmt.Println("----- 4 -----")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 

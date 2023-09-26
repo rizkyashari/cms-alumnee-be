@@ -21,6 +21,9 @@ type ClassroomHandler interface {
 	CreateMass(c *gin.Context)
 
 	EditOne(c *gin.Context)
+
+	AssignSubjectsToClassroom(c *gin.Context)
+	RemoveSubjectsFromClassroom(c *gin.Context)
 }
 
 type impHandler struct {
@@ -150,4 +153,42 @@ func (h *impHandler) EditOne(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) AssignSubjectsToClassroom(c *gin.Context) {
+	classroomID := c.Param("id")
+
+	var request rq.IDsRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Classroom().AssignSubjectsToClassroom(c, classroomID, request.IDs)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) RemoveSubjectsFromClassroom(c *gin.Context) {
+	classroomID := c.Param("id")
+
+	var request rq.IDsRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Classroom().RemoveSubjectsFromClassroom(c, classroomID, request.IDs)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusNoContent)
 }

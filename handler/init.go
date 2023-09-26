@@ -79,6 +79,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			classroom.POST("/", h.Classroom.CreateOne)
 			classroom.POST("/bulk", h.Classroom.CreateMass)
 			classroom.PATCH("/:id", h.Classroom.EditOne)
+			classroom.POST("/:id/subject", h.Classroom.AssignSubjectsToClassroom)
+			classroom.DELETE("/:id/subject", h.Classroom.RemoveSubjectsFromClassroom)
 		}
 
 		school := admin.Group("/school")

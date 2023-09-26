@@ -6,4 +6,6 @@ type RelationClassroomSubject struct {
 	Base
 	ClassroomID uuid.UUID
 	SubjectID   uuid.UUID
+	Classroom   Classroom
+	Subject     Subject
 }

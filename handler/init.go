@@ -138,6 +138,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		teacher.GET("/data", h.Teacher.GetOwnTeacherData)
 		teacher.PATCH("/data", h.Teacher.EditOwnData)
 
+		teacher.GET("/classroom-subject", h.Teacher.GetOwnAllClassroomSubject)
+
 		subject := teacher.Group("/subject")
 		{
 			subject.GET("/", h.Subject.GetAllOwnTeacher)

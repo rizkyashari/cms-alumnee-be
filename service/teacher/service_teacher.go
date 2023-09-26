@@ -28,6 +28,7 @@ import (
 
 type TeacherService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.Account]) (*rs.PaginationResponse[any, rs.AccountResponse], error)
+	GetAllClassroomSubject(c context.Context, teacherID string, academicYearID string, params *rq.PaginationParams[model.RelationClassroomSubject]) (*rs.PaginationResponse[any, rs.ClassroomSubject], error)
 	GetDetailByAccountID(c context.Context, id string) (*rs.TeacherResponse, error)
 	GetTeacherDataByTeacherID(c context.Context, id string) (*rs.TeacherDataResponse, error)
 
@@ -280,6 +281,89 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 	}
 
 	return &res, nil
+}
+
+func (s *impService) GetAllClassroomSubject(c context.Context, teacherID string, academicYearID string, params *rq.PaginationParams[model.RelationClassroomSubject]) (*rs.PaginationResponse[any, rs.ClassroomSubject], error) {
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
+	if err != nil {
+		return nil, err
+	}
+
+	newParam := *params
+	newParam.Data.Subject.TeacherID = *parsedTeacherID
+
+	parsedAcademicYearID, err := serviceutil.GetUUIDFromStringWithValidation("Academic Year ID", &academicYearID)
+	if err == nil {
+		newParam.Data.Classroom.AcademicYearID = *parsedAcademicYearID
+	}
+
+	gotRelation, maxPage, err := s.repo.RelationClassroomSubject().GetAll(params)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := rs.PaginationResponse[any, rs.ClassroomSubject]{}
+			return &res, nil
+		}
+
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if gotRelation == nil {
+		return &rs.PaginationResponse[any, rs.ClassroomSubject]{
+			Data: []rs.ClassroomSubject{},
+		}, nil
+	}
+
+	if len(*gotRelation) < 1 {
+		return &rs.PaginationResponse[any, rs.ClassroomSubject]{
+			Data: []rs.ClassroomSubject{},
+		}, nil
+	}
+
+	var response []rs.ClassroomSubject
+
+	for _, relation := range *gotRelation {
+		var tempRelation rs.ClassroomSubject
+		err = copier.Copy(&tempRelation, relation)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
+		var tempClassroom rs.ClassroomResponse
+		err = copier.Copy(&tempClassroom, relation.Classroom)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+		tempRelation.Classroom = tempClassroom
+
+		var tempSubject rs.SubjectResponse
+		err = copier.Copy(&tempSubject, relation.Subject)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+		tempRelation.Subject = tempSubject
+
+		response = append(response, tempRelation)
+	}
+
+	res := rs.PaginationResponse[any, rs.ClassroomSubject]{
+		MaxPage:         maxPage,
+		CurrentPage:     params.Page,
+		AvailableFilter: nil,
+		Data:            response,
+	}
+
+	return &res, nil
+
 }
 
 func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.TeacherResponse, error) {

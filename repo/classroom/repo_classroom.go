@@ -11,6 +11,7 @@ import (
 
 type ClassroomRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.Classroom, error)
+	GetClassroomsByTeacherID(teacherID uuid.UUID) ([]model.Classroom, error)
 	GetDetailByCode(code string) (*model.Classroom, error)
 	GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error)
 	CreateOne(tx *gorm.DB, newClassroom *model.Classroom) error
@@ -112,6 +113,15 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newClassroom *model.Classroom) error {
 	}
 
 	return nil
+}
+
+func (r *impRepo) GetClassroomsByTeacherID(teacherID uuid.UUID) ([]model.Classroom, error) {
+	var classrooms []model.Classroom
+	if err := r.db.Preload("Teacher").Where("teacher_id = ?", teacherID).Find(&classrooms).Error; err != nil {
+		return nil, err
+	}
+
+	return classrooms, nil
 }
 
 func (r *impRepo) CreateMass(tx *gorm.DB, newClassrooms *[]model.Classroom) error {

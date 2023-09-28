@@ -13,6 +13,8 @@ type StudentRepo interface {
 	CreateOne(tx *gorm.DB, newStudent *model.Student) error
 
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newStudent *model.Student) error
+
+	GetStudentsByClassroomID(classroomID uuid.UUID) ([]model.Student, error)
 }
 
 type impRepo struct {
@@ -53,4 +55,13 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newStudent *model.Student
 	}
 
 	return nil
+}
+
+func (r *impRepo) GetStudentsByClassroomID(classroomID uuid.UUID) ([]model.Student, error) {
+	var students []model.Student
+	if err := r.db.Preload("StudentData").Where("classroom_id = ?", classroomID).Find(&students).Error; err != nil {
+		return nil, err
+	}
+
+	return students, nil
 }

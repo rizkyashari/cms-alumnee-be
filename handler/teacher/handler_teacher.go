@@ -18,6 +18,7 @@ import (
 type TeacherHandler interface {
 	GetAll(c *gin.Context)
 	GetOwnAllClassroomSubject(c *gin.Context)
+	GetAllClassroomStudents(c *gin.Context)
 	GetDetailByAccountID(c *gin.Context)
 	GetTeacherDataByTeacherID(c *gin.Context)
 	GetOwnDetail(c *gin.Context)
@@ -262,4 +263,25 @@ func (h *impHandler) EditOwnData(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) GetAllClassroomStudents(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	classrooms, students, err := h.s.Teacher().GetAllClassroomStudents(c, gotAccount.Teacher.ID.String())
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	response := rs.ClassroomStudentsResponse{
+		Classrooms: classrooms,
+		Students:   students,
+	}
+
+	rs.SuccessResponse(c, response, http.StatusOK)
 }

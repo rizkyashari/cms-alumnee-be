@@ -52,6 +52,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	r.GET("/account-detail", h.Auth.GetOwnAccountDetail)
 	r.POST("/avatar", h.Account.UploadOwnAvatar)
 
+	r.GET("/reward-punishment", h.RewardPunishment.GetAll)
+
 	admin := r.Group("/4dm1n")
 	{
 		admin.Use(h.Auth.CheckAdmin())
@@ -130,6 +132,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		student.PATCH("/data/address", h.Student.EditOwnAddressData)
 
 		student.GET("/subject", h.Subject.GetAllOwnStudent)
+		student.GET("/reward-punishment", h.RewardPunishment.GetAllOwnStudent)
 	}
 
 	teacher := r.Group("/t")
@@ -150,6 +153,16 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			subject.POST("/component", h.Subject.CreateOneSubjectComponentWithValidation)
 			subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponentWithValidation)
+		}
+		reward_punishment := teacher.Group("/reward-punishment")
+		{
+			reward_punishment.GET("/", h.RewardPunishment.GetAllRewardPunishmentForTeacher)
+			reward_punishment.POST("/", h.RewardPunishment.CreateOne)
+			reward_punishment.PATCH("/:id", h.RewardPunishment.EditOne)
+		}
+		classroom_student := teacher.Group("/classroom-student")
+		{
+			classroom_student.GET("/", h.Teacher.GetAllClassroomStudents)
 		}
 	}
 

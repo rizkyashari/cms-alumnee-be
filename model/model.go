@@ -18,4 +18,5 @@ var Entities = []interface{}{
 	&SubjectComponent{},
 	&Score{},
 	&MassCreate{},
+	&RewardPunishment{},
 }

@@ -29,6 +29,7 @@ import (
 type TeacherService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.Account]) (*rs.PaginationResponse[any, rs.AccountResponse], error)
 	GetAllClassroomSubject(c context.Context, teacherID string, academicYearID string, params *rq.PaginationParams[model.RelationClassroomSubject]) (*rs.PaginationResponse[any, rs.ClassroomSubject], error)
+	GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.StudentResponse, error)
 	GetDetailByAccountID(c context.Context, id string) (*rs.TeacherResponse, error)
 	GetTeacherDataByTeacherID(c context.Context, id string) (*rs.TeacherDataResponse, error)
 
@@ -735,4 +736,45 @@ func (s *impService) EditOne(c context.Context, teacherID string, body *rq.Teach
 	}
 
 	return nil
+}
+
+func (s *impService) GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.StudentResponse, error) {
+	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	classrooms, err := s.repo.Classroom().GetClassroomsByTeacherID(*parsedTeacherID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var classroomsResponse []rs.ClassroomResponse
+	var studentsResponse []rs.StudentResponse
+
+	for _, classroom := range classrooms {
+
+		var classroomResponse rs.ClassroomResponse
+		if err := copier.Copy(&classroomResponse, classroom); err != nil {
+			return nil, nil, err
+		}
+		classroomsResponse = append(classroomsResponse, classroomResponse)
+
+		classroomStudents, err := s.repo.Student().GetStudentsByClassroomID(classroom.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, student := range classroomStudents {
+
+			var studentResponse rs.StudentResponse
+			if err := copier.Copy(&studentResponse, student); err != nil {
+				return nil, nil, err
+			}
+
+			studentsResponse = append(studentsResponse, studentResponse)
+		}
+	}
+
+	return classroomsResponse, studentsResponse, nil
 }

@@ -7,6 +7,7 @@ import (
 	auth "github.com/fadhln/lms-be/service/auth"
 	classroom "github.com/fadhln/lms-be/service/classroom"
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
+	rewardpunishment "github.com/fadhln/lms-be/service/reward_punishment"
 	school "github.com/fadhln/lms-be/service/school"
 	student "github.com/fadhln/lms-be/service/student"
 	subject "github.com/fadhln/lms-be/service/subject"
@@ -23,6 +24,7 @@ type Service interface {
 	Student() student.StudentService
 	Subject() subject.SubjectService
 	Teacher() teacher.TeacherService
+	RewardPunishment() rewardpunishment.RewardPunishmentService
 }
 
 type impService struct {
@@ -69,4 +71,8 @@ func (s *impService) Subject() subject.SubjectService {
 
 func (s *impService) Teacher() teacher.TeacherService {
 	return teacher.Init(s.repo)
+}
+
+func (s *impService) RewardPunishment() rewardpunishment.RewardPunishmentService {
+	return rewardpunishment.Init(s.repo)
 }

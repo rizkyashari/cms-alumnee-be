@@ -13,6 +13,8 @@ type TeacherRepo interface {
 	CreateOne(tx *gorm.DB, newTeacher *model.Teacher) error
 
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newTeacher *model.Teacher) error
+
+	GetTeacherByID(id uuid.UUID) (*model.Teacher, error)
 }
 
 type impRepo struct {
@@ -53,4 +55,13 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, id uuid.UUID, newTeacher *model.Teacher
 	}
 
 	return nil
+}
+
+func (r *impRepo) GetTeacherByID(id uuid.UUID) (*model.Teacher, error) {
+	var teacher model.Teacher
+	if err := r.db.Where("id = ?", id).Preload("TeacherData").First(&teacher).Error; err != nil {
+		return nil, err
+	}
+
+	return &teacher, nil
 }

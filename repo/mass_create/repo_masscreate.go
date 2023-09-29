@@ -10,7 +10,7 @@ import (
 )
 
 type MassCreateRepo interface {
-	GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, error)
+	GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, int, error)
 	GetDetailByID(id uuid.UUID) (*model.MassCreate, error)
 	CreateOne(tx *gorm.DB, newCreation *model.MassCreate) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newCreation *model.MassCreate) error
@@ -26,12 +26,12 @@ func Init(db *gorm.DB) MassCreateRepo {
 	}
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate, int, int, error) {
 	var entries []model.MassCreate
 
 	chain := r.db
 
-	maxPage := util.GetMaxPage(chain.Find(&entries), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&entries), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -42,10 +42,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[any]) (*[]model.MassCreate,
 		Find(&entries)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &entries, maxPage, nil
+	return &entries, maxPage, rowCount, nil
 }
 
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.MassCreate, error) {

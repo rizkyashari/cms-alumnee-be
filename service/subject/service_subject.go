@@ -3,7 +3,6 @@ package service_subject
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
@@ -81,7 +80,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotSubjects, maxPage, err := s.repo.Subject().GetAll(params)
+	gotSubjects, maxPage, rowCount, err := s.repo.Subject().GetAll(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.SubjectResponse]{
@@ -118,6 +117,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.SubjectResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,
@@ -182,7 +182,7 @@ func (s *impService) GetAllSubjectComponent(c context.Context, params *rq.Pagina
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotSubjectCompoents, maxPage, err := s.repo.Subject().GetAllComponent(params)
+	gotSubjectCompoents, maxPage, rowCount, err := s.repo.Subject().GetAllComponent(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.SubjectComponentResponse]{
@@ -214,6 +214,7 @@ func (s *impService) GetAllSubjectComponent(c context.Context, params *rq.Pagina
 
 	res := rs.PaginationResponse[any, rs.SubjectComponentResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,
@@ -380,7 +381,6 @@ func (s *impService) validateSubjectComponentPercentage(c context.Context, perce
 }
 
 func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp *rq.SubjectComponentRequest) error {
-	fmt.Println("--- d")
 	if newSubjectComp.Name == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Name"}
 	}
@@ -432,18 +432,15 @@ func (s *impService) CreateOneSubjectComponentWithValidation(c context.Context, 
 	if newSubjectComp.SubjectID == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Subject ID"}
 	}
-	fmt.Println("--- a")
 
 	gotSubject, err := s.GetDetailByID(c, *newSubjectComp.SubjectID)
 	if err != nil {
 		return err
 	}
-	fmt.Println("--- b")
 
 	if gotSubject.TeacherID.String() != teacherId {
 		return &errmsg.ErrUserIsNot{FieldName: "Subject Teacher"}
 	}
-	fmt.Println("--- c")
 
 	return s.CreateOneSubjectComponent(c, newSubjectComp)
 }

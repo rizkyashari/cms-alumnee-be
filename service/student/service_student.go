@@ -242,7 +242,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotAccounts, maxPage, err := s.repo.Account().GetAllStudent(params)
+	gotAccounts, maxPage, rowCount, err := s.repo.Account().GetAllStudent(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.AccountResponse]{}
@@ -277,6 +277,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.AccountResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,

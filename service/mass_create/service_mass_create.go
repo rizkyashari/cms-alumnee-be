@@ -60,7 +60,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[any])
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotRecords, maxPage, err := s.repo.MassCreate().GetAll(params)
+	gotRecords, maxPage, rowCount, err := s.repo.MassCreate().GetAll(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.MassCreateResponse]{}
@@ -95,6 +95,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[any])
 
 	res := rs.PaginationResponse[any, rs.MassCreateResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,

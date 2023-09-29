@@ -133,7 +133,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotClassrooms, maxPage, err := s.repo.Classroom().GetAll(params)
+	gotClassrooms, maxPage, rowCount, err := s.repo.Classroom().GetAll(params)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -163,6 +163,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.ClassroomResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,

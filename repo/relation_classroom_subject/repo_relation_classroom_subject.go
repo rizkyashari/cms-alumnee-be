@@ -9,7 +9,7 @@ import (
 )
 
 type RelationClassroomSubjectRepo interface {
-	GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, error)
+	GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, int, error)
 	CreateOne(tx *gorm.DB, newRelation *model.RelationClassroomSubject) error
 	DeleteOne(tx *gorm.DB, classroomID uuid.UUID, subjectID uuid.UUID) error
 }
@@ -24,7 +24,7 @@ func Init(db *gorm.DB) RelationClassroomSubjectRepo {
 	}
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, int, error) {
 	var relations []model.RelationClassroomSubject
 
 	chain := r.db.Preload("Classroom").Preload("Subject")
@@ -39,7 +39,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubj
 			r.db.Debug().Model(&model.Classroom{}).Where("academic_year_id = ?", params.Data.Classroom.AcademicYearID).Select("id")))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&relations), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&relations), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -52,10 +52,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubj
 		Find(&relations)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &relations, maxPage, nil
+	return &relations, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newRelation *model.RelationClassroomSubject) error {

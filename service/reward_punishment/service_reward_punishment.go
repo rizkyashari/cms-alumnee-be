@@ -164,53 +164,6 @@ func (s *impService) GetAllByStudentID(c context.Context, studentID string, para
 	return s.GetAll(c, &newParams)
 }
 
-// func (s *impService) GetAllRewardPunishmentForTeacher(c context.Context, teacherID string) ([]rs.RewardPunishmentResponse, error) {
-
-// 	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	classrooms, err := s.repo.Classroom().GetClassroomsByTeacherID(*parsedTeacherID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var rewardPunishments []rs.RewardPunishmentResponse
-
-// 	for _, classroom := range classrooms {
-
-// 		classroomStudents, err := s.repo.Student().GetStudentsByClassroomID(classroom.ID)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		for _, student := range classroomStudents {
-
-// 			studentRewardPunishments, err := s.repo.RewardPunishment().GetRewardPunishmentsByStudentID(student.ID)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-
-// 			for _, rp := range studentRewardPunishments {
-
-// 				rewardPunishmentResponse := rs.RewardPunishmentResponse{
-// 					ID:          rp.ID,
-// 					CreatedAt:   rp.CreatedAt,
-// 					UpdatedAt:   rp.UpdatedAt,
-// 					StudentID:   rp.StudentID.String(),
-// 					Type:        rp.Type,
-// 					Point:       rp.Point,
-// 					Description: *rp.Description,
-// 				}
-// 				rewardPunishments = append(rewardPunishments, rewardPunishmentResponse)
-// 			}
-// 		}
-// 	}
-
-// 	return rewardPunishments, nil
-// }
-
 func (s *impService) GetAllRewardPunishmentForTeacher(c context.Context, teacherID string, params *rq.PaginationParams[model.RewardPunishment]) (*rs.PaginationResponse[any, rs.RewardPunishmentResponse], error) {
 	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
 	if err != nil {

@@ -54,6 +54,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 	r.GET("/reward-punishment", h.RewardPunishment.GetAll)
 
+	r.GET("/feedback", h.Feedback.GetAll)
+	r.GET("/feedback/:id", h.Feedback.GetDetailByID)
+
 	admin := r.Group("/4dm1n")
 	{
 		admin.Use(h.Auth.CheckAdmin())
@@ -119,6 +122,13 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponent)
 
 		}
+
+		feedback := admin.Group("/feedback")
+		{
+			feedback.GET("/", h.Feedback.GetAll)
+			feedback.POST("/", h.Feedback.CreateOne)
+			feedback.PATCH("/", h.Feedback.EditOneForAdmin)
+		}
 	}
 
 	student := r.Group("/s")
@@ -132,7 +142,14 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		student.PATCH("/data/address", h.Student.EditOwnAddressData)
 
 		student.GET("/subject", h.Subject.GetAllOwnStudent)
+
 		student.GET("/reward-punishment", h.RewardPunishment.GetAllOwnStudent)
+
+		feedback := student.Group("/feedback")
+		{
+			feedback.PATCH("/", h.Feedback.EditOne)
+			feedback.GET("/", h.Feedback.GetAllOwnStudent)
+		}
 	}
 
 	teacher := r.Group("/t")
@@ -163,6 +180,10 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		classroom_student := teacher.Group("/classroom-student")
 		{
 			classroom_student.GET("/", h.Teacher.GetAllClassroomStudents)
+		}
+		feedback := teacher.Group("/feedback")
+		{
+			feedback.GET("/", h.Feedback.GetAllOwnTeacher)
 		}
 	}
 

@@ -84,15 +84,6 @@ func (r *impRepo) DeleteOne(tx *gorm.DB, id uuid.UUID) error {
 	return nil
 }
 
-// func (r *impRepo) GetRewardPunishmentsByStudentID(studentID uuid.UUID) ([]model.RewardPunishment, error) {
-// 	var rewardPunishments []model.RewardPunishment
-// 	result := r.db.Where("student_id = ?", studentID.String()).Find(&rewardPunishments)
-// 	if result.Error != nil {
-// 		return nil, result.Error
-// 	}
-// 	return rewardPunishments, nil
-// }
-
 func (r *impRepo) GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *rq.PaginationParams[model.RewardPunishment]) ([]model.RewardPunishment, int, error) {
 	var rewardPunishments []model.RewardPunishment
 

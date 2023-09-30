@@ -5,6 +5,7 @@ import (
 	account "github.com/fadhln/lms-be/handler/account"
 	auth "github.com/fadhln/lms-be/handler/auth"
 	classroom "github.com/fadhln/lms-be/handler/classroom"
+	feedback "github.com/fadhln/lms-be/handler/feedback"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
 	rewardpunishment "github.com/fadhln/lms-be/handler/reward_punishment"
 	school "github.com/fadhln/lms-be/handler/school"
@@ -27,6 +28,7 @@ type Handler struct {
 	Subject          subject.SubjectHandler
 	Teacher          teacher.TeacherHandler
 	RewardPunishment rewardpunishment.RewardPunishmentHandler
+	Feedback         feedback.FeedbackHandler
 }
 
 func SetupHandler(s service.Service) *Handler {
@@ -42,5 +44,6 @@ func SetupHandler(s service.Service) *Handler {
 		Subject:          subject.Init(s),
 		Teacher:          teacher.Init(s),
 		RewardPunishment: rewardpunishment.Init(s),
+		Feedback:         feedback.Init(s),
 	}
 }

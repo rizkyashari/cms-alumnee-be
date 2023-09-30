@@ -19,4 +19,7 @@ var Entities = []interface{}{
 	&Score{},
 	&MassCreate{},
 	&RewardPunishment{},
+	&Feedback{},
+	&FeedbackScore{},
+	&FeedbackQuestion{},
 }

@@ -8,6 +8,7 @@ import (
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
 	classroom "github.com/fadhln/lms-be/repo/classroom"
+	"github.com/fadhln/lms-be/repo/feedback"
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	relationclassroomsubject "github.com/fadhln/lms-be/repo/relation_classroom_subject"
 	rewardpunishment "github.com/fadhln/lms-be/repo/reward_punishment"
@@ -37,6 +38,7 @@ type Repository interface {
 	Teacher() teacher.TeacherRepo
 	TeacherData() teacherdata.TeacherDataRepo
 	RewardPunishment() rewardpunishment.RewardPunishmentRepo
+	Feedback() feedback.FeedbackRepo
 }
 
 type impRepo struct {
@@ -105,4 +107,8 @@ func (r *impRepo) TeacherData() teacherdata.TeacherDataRepo {
 
 func (r *impRepo) RewardPunishment() rewardpunishment.RewardPunishmentRepo {
 	return rewardpunishment.Init(r.DB)
+}
+
+func (r *impRepo) Feedback() feedback.FeedbackRepo {
+	return feedback.Init(r.DB)
 }

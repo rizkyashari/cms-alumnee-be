@@ -127,7 +127,11 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		{
 			feedback.GET("/", h.Feedback.GetAll)
 			feedback.POST("/", h.Feedback.CreateOne)
-			feedback.PATCH("/", h.Feedback.EditOneForAdmin)
+			feedback.POST("/multiple", h.Feedback.CreateMultiple)
+			feedback.PATCH("/:id", h.Feedback.EditFeedback)
+			feedback.GET("/question", h.Feedback.GetAllFeedbackQuestions)
+			feedback.POST("/question", h.Feedback.CreateOneFeedbackQuestion)
+			feedback.PATCH("/question/:id", h.Feedback.EditFeedbackQuestion)
 		}
 	}
 

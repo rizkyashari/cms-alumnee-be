@@ -11,9 +11,12 @@ import (
 
 type FeedbackRepo interface {
 	GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, error)
+	GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, error)
 	GetByID(id uuid.UUID) (*model.Feedback, error)
 	CreateOne(tx *gorm.DB, newFeedback *model.Feedback) error
+	CreateOneFeedbackQuestion(tx *gorm.DB, newFeedbackQuestion *model.FeedbackQuestion) error
 	UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error
+	UpdateFeedbackQuestion(tx *gorm.DB, id uuid.UUID, feedbackQuestion *model.FeedbackQuestion) error
 	UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value int) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
@@ -32,6 +35,14 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newFeedback *model.Feedback) error {
 	if err := tx.Create(newFeedback).Error; err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *impRepo) CreateOneFeedbackQuestion(tx *gorm.DB, newFeedbackQuestion *model.FeedbackQuestion) error {
+	if err := tx.Create(newFeedbackQuestion).Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -86,7 +97,7 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error {
 		return &errmsg.ErrIsEmpty{FieldName: "Feedback"}
 	}
 
-	feedbackQuestionID := newFeedback.FeedbackScores[0].FeedbackQuestion.ID
+	feedbackQuestionID := newFeedback.FeedbackScores[0].FeedbackQuestionID
 
 	result := tx.Model(newFeedback).
 		Where("id = ?", newFeedback.ID).
@@ -103,11 +114,25 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error {
 		return result.Error
 	}
 
-	existingQuestion.Question = newFeedback.FeedbackScores[0].FeedbackQuestion.Question
-	result = tx.Save(&existingQuestion)
-
 	if result.Error != nil {
 		return result.Error
+	}
+
+	return nil
+}
+
+func (r *impRepo) UpdateFeedbackQuestion(tx *gorm.DB, id uuid.UUID, feedbackQuestion *model.FeedbackQuestion) error {
+	if feedbackQuestion == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "Question"}
+	}
+
+	result := tx.Model(feedbackQuestion).Where("id = ?", id).Updates(feedbackQuestion)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected != 1 {
+		return gorm.ErrRecordNotFound
 	}
 
 	return nil
@@ -133,4 +158,30 @@ func (r *impRepo) UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value 
 	}
 
 	return nil
+}
+
+func (r *impRepo) GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, error) {
+	var question []model.FeedbackQuestion
+
+	chain := r.db
+
+	if len(params.Data.Question) >= 2 {
+		chain = chain.Where(r.db.Where("question ILIKE " + `'%` + params.Data.Question + `%'`))
+	}
+
+	maxPage := util.GetMaxPage(chain.Find(&question), params.Limit)
+
+	validColumnName := []string{
+		"created_at",
+		"updated_at",
+		"question",
+	}
+
+	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).Find(&question)
+
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return &question, maxPage, nil
 }

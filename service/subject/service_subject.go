@@ -290,17 +290,17 @@ func (s *impService) CreateOne(c context.Context, newSubject *rq.SubjectRequest)
 }
 
 func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID string, newSubject *rq.SubjectRequest) error {
-	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
-	if err != nil {
-		return err
-	}
-
 	if newSubject.Name == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Name"}
 	}
 
 	if len(*newSubject.Name) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
+	}
+
+	parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
+	if err != nil {
+		return err
 	}
 
 	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", newSubject.TeacherID)
@@ -311,6 +311,15 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 	gotClassroom, err := s.repo.Classroom().GetDetailByID(*parsedClassroomID)
 	if err != nil {
 		return &errmsg.ErrInternal{Err: err}
+	}
+
+	gotTeacher, err := s.repo.Teacher().GetDetailByTeacherID(*parsedTeacherID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	if gotTeacher.SchoolID != gotClassroom.SchoolID {
+		return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
 	}
 
 	newSubjectID := uuid.New()
@@ -468,6 +477,23 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 		}
 
 		newSubject.TeacherID = *parsedTeacherID
+
+		gotSubject, err := s.repo.Subject().GetDetailByID(*parsedSubjectID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+
+		gotTeacher, err := s.repo.Teacher().GetDetailByTeacherID(*parsedTeacherID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+
+		gotRelation, err := s.repo.RelationClassroomSubject().GetAll(
+			&rq.PaginationParams[model.RelationClassroomSubject]{
+				Limit: 99,
+				Page:  1,
+				Data:  model.RelationClassroomSubject{},
+			})
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {

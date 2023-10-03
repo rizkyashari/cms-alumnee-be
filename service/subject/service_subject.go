@@ -2,8 +2,15 @@ package service_subject
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"mime/multipart"
+	"os"
+	"time"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/model"
@@ -11,6 +18,7 @@ import (
 	"github.com/fadhln/lms-be/util"
 	"github.com/fadhln/lms-be/util/errmsg"
 	serviceutil "github.com/fadhln/lms-be/util/service_util"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -32,6 +40,8 @@ type SubjectService interface {
 	CreateOneWithClassroomID(c context.Context, classroomID string, newSubject *rq.SubjectRequest) error
 	CreateOneSubjectComponent(c context.Context, newSubjectComp *rq.SubjectComponentRequest) error
 	CreateOneSubjectComponentWithValidation(c context.Context, teacherId string, newSubjectComp *rq.SubjectComponentRequest) error
+
+	CreateMass(c *gin.Context, requestFile *multipart.FileHeader) (*rs.MassCreateResponse, error)
 
 	EditOne(c context.Context, subjectID string, newSubject *rq.SubjectRequest) error
 	EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error
@@ -60,11 +70,20 @@ func (s *impService) convertToResponse(subject *model.Subject) (*rs.SubjectRespo
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	var tempSubjectComponent rs.SubjectComponentResponse
+	var tempTeacher rs.TeacherResponse
+	err = copier.Copy(&tempTeacher, subject.Teacher)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var tempSubjectComponent []rs.SubjectComponentResponse
 	err = copier.Copy(&tempSubjectComponent, subject.SubjectComponents)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
+
+	tempResponse.Teacher = tempTeacher
+	tempResponse.SubjectComponents = tempSubjectComponent
 
 	return &tempResponse, nil
 }
@@ -318,7 +337,7 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 		return &errmsg.ErrInternal{Err: err}
 	}
 
-	if gotTeacher.SchoolID != gotClassroom.SchoolID {
+	if gotTeacher.SchoolID.String() != gotClassroom.SchoolID.String() {
 		return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
 	}
 
@@ -460,6 +479,11 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 		return err
 	}
 
+	gotSubject, err := s.repo.Subject().GetDetailByID(*parsedSubjectID)
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
 	var newSubject model.Subject
 
 	if body.Name != nil {
@@ -478,22 +502,22 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 
 		newSubject.TeacherID = *parsedTeacherID
 
-		gotSubject, err := s.repo.Subject().GetDetailByID(*parsedSubjectID)
-		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
-		}
-
-		gotTeacher, err := s.repo.Teacher().GetDetailByTeacherID(*parsedTeacherID)
-		if err != nil {
-			return &errmsg.ErrInternal{Err: err}
-		}
-
-		gotRelation, err := s.repo.RelationClassroomSubject().GetAll(
+		gotRelation, _, _, _ := s.repo.RelationClassroomSubject().GetAll(
 			&rq.PaginationParams[model.RelationClassroomSubject]{
 				Limit: 99,
 				Page:  1,
-				Data:  model.RelationClassroomSubject{},
+				Data: model.RelationClassroomSubject{
+					SubjectID: gotSubject.ID,
+				},
 			})
+
+		if gotRelation != nil {
+			for _, relation := range *gotRelation {
+				if gotSubject.Teacher.SchoolID.String() != relation.Classroom.ID.String() {
+					return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
+				}
+			}
+		}
 	}
 
 	err = s.repo.Transaction(func(tx *gorm.DB) error {
@@ -509,6 +533,179 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 	}
 
 	return nil
+}
+
+func getSubjectCSV(requestFile *multipart.FileHeader) (*[]rq.SubjectRequestWithTeacherEmail, error) {
+	if requestFile == nil {
+		return nil, errmsg.ErrRequestFileInvalid
+	}
+
+	file, err := requestFile.Open()
+	if err != nil {
+		return nil, errmsg.ErrRequestFileInvalid
+	}
+	defer file.Close()
+
+	records, err := csv.NewReader(file).ReadAll()
+	if err != nil {
+		return nil, errmsg.ErrRequestFileInvalid
+	}
+
+	var subjects []rq.SubjectRequestWithTeacherEmail
+	for idx, rec := range records {
+		if idx == 0 {
+			continue
+		}
+
+		subject := rq.SubjectRequestWithTeacherEmail{
+			Name:         rec[0],
+			TeacherEmail: rec[1],
+		}
+
+		subjects = append(subjects, subject)
+	}
+
+	return &subjects, nil
+}
+
+func (s *impService) processMassCreate(c context.Context, requests *[]rq.SubjectRequestWithTeacherEmail, reportFileName string, newMassCreate *model.MassCreate) {
+	if requests == nil {
+		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
+
+		s.repo.Transaction(func(tx *gorm.DB) error {
+			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		return
+	}
+
+	if len(*requests) >= 350 {
+		newMassCreate.Status = constants.MASS_CREATE_STATUS_FAILED
+
+		s.repo.Transaction(func(tx *gorm.DB) error {
+			if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		return
+	}
+
+	successCount := 0
+	var errMsgs []model.ErrorMsg
+	for idx, tempSubject := range *requests {
+		gotTeacherAccount, err := s.repo.Account().ReadOneByEmail(tempSubject.TeacherEmail)
+		if err != nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: err.Error()})
+			continue
+		}
+
+		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotTeacherAccount.ID)
+		if err != nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: err.Error()})
+			continue
+		}
+		if gotTeacher == nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: "Teacher is missing"})
+			continue
+		}
+
+		teacherID := gotTeacher.ID.String()
+
+		err = s.CreateOne(c, &rq.SubjectRequest{Name: &tempSubject.Name, TeacherID: &teacherID})
+		if err != nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: err.Error()})
+			continue
+		}
+		successCount++
+	}
+
+	errMsgsStr, _ := json.Marshal(errMsgs)
+	file, _ := os.Create("./file/output/" + reportFileName)
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	writer.Write(model.GetErrorMsgHeader())
+	for _, errMsg := range errMsgs {
+		writer.Write(model.GetErrorMsgRow(&errMsg))
+	}
+
+	newMassCreate.Status = constants.MASS_CREATE_STATUS_DONE
+	newMassCreate.ReportFileUrl = reportFileName
+	newMassCreate.ErrorCount = len(errMsgs)
+	newMassCreate.SuccessCount = successCount
+	newMassCreate.ErrorMessages = string(errMsgsStr)
+
+	s.repo.Transaction(func(tx *gorm.DB) error {
+		if err := s.repo.MassCreate().UpdateOne(tx, newMassCreate.ID, newMassCreate); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeader) (*rs.MassCreateResponse, error) {
+
+	newSubjects, err := getSubjectCSV(requestFile)
+	if err != nil {
+		return nil, errmsg.ErrRequestFileInvalid
+	}
+
+	nowStr := time.Now().Format(constants.FilenameTimeFormat)
+	requestFileName := fmt.Sprintf("subject-request-%s-%s.csv", nowStr, uuid.New().String())
+	reportFileName := fmt.Sprintf("subject-report-%s-%s.csv", nowStr, uuid.New().String())
+
+	err = c.SaveUploadedFile(requestFile, "./file/input/"+requestFileName)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	newMassCreateID := uuid.New()
+	var newMassCreate = model.MassCreate{
+		Base:           model.Base{ID: newMassCreateID},
+		Status:         constants.MASS_CREATE_STATUS_PROCESSING,
+		Destination:    constants.DEST_SUBJECT,
+		RequestFileUrl: requestFileName,
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		if err := s.repo.MassCreate().CreateOne(tx, &newMassCreate); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	go s.processMassCreate(c, newSubjects, reportFileName, &newMassCreate)
+
+	var res rs.MassCreateResponse
+	err = copier.Copy(&res, newMassCreate)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &res, nil
 }
 
 func (s *impService) EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error {
@@ -636,11 +833,24 @@ func (s *impService) AssignClassroomsToSubject(c context.Context, subjectID stri
 		return err
 	}
 
+	gotSubject, err := s.GetDetailByID(c, parsedSubjectID.String())
+	if err != nil {
+		return err
+	}
+
 	parsedClassroomIDs := []uuid.UUID{}
 	for _, classroomID := range classroomIDs {
 		parsedClassroomID, err := serviceutil.GetUUIDFromStringWithValidation("Classroom ID", &classroomID)
 		if err != nil {
 			return err
+		}
+
+		gotClassroom, err := s.repo.Classroom().GetDetailByID(*parsedClassroomID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+		if gotSubject.Teacher.SchoolID.String() != gotClassroom.SchoolID.String() {
+			return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
 		}
 
 		parsedClassroomIDs = append(parsedClassroomIDs, *parsedClassroomID)

@@ -8,6 +8,7 @@ type Subject struct {
 	Base
 	Name                      string
 	TeacherID                 uuid.UUID
+	Teacher                   Teacher
 	RelationClassroomSubjects []RelationClassroomSubject
 	SubjectComponents         []SubjectComponent
 }

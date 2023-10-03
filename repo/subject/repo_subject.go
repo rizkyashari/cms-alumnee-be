@@ -35,7 +35,7 @@ func Init(db *gorm.DB) SubjectRepo {
 
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Subject, error) {
 	var subject model.Subject
-	chain := r.db.Preload("SubjectComponents")
+	chain := r.db.Preload("SubjectComponents").Preload("Teacher")
 
 	if err := chain.Where("id = ?", id).Find(&subject).Error; err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Subject, error) {
 func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, int, error) {
 	var subjects []model.Subject
 
-	chain := r.db.Preload("SubjectComponents")
+	chain := r.db.Preload("SubjectComponents").Preload("Teacher")
 
 	if len(params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))

@@ -39,6 +39,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubj
 			r.db.Debug().Model(&model.Classroom{}).Where("academic_year_id = ?", params.Data.Classroom.AcademicYearID).Select("id")))
 	}
 
+	if params.Data.SubjectID != uuid.Nil {
+		chain = chain.Where(r.db.Where("subject_id = ?", params.Data.ClassroomID))
+	}
+
 	if params.Data.ClassroomID != uuid.Nil {
 		chain = chain.Where(r.db.Where("classroom_id = ?", params.Data.ClassroomID))
 	}

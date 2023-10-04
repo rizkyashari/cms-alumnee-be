@@ -39,6 +39,22 @@ func ConnectDb() *gorm.DB {
 	log.Println("DB is connected")
 	db.Logger = logger.Default.LogMode(logger.Info)
 
+	var strapiDBExists bool
+	err = db.Raw("SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'strapi')").Scan(&strapiDBExists).Error
+	if err != nil {
+		log.Fatal("Failed to check if database exists. \n", err)
+		os.Exit(2)
+	}
+
+	if !strapiDBExists {
+		err := db.Exec("CREATE DATABASE strapi").Error
+		if err != nil {
+			log.Fatal("Failed to create 'strapi' database. \n", err)
+			os.Exit(2)
+		}
+		log.Println("Database 'strapi' created successfully.")
+	}
+
 	return db
 }
 

@@ -6,5 +6,4 @@ WORKDIR /usr/src/app
 RUN go install github.com/cosmtrek/air@latest
 
 COPY . .
-RUN sh script/install-vips.sh
 RUN go mod tidy

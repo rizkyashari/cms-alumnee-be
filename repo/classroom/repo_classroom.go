@@ -13,7 +13,7 @@ type ClassroomRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.Classroom, error)
 	GetClassroomsByTeacherID(teacherID uuid.UUID) ([]model.Classroom, error)
 	GetDetailByCode(code string) (*model.Classroom, error)
-	GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error)
+	GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, int, error)
 	CreateOne(tx *gorm.DB, newClassroom *model.Classroom) error
 	CreateMass(tx *gorm.DB, newClassrooms *[]model.Classroom) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newClassroom *model.Classroom) error
@@ -52,7 +52,7 @@ func (r *impRepo) GetDetailByCode(code string) (*model.Classroom, error) {
 	return &classroom, nil
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model.Classroom, int, int, error) {
 	var classrooms []model.Classroom
 
 	chain := r.db.Preload("AcademicYear").Preload("Teacher").Preload("Teacher.TeacherData")
@@ -90,7 +90,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 		}
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&classrooms), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&classrooms), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -101,10 +101,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Classroom]) (*[]model
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).Find(&classrooms)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &classrooms, maxPage, nil
+	return &classrooms, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newClassroom *model.Classroom) error {

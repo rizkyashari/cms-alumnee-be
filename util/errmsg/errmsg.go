@@ -104,3 +104,12 @@ func (e *ErrInternal) Error() string {
 
 	return fmt.Sprintf("Internal Error: %s", e.Err.Error())
 }
+
+type ErrANotSameB struct {
+	A string
+	B string
+}
+
+func (e *ErrANotSameB) Error() string {
+	return fmt.Sprintf("%s is not the same as %s", e.A, e.B)
+}

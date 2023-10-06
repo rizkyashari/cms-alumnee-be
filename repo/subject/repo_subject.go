@@ -11,13 +11,13 @@ import (
 
 type SubjectRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.Subject, error)
-	GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, error)
+	GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, int, error)
 	CreateOne(tx *gorm.DB, newSubject *model.Subject) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newSubject *model.Subject) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 
 	GetComponentDetailByComponentID(componentId uuid.UUID) (*model.SubjectComponent, error)
-	GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, error)
+	GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, int, error)
 	CreateOneComponent(tx *gorm.DB, newSubjectComp *model.SubjectComponent) error
 	UpdateOneComponent(tx *gorm.DB, componentId uuid.UUID, newSubjectComp *model.SubjectComponent) error
 	DeleteOneComponent(tx *gorm.DB, id uuid.UUID) error
@@ -35,7 +35,7 @@ func Init(db *gorm.DB) SubjectRepo {
 
 func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Subject, error) {
 	var subject model.Subject
-	chain := r.db.Preload("SubjectComponents")
+	chain := r.db.Preload("SubjectComponents").Preload("Teacher")
 
 	if err := chain.Where("id = ?", id).Find(&subject).Error; err != nil {
 		return nil, err
@@ -44,10 +44,10 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.Subject, error) {
 	return &subject, nil
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.Subject, int, int, error) {
 	var subjects []model.Subject
 
-	chain := r.db.Preload("SubjectComponents")
+	chain := r.db.Preload("SubjectComponents").Preload("Teacher")
 
 	if len(params.Data.Name) >= 2 {
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))
@@ -74,7 +74,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 		}
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&subjects), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&subjects), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -87,10 +87,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 		Find(&subjects)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &subjects, maxPage, nil
+	return &subjects, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, subject *model.Subject) error {
@@ -136,7 +136,7 @@ func (r *impRepo) GetComponentDetailByComponentID(componentId uuid.UUID) (*model
 	return &SubjectComponent, nil
 }
 
-func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, error) {
+func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectComponent]) (*[]model.SubjectComponent, int, int, error) {
 	var subjectComps []model.SubjectComponent
 
 	chain := r.db
@@ -149,7 +149,7 @@ func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectCompo
 		chain = chain.Where(r.db.Where("subject_id = ?", params.Data.SubjectID.String()))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&subjectComps), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&subjectComps), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -162,10 +162,10 @@ func (r *impRepo) GetAllComponent(params *rq.PaginationParams[model.SubjectCompo
 		Find(&subjectComps)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &subjectComps, maxPage, nil
+	return &subjectComps, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOneComponent(tx *gorm.DB, newSubjectComp *model.SubjectComponent) error {

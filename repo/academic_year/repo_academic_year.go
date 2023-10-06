@@ -11,7 +11,7 @@ import (
 
 type AcademicYearRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.AcademicYear, error)
-	GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, error)
+	GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, int, error)
 	CreateOne(tx *gorm.DB, newAcademicYear *model.AcademicYear) error
 	UpdateOne(tx *gorm.DB, id uuid.UUID, newAcademicYear *model.AcademicYear) error
 	UpdateStatus(tx *gorm.DB, id uuid.UUID, newAcademicYear *model.AcademicYear) error
@@ -37,7 +37,7 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.AcademicYear, error) {
 	return &year, nil
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]model.AcademicYear, int, int, error) {
 	var year []model.AcademicYear
 
 	chain := r.db
@@ -46,7 +46,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]mo
 		chain = chain.Where(r.db.Where("year ILIKE " + `'%` + params.Data.Year + `%'`))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&year), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&year), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -57,10 +57,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.AcademicYear]) (*[]mo
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).Find(&year)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &year, maxPage, nil
+	return &year, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, year *model.AcademicYear) error {

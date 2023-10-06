@@ -53,14 +53,14 @@ func Pagination(Limit, Page int, SortBy, SortOrder string, validColumnName []str
 	}
 }
 
-func GetMaxPage(db *gorm.DB, limit int) int {
+func GetMaxPageAndRowCount(db *gorm.DB, limit int) (int, int) {
 	count := int(db.RowsAffected)
 	maxPage := count / limit
 	if (count % limit) > 0 {
 		maxPage += 1
 	}
 
-	return maxPage
+	return maxPage, count
 }
 
 func IsParamValid(params *rq.PaginationParams[interface{}]) bool {

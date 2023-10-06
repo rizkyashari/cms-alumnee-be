@@ -11,7 +11,7 @@ import (
 
 type SchoolRepo interface {
 	GetDetailByID(id uuid.UUID) (*model.School, error)
-	GetAll(params *rq.PaginationParams[model.School]) (*[]model.School, int, error)
+	GetAll(params *rq.PaginationParams[model.School]) (*[]model.School, int, int, error)
 	CreateOne(tx *gorm.DB, newSchool *model.School) error
 	UpdateOne(tx *gorm.DB, newSchool *model.School) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
@@ -36,7 +36,7 @@ func (r *impRepo) GetDetailByID(id uuid.UUID) (*model.School, error) {
 	return &school, nil
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.School]) (*[]model.School, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.School]) (*[]model.School, int, int, error) {
 	var schools []model.School
 
 	chain := r.db
@@ -45,7 +45,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.School]) (*[]model.Sc
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + params.Data.Name + `%'`))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&schools), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&schools), params.Limit)
 
 	validColumnName := []string{
 		"name",
@@ -54,10 +54,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.School]) (*[]model.Sc
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).Find(&schools)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &schools, maxPage, nil
+	return &schools, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newSchool *model.School) error {

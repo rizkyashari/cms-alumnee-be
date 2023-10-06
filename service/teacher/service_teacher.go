@@ -222,7 +222,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotAccounts, maxPage, err := s.repo.Account().GetAllTeacher(params)
+	gotAccounts, maxPage, rowCount, err := s.repo.Account().GetAllTeacher(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.AccountResponse]{}
@@ -276,6 +276,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.AccountResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,
@@ -308,7 +309,7 @@ func (s *impService) GetAllClassroomSubject(c context.Context, teacherID string,
 		newParam.Data.Classroom.AcademicYearID = *parsedAcademicYearID
 	}
 
-	gotRelation, maxPage, err := s.repo.RelationClassroomSubject().GetAll(params)
+	gotRelation, maxPage, rowCount, err := s.repo.RelationClassroomSubject().GetAll(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.ClassroomSubject]{}
@@ -358,6 +359,7 @@ func (s *impService) GetAllClassroomSubject(c context.Context, teacherID string,
 
 	res := rs.PaginationResponse[any, rs.ClassroomSubject]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,

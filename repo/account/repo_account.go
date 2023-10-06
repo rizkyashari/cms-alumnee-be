@@ -20,8 +20,8 @@ import (
 type AccountRepo interface {
 	SetOneRedis(ctx context.Context, key string, acc *model.Account) error
 	ReadOneRedis(ctx context.Context, key string) (*model.Account, error)
-	GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error)
-	GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error)
+	GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error)
+	GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error)
 	CreateOne(tx *gorm.DB, newAccount *model.Account) error
 	ReadOneByEmail(email string) (*model.Account, error)
 	ReadOneByID(id uuid.UUID) (*model.Account, error)
@@ -77,29 +77,30 @@ func (r *impRepo) ReadOneRedis(ctx context.Context, key string) (*model.Account,
 	return &gotAccount, nil
 }
 
-func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
+func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error) {
 	var accounts []model.Account
 
-	var preloadTeacherArgs []any
+	chain := r.db.Preload("Teacher.TeacherData")
+
 	if params.Data.Teacher != nil && params.Data.Teacher.SchoolID != uuid.Nil {
-		schoolIdArgs := []any{"school_id = ?", params.Data.Teacher.SchoolID.String()}
-		preloadTeacherArgs = append(preloadTeacherArgs, schoolIdArgs...)
+		teacherChain := r.db.Debug().Model(&model.Teacher{}).Where("school_id IN (?)", params.Data.Teacher.SchoolID)
+
+		var teacherDataArgs *model.TeacherData
+		if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.Gender != nil {
+			teacherDataArgs.Gender = params.Data.Teacher.TeacherData.Gender
+		}
+
+		if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.EmploymentStatus != nil {
+			teacherDataArgs.EmploymentStatus = params.Data.Teacher.TeacherData.EmploymentStatus
+		}
+
+		if teacherDataArgs != nil {
+			teacherChain = teacherChain.Where(r.db.Where("id IN (?)"),
+				r.db.Debug().Model(&model.TeacherData{}).Where(teacherDataArgs).Select("teacher_id"))
+		}
+
+		chain = chain.Where(r.db.Where("id IN (?)", teacherChain.Select("account_id")))
 	}
-
-	chain := r.db.Preload("Teacher.TeacherData", preloadTeacherArgs...)
-
-	var preloadTeacherDataArgs []any
-	if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.Gender != nil {
-		genderArgs := []any{"gender = (?)", params.Data.Teacher.TeacherData.Gender}
-		preloadTeacherDataArgs = append(preloadTeacherDataArgs, genderArgs...)
-	}
-
-	if params.Data.Teacher != nil && params.Data.Teacher.TeacherData.EmploymentStatus != nil {
-		employmentStatusArgs := []any{"employment_status = (?)", params.Data.Teacher.TeacherData.EmploymentStatus}
-		preloadTeacherDataArgs = append(preloadTeacherDataArgs, employmentStatusArgs...)
-	}
-
-	chain = chain.Preload("Teacher.TeacherData", preloadTeacherDataArgs...)
 
 	chain = chain.Where(r.db.Where("account_type = ?", constants.ACCOUNT_TEACHER))
 
@@ -107,7 +108,7 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&accounts), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&accounts), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -120,13 +121,13 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 		Find(&accounts)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &accounts, maxPage, nil
+	return &accounts, maxPage, rowCount, nil
 }
 
-func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, error) {
+func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error) {
 	var accounts []model.Account
 
 	var preloadStudentArgs []any
@@ -151,7 +152,7 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 		chain = chain.Where(r.db.Where("name ILIKE " + `'%` + *params.Data.Name + `%'`))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&accounts), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&accounts), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -164,10 +165,10 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 		Find(&accounts)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &accounts, maxPage, nil
+	return &accounts, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newAccount *model.Account) error {

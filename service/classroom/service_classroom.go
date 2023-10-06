@@ -133,7 +133,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotClassrooms, maxPage, err := s.repo.Classroom().GetAll(params)
+	gotClassrooms, maxPage, rowCount, err := s.repo.Classroom().GetAll(params)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
@@ -163,6 +163,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.ClassroomResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            response,
@@ -524,12 +525,24 @@ func (s *impService) AssignSubjectsToClassroom(c context.Context, classroomID st
 	if err != nil {
 		return err
 	}
+	gotClassroom, err := s.GetDetailByID(c, parsedClassroomID.String())
+	if err != nil {
+		return err
+	}
 
 	parsedSubjectIDs := []uuid.UUID{}
 	for _, subjectID := range subjectIDs {
 		parsedSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject ID", &subjectID)
 		if err != nil {
 			return err
+		}
+
+		gotSubject, err := s.repo.Subject().GetDetailByID(*parsedSubjectID)
+		if err != nil {
+			return &errmsg.ErrInternal{Err: err}
+		}
+		if gotSubject.Teacher.SchoolID.String() != gotClassroom.SchoolID {
+			return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
 		}
 
 		parsedSubjectIDs = append(parsedSubjectIDs, *parsedSubjectID)

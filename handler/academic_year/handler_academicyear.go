@@ -91,8 +91,9 @@ func (h *impHandler) CreateOne(c *gin.Context) {
 func (h *impHandler) EditYear(c *gin.Context) {
 	id := c.Param("id")
 
-	var request rq.AcademicYearRequest = rq.AcademicYearRequest{ID: &id}
+	var request rq.AcademicYearRequest
 	err := c.ShouldBindJSON(&request)
+	request.ID = &id
 
 	if err != nil {
 		rs.ErrorResponse(c, err)
@@ -111,8 +112,9 @@ func (h *impHandler) EditYear(c *gin.Context) {
 func (h *impHandler) EditStatus(c *gin.Context) {
 	id := c.Param("id")
 
-	var request rq.AcademicYearRequest = rq.AcademicYearRequest{ID: &id}
+	var request rq.AcademicYearRequest
 	err := c.ShouldBindJSON(&request)
+	request.ID = &id
 
 	if err != nil {
 		rs.ErrorResponse(c, err)

@@ -269,7 +269,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotFeedbacks, maxPage, err := s.repo.Feedback().GetAll(params)
+	gotFeedbacks, maxPage, rowCount, err := s.repo.Feedback().GetAll(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.FeedbackResponse]{}
@@ -299,6 +299,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.FeedbackResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            datares,
@@ -371,7 +372,7 @@ func (s *impService) GetAllFeedbackQuestions(c context.Context, params *rq.Pagin
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotQuestions, maxPage, err := s.repo.Feedback().GetAllFeedbackQuestions(params)
+	gotQuestions, maxPage, rowCount, err := s.repo.Feedback().GetAllFeedbackQuestions(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.FeedbackQuestionResponse]{}
@@ -401,6 +402,7 @@ func (s *impService) GetAllFeedbackQuestions(c context.Context, params *rq.Pagin
 
 	res := rs.PaginationResponse[any, rs.FeedbackQuestionResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            datares,

@@ -26,3 +26,9 @@ wait-for-db:
 .PHONY: strapi-dev
 strapi-dev: wait-for-db
 	docker-compose run --service-ports --rm strapi yarn develop
+
+.PHONY: deploy
+deploy: build migrate seed wait-for-db 
+	docker-compose run --service-ports --rm strapi yarn build
+	docker-compose run --service-ports strapi yarn strapi
+	docker compose run --service-ports --rm go run $(ENTRY)

@@ -114,7 +114,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
 	}
 
-	gotRewardPunishments, maxPage, err := s.repo.RewardPunishment().GetAll(params)
+	gotRewardPunishments, maxPage, rowCount, err := s.repo.RewardPunishment().GetAll(params)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			res := rs.PaginationResponse[any, rs.RewardPunishmentResponse]{}
@@ -144,6 +144,7 @@ func (s *impService) GetAll(c context.Context, params *rq.PaginationParams[model
 
 	res := rs.PaginationResponse[any, rs.RewardPunishmentResponse]{
 		MaxPage:         maxPage,
+		RowCount:        rowCount,
 		CurrentPage:     params.Page,
 		AvailableFilter: nil,
 		Data:            datares,
@@ -177,6 +178,7 @@ func (s *impService) GetAllRewardPunishmentForTeacher(c context.Context, teacher
 
 	var rewardPunishments []rs.RewardPunishmentResponse
 	var maxPage int
+	var maxRow int
 
 	for _, classroom := range classrooms {
 		classroomStudents, err := s.repo.Student().GetStudentsByClassroomID(classroom.ID)
@@ -185,11 +187,12 @@ func (s *impService) GetAllRewardPunishmentForTeacher(c context.Context, teacher
 		}
 
 		for _, student := range classroomStudents {
-			studentRewardPunishments, pageCount, err := s.repo.RewardPunishment().GetRewardPunishmentsByStudentID(student.ID, params)
+			studentRewardPunishments, pageCount, rowCount, err := s.repo.RewardPunishment().GetRewardPunishmentsByStudentID(student.ID, params)
 			if err != nil {
 				return nil, err
 			}
 
+			maxRow += rowCount
 			maxPage += pageCount
 
 			for _, rp := range studentRewardPunishments {
@@ -209,6 +212,7 @@ func (s *impService) GetAllRewardPunishmentForTeacher(c context.Context, teacher
 
 	res := rs.PaginationResponse[any, rs.RewardPunishmentResponse]{
 		MaxPage:     maxPage,
+		RowCount:    maxRow,
 		CurrentPage: params.Page,
 		Data:        rewardPunishments,
 	}

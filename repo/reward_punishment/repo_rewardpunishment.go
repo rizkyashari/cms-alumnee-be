@@ -10,8 +10,8 @@ import (
 )
 
 type RewardPunishmentRepo interface {
-	GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*[]model.RewardPunishment, int, error)
-	GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *rq.PaginationParams[model.RewardPunishment]) ([]model.RewardPunishment, int, error)
+	GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*[]model.RewardPunishment, int, int, error)
+	GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *rq.PaginationParams[model.RewardPunishment]) ([]model.RewardPunishment, int, int, error)
 	CreateOne(tx *gorm.DB, newRewardPunishment *model.RewardPunishment) error
 	UpdateOne(tx *gorm.DB, newRewardPunishment *model.RewardPunishment) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
@@ -27,7 +27,7 @@ func Init(db *gorm.DB) RewardPunishmentRepo {
 	}
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*[]model.RewardPunishment, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*[]model.RewardPunishment, int, int, error) {
 	var rewardPunishments []model.RewardPunishment
 
 	chain := r.db
@@ -36,7 +36,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*
 		chain = chain.Where(r.db.Where("student_id = ?", params.Data.StudentID.String()))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&rewardPunishments), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&rewardPunishments), params.Limit)
 
 	validColumDescription := []string{
 		"description",
@@ -45,10 +45,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.RewardPunishment]) (*
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumDescription)).Find(&rewardPunishments)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &rewardPunishments, maxPage, nil
+	return &rewardPunishments, maxPage, rowCount, nil
 }
 
 func (r *impRepo) CreateOne(tx *gorm.DB, newRewardPunishment *model.RewardPunishment) error {
@@ -84,12 +84,12 @@ func (r *impRepo) DeleteOne(tx *gorm.DB, id uuid.UUID) error {
 	return nil
 }
 
-func (r *impRepo) GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *rq.PaginationParams[model.RewardPunishment]) ([]model.RewardPunishment, int, error) {
+func (r *impRepo) GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *rq.PaginationParams[model.RewardPunishment]) ([]model.RewardPunishment, int, int, error) {
 	var rewardPunishments []model.RewardPunishment
 
 	chain := r.db.Where("student_id = ?", studentID.String())
 
-	maxPage := util.GetMaxPage(chain.Find(&rewardPunishments), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&rewardPunishments), params.Limit)
 
 	validColumnDescription := []string{
 		"description",
@@ -98,8 +98,8 @@ func (r *impRepo) GetRewardPunishmentsByStudentID(studentID uuid.UUID, params *r
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnDescription)).Find(&rewardPunishments)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return rewardPunishments, maxPage, nil
+	return rewardPunishments, maxPage, rowCount, nil
 }

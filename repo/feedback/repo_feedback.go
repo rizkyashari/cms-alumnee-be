@@ -10,8 +10,8 @@ import (
 )
 
 type FeedbackRepo interface {
-	GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, error)
-	GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, error)
+	GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, int, error)
+	GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, int, error)
 	GetByID(id uuid.UUID) (*model.Feedback, error)
 	CreateOne(tx *gorm.DB, newFeedback *model.Feedback) error
 	CreateOneFeedbackQuestion(tx *gorm.DB, newFeedbackQuestion *model.FeedbackQuestion) error
@@ -59,7 +59,7 @@ func (r *impRepo) DeleteOne(tx *gorm.DB, id uuid.UUID) error {
 	return nil
 }
 
-func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, error) {
+func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, int, error) {
 	var feedbacks []model.Feedback
 
 	chain := r.db.Preload("FeedbackScores").Preload("FeedbackScores.FeedbackQuestion")
@@ -76,7 +76,7 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&feedbacks), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&feedbacks), params.Limit)
 
 	validColumnTeacherID := []string{
 		"teacher_id",
@@ -85,10 +85,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnTeacherID)).Find(&feedbacks)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &feedbacks, maxPage, nil
+	return &feedbacks, maxPage, rowCount, nil
 }
 
 func (r *impRepo) UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error {
@@ -160,7 +160,7 @@ func (r *impRepo) UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value 
 	return nil
 }
 
-func (r *impRepo) GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, error) {
+func (r *impRepo) GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, int, error) {
 	var question []model.FeedbackQuestion
 
 	chain := r.db
@@ -169,7 +169,7 @@ func (r *impRepo) GetAllFeedbackQuestions(params *rq.PaginationParams[model.Feed
 		chain = chain.Where(r.db.Where("question ILIKE " + `'%` + params.Data.Question + `%'`))
 	}
 
-	maxPage := util.GetMaxPage(chain.Find(&question), params.Limit)
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&question), params.Limit)
 
 	validColumnName := []string{
 		"created_at",
@@ -180,8 +180,8 @@ func (r *impRepo) GetAllFeedbackQuestions(params *rq.PaginationParams[model.Feed
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).Find(&question)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, 0, 0, result.Error
 	}
 
-	return &question, maxPage, nil
+	return &question, maxPage, rowCount, nil
 }

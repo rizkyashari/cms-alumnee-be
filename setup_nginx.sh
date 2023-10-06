@@ -7,9 +7,9 @@ sudo apt update
 sudo apt install -y nginx
 
 # Allow necessary ports in the firewall (if applicable)
-sudo ufw allow 8080
-sudo ufw allow 8083
-sudo ufw allow 1337
+sudo ufw allow 80
+sudo ufw allow 81
+sudo ufw allow 83
 
 # Allow SSH traffic (port 22) in the firewall
 sudo ufw allow ssh

@@ -7,6 +7,7 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "build": "strapi build",
+    "build-unoptimized": "sh script/update_config.sh && strapi build",
     "strapi": "strapi"
   },
   "devDependencies": {},

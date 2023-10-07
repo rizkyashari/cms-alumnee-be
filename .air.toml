@@ -1,2 +1,4 @@
 [build]
 cmd = "go build -o ./tmp/main ./cmd"
+
+exclude_dir = ["strapi", "file"]

@@ -58,20 +58,34 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Subject]) (*[]model.S
 	}
 
 	// For future reference: index 0 is for include, index 1 is for exclude
+	var filterClassroomID *uuid.UUID
+
 	if len(params.Data.RelationClassroomSubjects) >= 1 {
 		relationParams := params.Data.RelationClassroomSubjects[0]
 		if relationParams.ClassroomID != uuid.Nil {
 			chain = chain.Where(r.db.Where("id IN (?)",
 				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", relationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+
+			filterClassroomID = &relationParams.ClassroomID
 		}
 	}
 
 	if len(params.Data.RelationClassroomSubjects) >= 2 {
 		excludeRelationParams := params.Data.RelationClassroomSubjects[1]
 		if excludeRelationParams.ClassroomID != uuid.Nil {
-			chain = chain.Where(r.db.Where("id IN (?)",
-				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id != ?", excludeRelationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+			chain = chain.Where(r.db.Where("id NOT IN (?)",
+				r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("classroom_id = ?", excludeRelationParams.ClassroomID).Distinct("subject_id").Select("subject_id")))
+
+			filterClassroomID = &excludeRelationParams.ClassroomID
 		}
+	}
+
+	if filterClassroomID != nil && *filterClassroomID != uuid.Nil {
+		chain = chain.Where(r.db.Where("teacher_id IN (?)",
+			r.db.Debug().Model(&model.Teacher{}).Where("school_id IN (?)",
+				r.db.Debug().Model(&model.Classroom{}).Where("id = ?", *filterClassroomID).Select("school_id"),
+			).Select("id")),
+		)
 	}
 
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&subjects), params.Limit)

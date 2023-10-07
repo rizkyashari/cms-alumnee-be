@@ -29,6 +29,7 @@ type SubjectHandler interface {
 	CreateOneWithClassroomID(c *gin.Context)
 	CreateOneSubjectComponent(c *gin.Context)
 	CreateOneSubjectComponentWithValidation(c *gin.Context)
+	CreateMass(c *gin.Context)
 
 	EditOne(c *gin.Context)
 	EditOneWithValidation(c *gin.Context)
@@ -359,6 +360,27 @@ func (h *impHandler) CreateOneSubjectComponentWithValidation(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusCreated)
+}
+
+func (h *impHandler) CreateMass(c *gin.Context) {
+	var csvfile rq.CSVFileUploadRequest
+	if err := c.ShouldBind(&csvfile); err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		return
+	}
+
+	if csvfile.CSVFile == nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		return
+	}
+
+	res, err := h.s.Subject().CreateMass(c, csvfile.CSVFile)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {

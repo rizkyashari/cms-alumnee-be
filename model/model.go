@@ -22,4 +22,8 @@ var Entities = []interface{}{
 	&Feedback{},
 	&FeedbackScore{},
 	&FeedbackQuestion{},
+	&CustomerDetails{},
+	&PaymentLink{},
+	&Purchase{},
+	&DynamicAmount{},
 }

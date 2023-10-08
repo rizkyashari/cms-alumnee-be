@@ -7,6 +7,7 @@ import (
 	classroom "github.com/fadhln/lms-be/handler/classroom"
 	feedback "github.com/fadhln/lms-be/handler/feedback"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
+	paymentlink "github.com/fadhln/lms-be/handler/payment_link"
 	rewardpunishment "github.com/fadhln/lms-be/handler/reward_punishment"
 	school "github.com/fadhln/lms-be/handler/school"
 	student "github.com/fadhln/lms-be/handler/student"
@@ -29,6 +30,7 @@ type Handler struct {
 	Teacher          teacher.TeacherHandler
 	RewardPunishment rewardpunishment.RewardPunishmentHandler
 	Feedback         feedback.FeedbackHandler
+	PaymentLink      paymentlink.PaymentLinkHandler
 }
 
 func SetupHandler(s service.Service) *Handler {
@@ -45,5 +47,6 @@ func SetupHandler(s service.Service) *Handler {
 		Teacher:          teacher.Init(s),
 		RewardPunishment: rewardpunishment.Init(s),
 		Feedback:         feedback.Init(s),
+		PaymentLink:      paymentlink.Init(s),
 	}
 }

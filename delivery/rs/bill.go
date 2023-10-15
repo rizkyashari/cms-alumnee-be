@@ -14,6 +14,7 @@ type BillResponse struct {
 	GrossAmount     int64     `json:"gross_amount"`
 	PurchasedAmount int64     `json:"purchased_amount"`
 	RemainingAmount int64     `json:"remaining_amount"`
+	AdminFee        int64     `json:"admin_fee"`
 	Deadline        time.Time `json:"deadline"`
 	Description     string    `json:"description,omitempty"`
 }

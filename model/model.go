@@ -26,4 +26,7 @@ var Entities = []interface{}{
 	&PaymentLink{},
 	&Purchase{},
 	&DynamicAmount{},
+	&Transaction{},
+	&Bill{},
+	&MidtransCredentials{},
 }

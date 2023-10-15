@@ -8,16 +8,19 @@ type CustomerDetailsResponse struct {
 }
 
 type PaymentLinkResponse struct {
-	ID              uint                    `gorm:"primary_key"`
-	Title           string                  `json:"title"`
-	PaymentLinkURL  string                  `json:"payment_link_url"`
-	CustomerDetails CustomerDetailsResponse `json:"customer_details"`
-	Purchases       []PurchaseResponse      `json:"purchases"`
-	Usage           uint                    `json:"usage"`
-	UsageLimit      uint                    `json:"usage_limit"`
-	DynamicAmount   DynamicAmountResponse   `json:"dynamic_amount"`
-	CreatedAt       time.Time               `json:"createdAt"`
-	UpdatedAt       time.Time               `json:"updatedAt"`
+	ID                  uint                    `gorm:"primary_key"`
+	Title               string                  `json:"title"`
+	PaymentLinkURL      string                  `json:"payment_link_url"`
+	CustomerDetails     CustomerDetailsResponse `json:"customer_details"`
+	Purchases           []PurchaseResponse      `json:"purchases"`
+	Usage               uint                    `json:"usage"`
+	UsageLimit          uint                    `json:"usage_limit"`
+	DynamicAmount       DynamicAmountResponse   `json:"dynamic_amount"`
+	TotalPurchaseAmount uint                    `json:"total_purchase_amount"`
+	RemainingBillAmount uint                    `json:"remaining_bill_amount"`
+	TotalBillAmount     uint                    `json:"total_bill_amount"`
+	CreatedAt           time.Time               `json:"createdAt"`
+	UpdatedAt           time.Time               `json:"updatedAt"`
 }
 
 type PurchaseResponse struct {

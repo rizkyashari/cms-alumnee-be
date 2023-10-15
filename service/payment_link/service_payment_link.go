@@ -39,7 +39,6 @@ func (s *impService) GetPaymentLinksByEmailFromAPI(c context.Context, studentEma
 		return nil, err
 	}
 
-	// Set Basic Authentication headers
 	username := "SB-Mid-server-i80r0bH-bVrnextByHg6RBmH"
 	password := ""
 	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
@@ -56,9 +55,6 @@ func (s *impService) GetPaymentLinksByEmailFromAPI(c context.Context, studentEma
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
 	}
-
-	// responseBody, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println("API Response Body:", string(responseBody))
 
 	// Decode the response JSON into a struct
 	var paymentLinksResponse PaymentLinksAPIResponse
@@ -89,16 +85,34 @@ func filterPaymentLinks(paymentLinks []rs.PaymentLinkResponse, email string, par
 
 	for _, link := range paymentLinks {
 		if link.CustomerDetails.Email == email {
+
+			// Calculate TotalPurchaseAmount
+			var totalPurchaseAmount uint
+			if link.Purchases != nil {
+				for _, purchase := range link.Purchases {
+					// Check if payment_status is "SETTLEMENT" before adding amount_value
+					if purchase.PaymentStatus == "SETTLEMENT" {
+						totalPurchaseAmount += purchase.AmountValue
+					}
+				}
+			}
+
+			// Calculate RemainingBillAmount
+			remainingBillAmount := link.DynamicAmount.PresetAmount - totalPurchaseAmount
+
 			// Create a PaymentLinkResponse based on the filtered data
 			paymentLinkResponse := rs.PaymentLinkResponse{
 				// Map fields from link to paymentLinkResponse
-				ID:             link.ID,
-				Title:          link.Title,
-				PaymentLinkURL: link.PaymentLinkURL,
-				Usage:          link.Usage,
-				UsageLimit:     link.UsageLimit,
-				CreatedAt:      link.CreatedAt,
-				UpdatedAt:      link.UpdatedAt,
+				ID:                  link.ID,
+				Title:               link.Title,
+				PaymentLinkURL:      link.PaymentLinkURL,
+				Usage:               link.Usage,
+				UsageLimit:          link.UsageLimit,
+				TotalPurchaseAmount: totalPurchaseAmount,
+				RemainingBillAmount: remainingBillAmount,
+				TotalBillAmount:     link.DynamicAmount.PresetAmount,
+				CreatedAt:           link.CreatedAt,
+				UpdatedAt:           link.UpdatedAt,
 			}
 
 			// Map CustomerDetails

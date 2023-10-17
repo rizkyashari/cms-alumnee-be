@@ -168,6 +168,9 @@ func (r *impRepo) GetAllBills(params *rq.PaginationParams[model.Bill]) (*[]model
 		"description",
 	}
 
+	if len(*params.Data.Description) >= 2 {
+		chain = chain.Where(r.db.Where("description ILIKE " + `'%` + *params.Data.Description + `%'`))
+	}
 	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumDescription)).Find(&bills)
 
 	if result.Error != nil {

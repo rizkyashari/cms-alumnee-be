@@ -208,8 +208,11 @@ func (h *impHandler) GetAllBills(c *gin.Context) {
 	searchAccountID := c.DefaultQuery("account_id", "")
 	parsedAccountID, _ := uuid.Parse(searchAccountID)
 
+	searchDescription := c.DefaultQuery("description", "")
+
 	filters := model.Bill{
-		AccountID: parsedAccountID,
+		AccountID:   parsedAccountID,
+		Description: &searchDescription,
 	}
 
 	if len(searchAccountID) >= 2 {

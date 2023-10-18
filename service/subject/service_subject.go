@@ -70,6 +70,17 @@ func (s *impService) convertToResponse(subject *model.Subject) (*rs.SubjectRespo
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	var res rs.AccountResponse
+	gotAccount, err := s.repo.Account().ReadOneByID(subject.Teacher.AccountID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	err = copier.Copy(&res, gotAccount)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
 	var tempTeacher rs.TeacherResponse
 	err = copier.Copy(&tempTeacher, subject.Teacher)
 	if err != nil {
@@ -82,7 +93,8 @@ func (s *impService) convertToResponse(subject *model.Subject) (*rs.SubjectRespo
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	tempResponse.Teacher = tempTeacher
+	res.Teacher = &tempTeacher
+	tempResponse.Teacher = res
 	tempResponse.SubjectComponents = tempSubjectComponent
 
 	return &tempResponse, nil
@@ -849,7 +861,8 @@ func (s *impService) AssignClassroomsToSubject(c context.Context, subjectID stri
 		if err != nil {
 			return &errmsg.ErrInternal{Err: err}
 		}
-		if gotSubject.Teacher.SchoolID.String() != gotClassroom.SchoolID.String() {
+
+		if gotSubject.Teacher.Teacher.SchoolID != gotClassroom.SchoolID {
 			return &errmsg.ErrANotSameB{A: "Teacher School", B: "Classroom School"}
 		}
 

@@ -29,7 +29,7 @@ import (
 type TeacherService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.Account]) (*rs.PaginationResponse[any, rs.AccountResponse], error)
 	GetAllClassroomSubject(c context.Context, teacherID string, academicYearID string, params *rq.PaginationParams[model.RelationClassroomSubject]) (*rs.PaginationResponse[any, rs.ClassroomSubject], error)
-	GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.StudentResponse, error)
+	GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.AccountResponse, error)
 	GetDetailByAccountID(c context.Context, id string) (*rs.TeacherResponse, error)
 	GetTeacherDataByTeacherID(c context.Context, id string) (*rs.TeacherDataResponse, error)
 
@@ -740,7 +740,7 @@ func (s *impService) EditOne(c context.Context, teacherID string, body *rq.Teach
 	return nil
 }
 
-func (s *impService) GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.StudentResponse, error) {
+func (s *impService) GetAllClassroomStudents(c context.Context, teacherID string) ([]rs.ClassroomResponse, []rs.AccountResponse, error) {
 	parsedTeacherID, err := serviceutil.GetUUIDFromStringWithValidation("Teacher ID", &teacherID)
 	if err != nil {
 		return nil, nil, err
@@ -752,7 +752,7 @@ func (s *impService) GetAllClassroomStudents(c context.Context, teacherID string
 	}
 
 	var classroomsResponse []rs.ClassroomResponse
-	var studentsResponse []rs.StudentResponse
+	var studentAccountsResponse []rs.AccountResponse
 
 	for _, classroom := range classrooms {
 
@@ -768,15 +768,27 @@ func (s *impService) GetAllClassroomStudents(c context.Context, teacherID string
 		}
 
 		for _, student := range classroomStudents {
+			var res rs.AccountResponse
+			gotAccount, err := s.repo.Account().ReadOneByID(student.AccountID)
+			if err != nil {
+				return nil, nil, &errmsg.ErrInternal{Err: err}
+			}
+
+			err = copier.Copy(&res, gotAccount)
+			if err != nil {
+				return nil, nil, &errmsg.ErrInternal{Err: err}
+			}
 
 			var studentResponse rs.StudentResponse
 			if err := copier.Copy(&studentResponse, student); err != nil {
 				return nil, nil, err
 			}
 
-			studentsResponse = append(studentsResponse, studentResponse)
+			res.Student = &studentResponse
+
+			studentAccountsResponse = append(studentAccountsResponse, res)
 		}
 	}
 
-	return classroomsResponse, studentsResponse, nil
+	return classroomsResponse, studentAccountsResponse, nil
 }

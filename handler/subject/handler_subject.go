@@ -510,5 +510,5 @@ func (h *impHandler) RemoveClassroomsFromSubject(c *gin.Context) {
 		return
 	}
 
-	rs.SuccessResponse(c, nil, http.StatusNoContent)
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }

@@ -3,6 +3,7 @@ package handler_classroom
 import (
 	"net/http"
 
+	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/delivery/rs"
 	"github.com/fadhln/lms-be/model"
@@ -15,6 +16,9 @@ import (
 
 type ClassroomHandler interface {
 	GetAll(c *gin.Context)
+	GetAllBySubjectID(c *gin.Context)
+	GetAllByNotInSubjectID(c *gin.Context)
+	GetAllByOwnTeacherID(c *gin.Context)
 	GetDetailByID(c *gin.Context)
 
 	CreateOne(c *gin.Context)
@@ -74,6 +78,154 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	}
 
 	res, err := h.s.Classroom().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllBySubjectID(c *gin.Context) {
+	subjectID := c.Param("subject_id")
+
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+	searchTeacherID := c.DefaultQuery("teacher_id", "")
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	academicYearID := c.DefaultQuery("academic_year_id", "")
+
+	params := rq.PaginationParams[model.Classroom]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Classroom{
+			Name: searchName,
+		},
+	}
+
+	if len(searchTeacherID) >= 2 {
+		parsedSearchTeacherID, _ := uuid.Parse(searchTeacherID)
+		params.Data.TeacherID = parsedSearchTeacherID
+	}
+
+	if len(searchSchoolID) >= 2 {
+		parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
+		params.Data.SchoolID = parsedSearchSchoolID
+	}
+
+	if len(academicYearID) >= 2 {
+		parsedAcademicYearID, _ := uuid.Parse(academicYearID)
+		params.Data.AcademicYearID = parsedAcademicYearID
+	}
+
+	res, err := h.s.Classroom().GetAllClassroomBySubjectID(c, subjectID, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllByNotInSubjectID(c *gin.Context) {
+	subjectID := c.Param("subject_id")
+
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+	searchTeacherID := c.DefaultQuery("teacher_id", "")
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	academicYearID := c.DefaultQuery("academic_year_id", "")
+
+	params := rq.PaginationParams[model.Classroom]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Classroom{
+			Name: searchName,
+		},
+	}
+
+	if len(searchTeacherID) >= 2 {
+		parsedSearchTeacherID, _ := uuid.Parse(searchTeacherID)
+		params.Data.TeacherID = parsedSearchTeacherID
+	}
+
+	if len(searchSchoolID) >= 2 {
+		parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
+		params.Data.SchoolID = parsedSearchSchoolID
+	}
+
+	if len(academicYearID) >= 2 {
+		parsedAcademicYearID, _ := uuid.Parse(academicYearID)
+		params.Data.AcademicYearID = parsedAcademicYearID
+	}
+
+	res, err := h.s.Classroom().GetAllClassroomNotInSubject(c, subjectID, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllByOwnTeacherID(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchName := c.DefaultQuery("name", "")
+	searchTeacherID := c.DefaultQuery("teacher_id", "")
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	academicYearID := c.DefaultQuery("academic_year_id", "")
+
+	params := rq.PaginationParams[model.Classroom]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Classroom{
+			Name: searchName,
+		},
+	}
+
+	if len(searchTeacherID) >= 2 {
+		parsedSearchTeacherID, _ := uuid.Parse(searchTeacherID)
+		params.Data.TeacherID = parsedSearchTeacherID
+	}
+
+	if len(searchSchoolID) >= 2 {
+		parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
+		params.Data.SchoolID = parsedSearchSchoolID
+	}
+
+	if len(academicYearID) >= 2 {
+		parsedAcademicYearID, _ := uuid.Parse(academicYearID)
+		params.Data.AcademicYearID = parsedAcademicYearID
+	}
+
+	res, err := h.s.Classroom().GetAllClassroomByTeacherID(c, gotAccount.Teacher.ID.String(), &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
@@ -190,5 +342,5 @@ func (h *impHandler) RemoveSubjectsFromClassroom(c *gin.Context) {
 		return
 	}
 
-	rs.SuccessResponse(c, nil, http.StatusNoContent)
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }

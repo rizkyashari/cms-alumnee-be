@@ -12,7 +12,7 @@ type SubjectResponse struct {
 	UpdatedAt         time.Time                  `json:"updated_at"`
 	Name              string                     `json:"name"`
 	TeacherID         uuid.UUID                  `json:"teacher_id"`
-	Teacher           TeacherResponse            `json:"teacher"`
+	Teacher           AccountResponse            `json:"teacher"`
 	SubjectComponents []SubjectComponentResponse `json:"subject_component"`
 }
 

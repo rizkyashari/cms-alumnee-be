@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,8 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	useMigrate := flag.Bool("migrate", false, "run database migration process")
 	useSeed := flag.Bool("seed", false, "run database seeding process")
 	flag.Parse()

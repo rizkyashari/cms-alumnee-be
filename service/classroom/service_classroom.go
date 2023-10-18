@@ -102,6 +102,17 @@ func (s *impService) convertToResponse(classroom *model.Classroom) (*rs.Classroo
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	var res rs.AccountResponse
+	gotAccount, err := s.repo.Account().ReadOneByID(classroom.Teacher.AccountID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	err = copier.Copy(&res, gotAccount)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
 	var tempTeacher rs.TeacherResponse
 	err = copier.Copy(&tempTeacher, classroom.Teacher)
 	if err != nil {
@@ -117,7 +128,8 @@ func (s *impService) convertToResponse(classroom *model.Classroom) (*rs.Classroo
 	tempResponse.AcademicYear = tempAcademicYear
 
 	tempTeacher.TeacherData = &tempTeacherData
-	tempResponse.Teacher = tempTeacher
+	res.Teacher = &tempTeacher
+	tempResponse.Teacher = res
 
 	return &tempResponse, nil
 }

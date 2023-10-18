@@ -14,5 +14,5 @@ type ClassroomResponse struct {
 	Code         string               `json:"code"`
 	SchoolID     string               `json:"school_id"`
 	AcademicYear AcademicYearResponse `json:"academic_year"`
-	Teacher      TeacherResponse      `json:"teacher"`
+	Teacher      AccountResponse      `json:"teacher"`
 }

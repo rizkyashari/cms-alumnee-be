@@ -31,6 +31,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
 
 		r.GET("/classroom", h.Classroom.GetAll)
+		r.GET("/classroom/by-subject/:subject_id", h.Classroom.GetAllBySubjectID)
+		r.GET("/classroom/notin-subject/:subject_id", h.Classroom.GetAllByNotInSubjectID)
 		r.GET("/classroom/:id", h.Classroom.GetDetailByID)
 
 		r.GET("/school", h.School.GetAll)
@@ -88,7 +90,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				classroom.POST("/bulk", h.Classroom.CreateMass)
 				classroom.PATCH("/:id", h.Classroom.EditOne)
 				classroom.POST("/:id/subject", h.Classroom.AssignSubjectsToClassroom)
-				classroom.DELETE("/:id/subject", h.Classroom.RemoveSubjectsFromClassroom)
+				classroom.POST("/:id/subject/delete", h.Classroom.RemoveSubjectsFromClassroom)
 			}
 
 			admin.POST("/school", h.School.CreateOne)
@@ -116,10 +118,11 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			admin.POST("/subject", h.Subject.CreateOne)
 			subject := admin.Group("/subject")
 			{
+				subject.POST("/bulk", h.Subject.CreateMass)
 				subject.POST("/with-classroom/:classroom_id", h.Subject.CreateOneWithClassroomID)
 				subject.PATCH("/:id", h.Subject.EditOne)
 				subject.POST("/:id/classroom", h.Subject.AssignClassroomsToSubject)
-				subject.DELETE("/:id/classroom", h.Subject.RemoveClassroomsFromSubject)
+				subject.POST("/:id/classroom/delete", h.Subject.RemoveClassroomsFromSubject)
 
 				subject.POST("/component", h.Subject.CreateOneSubjectComponent)
 				subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponent)
@@ -164,6 +167,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			teacher.GET("/data", h.Teacher.GetOwnTeacherData)
 			teacher.PATCH("/data", h.Teacher.EditOwnData)
 
+			teacher.GET("/classroom", h.Classroom.GetAllByOwnTeacherID)
 			teacher.GET("/classroom-subject", h.Teacher.GetOwnAllClassroomSubject)
 
 			teacher.GET("/subject", h.Subject.GetAllOwnTeacher)

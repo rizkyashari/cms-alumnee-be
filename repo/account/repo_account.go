@@ -130,18 +130,20 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error) {
 	var accounts []model.Account
 
-	var preloadStudentArgs []any
 	chain := r.db.Model(&model.Account{}).Joins("LEFT JOIN students ON students.account_id = accounts.id")
 
 	if params.Data.Student != nil && params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
 		classroomID := params.Data.Student.ClassroomID.String()
-		chain = chain.Preload("Student.StudentData", preloadStudentArgs...).
-			Where("students.classroom_id = ?", classroomID).
-			Where("account_type = ?", constants.ACCOUNT_STUDENT)
-	} else {
-		chain = chain.Preload("Student.StudentData", preloadStudentArgs...).
-			Where("account_type = ?", constants.ACCOUNT_STUDENT)
+		chain = chain.Where("students.classroom_id = ?", classroomID)
 	}
+
+	if params.Data.Student != nil && params.Data.Student.Classroom.SchoolID != uuid.Nil {
+		chain = chain.Where(
+			"students.classroom_id IN (?)",
+			r.db.Debug().Model(&model.Classroom{}).Where("school_id = ?", params.Data.Student.Classroom.SchoolID).Select("id"))
+	}
+
+	chain = chain.Where("account_type = ?", constants.ACCOUNT_STUDENT)
 
 	var preloadStudentDataArgs []any
 	if params.Data.Student != nil && params.Data.Student.StudentData.Gender != nil {

@@ -87,6 +87,7 @@ func (s *impService) CreateOne(c context.Context, newFeedback *rq.FeedbackReques
 	}
 
 	feedback := model.Feedback{
+		Title:          newFeedback.Title,
 		StudentID:      *parsedStudentID,
 		AcademicYearID: *parsedAcademicYearID,
 		TeacherID:      *parsedTeacherID,

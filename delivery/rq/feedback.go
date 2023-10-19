@@ -2,6 +2,7 @@ package rq
 
 type FeedbackRequest struct {
 	ID             *string                 `json:"id,omitempty"`
+	Title          string                  `json:"title"`
 	AcademicYearID *string                 `json:"academic_year_id"`
 	StudentID      *string                 `json:"student_id"`
 	TeacherID      *string                 `json:"teacher_id"`

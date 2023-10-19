@@ -8,6 +8,8 @@ import (
 	classroom "github.com/fadhln/lms-be/service/classroom"
 	feedback "github.com/fadhln/lms-be/service/feedback"
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
+	midtrans "github.com/fadhln/lms-be/service/midtrans"
+	paymentlink "github.com/fadhln/lms-be/service/payment_link"
 	rewardpunishment "github.com/fadhln/lms-be/service/reward_punishment"
 	school "github.com/fadhln/lms-be/service/school"
 	student "github.com/fadhln/lms-be/service/student"
@@ -27,6 +29,8 @@ type Service interface {
 	Teacher() teacher.TeacherService
 	RewardPunishment() rewardpunishment.RewardPunishmentService
 	Feedback() feedback.FeedbackService
+	PaymentLink() paymentlink.PaymentLinkService
+	Midtrans() midtrans.SnapService
 }
 
 type impService struct {
@@ -81,4 +85,12 @@ func (s *impService) RewardPunishment() rewardpunishment.RewardPunishmentService
 
 func (s *impService) Feedback() feedback.FeedbackService {
 	return feedback.Init(s.repo)
+}
+
+func (s *impService) PaymentLink() paymentlink.PaymentLinkService {
+	return paymentlink.NewPaymentLinkService()
+}
+
+func (s *impService) Midtrans() midtrans.SnapService {
+	return midtrans.Init(s.repo)
 }

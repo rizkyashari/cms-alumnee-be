@@ -62,6 +62,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		r.GET("/feedback", h.Feedback.GetAll)
 		r.GET("/feedback/:id", h.Feedback.GetDetailByID)
 
+		r.GET("/midtrans-frontend", h.Midtrans.GetMidtransFrontendCredentials)
+
 		admin := r.Group("/4dm1n")
 		{
 			admin.Use(h.Auth.CheckAdmin())
@@ -139,6 +141,17 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				feedback.POST("/question", h.Feedback.CreateOneFeedbackQuestion)
 				feedback.PATCH("/question/:id", h.Feedback.EditFeedbackQuestion)
 			}
+
+			admin.GET("/bill", h.Midtrans.GetAllBills)
+			admin.POST("/bill", h.Midtrans.CreateOneBill)
+			bill := admin.Group("/bill")
+			{
+				bill.GET("/:id", h.Midtrans.GetBillByID)
+				bill.PATCH("/:id", h.Midtrans.EditOneBill)
+				bill.POST("/multiple", h.Midtrans.CreateMultipleBill)
+			}
+			admin.GET("/midtrans", h.Midtrans.GetMidtransCredentials)
+			admin.PATCH("/midtrans", h.Midtrans.SaveMidtransCredentials)
 		}
 
 		student := r.Group("/s")
@@ -157,6 +170,10 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			student.PATCH("/feedback", h.Feedback.EditOne)
 			student.GET("/feedback", h.Feedback.GetAllOwnStudent)
+			student.GET("/payment-link", h.PaymentLink.GetPaymentLinksByEmail)
+
+			student.POST("/transaction", h.Midtrans.CreateTransaction)
+			student.GET("/bill", h.Midtrans.GetAllOwnBills)
 		}
 
 		teacher := r.Group("/t")

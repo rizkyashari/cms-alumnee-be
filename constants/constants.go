@@ -7,6 +7,7 @@ const (
 	DEST_TEACHER
 	DEST_SUBJECT
 	DEST_SUBJECTCOMP
+	DEST_BILL
 )
 
 var DestinationMap = map[int]bool{
@@ -15,6 +16,7 @@ var DestinationMap = map[int]bool{
 	DEST_TEACHER:     true,
 	DEST_SUBJECT:     true,
 	DEST_SUBJECTCOMP: true,
+	DEST_BILL:        true,
 }
 
 var DestinationMapString = map[int]string{
@@ -23,6 +25,7 @@ var DestinationMapString = map[int]string{
 	DEST_TEACHER:     "Teacher",
 	DEST_SUBJECT:     "Subject",
 	DEST_SUBJECTCOMP: "Subject Component",
+	DEST_BILL:        "Bill",
 }
 
 ///

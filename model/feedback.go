@@ -4,6 +4,7 @@ import "github.com/google/uuid"
 
 type Feedback struct {
 	Base
+	Title          string
 	AcademicYearID uuid.UUID
 	StudentID      uuid.UUID
 	TeacherID      uuid.UUID

@@ -131,12 +131,17 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 	var accounts []model.Account
 
 	var preloadStudentArgs []any
-	if params.Data.Student != nil && params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
-		classromIdArgs := []any{"classroom_id = ?", params.Data.Student.ClassroomID.String()}
-		preloadStudentArgs = append(preloadStudentArgs, classromIdArgs...)
-	}
+	chain := r.db.Model(&model.Account{}).Joins("LEFT JOIN students ON students.account_id = accounts.id")
 
-	chain := r.db.Preload("Student.StudentData", preloadStudentArgs...)
+	if params.Data.Student != nil && params.Data.Student.ClassroomID != nil && *params.Data.Student.ClassroomID != uuid.Nil {
+		classroomID := params.Data.Student.ClassroomID.String()
+		chain = chain.Preload("Student.StudentData", preloadStudentArgs...).
+			Where("students.classroom_id = ?", classroomID).
+			Where("account_type = ?", constants.ACCOUNT_STUDENT)
+	} else {
+		chain = chain.Preload("Student.StudentData", preloadStudentArgs...).
+			Where("account_type = ?", constants.ACCOUNT_STUDENT)
+	}
 
 	var preloadStudentDataArgs []any
 	if params.Data.Student != nil && params.Data.Student.StudentData.Gender != nil {

@@ -143,6 +143,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			admin.POST("/bill", h.Midtrans.CreateOneBill)
 			bill := admin.Group("/bill")
 			{
+				bill.GET("/:id", h.Midtrans.GetBillByID)
 				bill.PATCH("/:id", h.Midtrans.EditOneBill)
 				bill.POST("/multiple", h.Midtrans.CreateMultipleBill)
 			}

@@ -34,7 +34,7 @@ type SnapService interface {
 	EditOneBill(c context.Context, newBill *rq.BillRequest) error
 	GetBillsByAccountID(c context.Context, accountID string, params *rq.PaginationParams[model.Bill]) (*rs.PaginationResponse[any, rs.BillResponse], error)
 	GetAllBills(c context.Context, params *rq.PaginationParams[model.Bill]) (*rs.PaginationResponse[any, rs.BillResponse], error)
-	GetBillByID(billID string) (*model.Bill, error)
+	GetBillByID(c context.Context, billID string) (*model.Bill, error)
 	StartCronJob()
 }
 
@@ -52,7 +52,7 @@ func Init(r repo.Repository) SnapService {
 		cron: c,
 	}
 
-	c.AddFunc("0 * * * * *", s.UpdateDatabaseJob)
+	c.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
 
 	c.Start()
 
@@ -61,7 +61,7 @@ func Init(r repo.Repository) SnapService {
 
 func (s *impService) StartCronJob() {
 	// Start the cron job
-	s.cron.AddFunc("0 * * * * *", s.UpdateDatabaseJob)
+	s.cron.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
 	s.cron.Start()
 }
 
@@ -564,7 +564,7 @@ func (s *impService) GetBillsByAccountID(c context.Context, accountID string, pa
 	return s.GetAllBills(c, &newParams)
 }
 
-func (s *impService) GetBillByID(billID string) (*model.Bill, error) {
+func (s *impService) GetBillByID(c context.Context, billID string) (*model.Bill, error) {
 	bill, err := s.r.Midtrans().GetBillByID(billID)
 	if err != nil {
 		return nil, err

@@ -24,6 +24,7 @@ type SnapHandler interface {
 	CreateMultipleBill(c *gin.Context)
 	GetAllOwnBills(c *gin.Context)
 	GetAllBills(c *gin.Context)
+	GetBillByID(c *gin.Context)
 	SaveMidtransCredentials(c *gin.Context)
 	GetMidtransCredentials(c *gin.Context)
 	GetMidtransFrontendCredentials(c *gin.Context)
@@ -61,7 +62,7 @@ func (h *impHandler) CreateTransaction(c *gin.Context) {
 	}
 
 	// Retrieve the Bill information from the database
-	bill, err := h.s.Midtrans().GetBillByID(billID)
+	bill, err := h.s.Midtrans().GetBillByID(c, billID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Bill information"})
 		return
@@ -229,6 +230,17 @@ func (h *impHandler) GetAllBills(c *gin.Context) {
 	}
 
 	res, err := h.s.Midtrans().GetAllBills(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetBillByID(c *gin.Context) {
+	id := c.Param("id")
+	res, err := h.s.Midtrans().GetBillByID(c, id)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

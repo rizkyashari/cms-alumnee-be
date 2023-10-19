@@ -61,7 +61,8 @@ func (h *impHandler) GetAll(c *gin.Context) {
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
 		Data: model.Account{
-			Name: &searchName,
+			Name:    &searchName,
+			Student: &model.Student{},
 		},
 	}
 

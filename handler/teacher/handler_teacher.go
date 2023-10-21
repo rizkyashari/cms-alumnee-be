@@ -30,6 +30,7 @@ type TeacherHandler interface {
 	EditOne(c *gin.Context)
 
 	EditOwnData(c *gin.Context)
+	CountTeachers(c *gin.Context)
 }
 
 type impHandler struct {
@@ -281,6 +282,68 @@ func (h *impHandler) GetAllClassroomStudents(c *gin.Context) {
 	response := rs.ClassroomStudentsResponse{
 		Classrooms: classrooms,
 		Students:   students,
+	}
+
+	rs.SuccessResponse(c, response, http.StatusOK)
+}
+
+func (h *impHandler) CountTeachers(c *gin.Context) {
+	searchName := c.DefaultQuery("name", "")
+	schoolID := c.DefaultQuery("school_id", "")
+	gender := c.DefaultQuery("gender", "")
+	employmentStatus := c.DefaultQuery("employment_status", "")
+
+	_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	params := rq.PaginationParams[model.Account]{
+		Limit:     10000000,
+		Page:      1,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Account{
+			Name: &searchName,
+			Teacher: &model.Teacher{
+				TeacherData: model.TeacherData{},
+			},
+		},
+	}
+
+	if len(schoolID) >= 2 {
+		parsedSchoolID, _ := uuid.Parse(schoolID)
+		params.Data.Teacher.SchoolID = parsedSchoolID
+	}
+
+	if len(gender) >= 1 {
+		genderInt, err := strconv.Atoi(gender)
+		if err == nil && util.IsValidConstant(genderInt, constants.GenderMap) {
+			params.Data.Teacher.TeacherData.Gender = &genderInt
+		}
+	}
+
+	if len(employmentStatus) >= 1 {
+		statusInt, err := strconv.Atoi(employmentStatus)
+		if err == nil && util.IsValidConstant(statusInt, constants.TeacherStatusMap) {
+			params.Data.Teacher.TeacherData.EmploymentStatus = &statusInt
+		}
+	}
+
+	// Retrieve the list of teachers based on search criteria
+	teachers, err := h.s.Teacher().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	// Count the number of teachers based on the result
+	teacherCount := len(teachers.Data)
+
+	// Create a response structure to return the teacher count
+	response := model.CountTotalTeacher{
+		TotalTeachers: teacherCount,
 	}
 
 	rs.SuccessResponse(c, response, http.StatusOK)

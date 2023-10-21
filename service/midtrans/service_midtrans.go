@@ -25,6 +25,7 @@ import (
 )
 
 type SnapService interface {
+	GetAllTransactions(c context.Context, params *rq.PaginationParams[any]) (*rs.PaginationResponse[any, rs.TransactionResponse], error)
 	SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials) error
 	GetMidtransCredentials() (*rs.MidtransCredentialsResponse, error)
 	GetMidtransFrontendCredentials() (*rs.MidtransFrontendResponse, error)
@@ -571,6 +572,56 @@ func (s *impService) GetBillByID(c context.Context, billID string) (*model.Bill,
 	}
 
 	return bill, nil
+}
+
+func (s *impService) GetAllTransactions(c context.Context, params *rq.PaginationParams[any]) (*rs.PaginationResponse[any, rs.TransactionResponse], error) {
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
+	gotTransactions, maxPage, rowCount, err := s.r.Midtrans().GetAll(params)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := rs.PaginationResponse[any, rs.TransactionResponse]{}
+			return &res, nil
+		}
+
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if gotTransactions == nil {
+		return &rs.PaginationResponse[any, rs.TransactionResponse]{
+			Data: []rs.TransactionResponse{},
+		}, nil
+	}
+
+	if len(*gotTransactions) < 1 {
+		return &rs.PaginationResponse[any, rs.TransactionResponse]{
+			Data: []rs.TransactionResponse{},
+		}, nil
+	}
+
+	var datares []rs.TransactionResponse
+	err = copier.Copy(&datares, gotTransactions)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	res := rs.PaginationResponse[any, rs.TransactionResponse]{
+		MaxPage:         maxPage,
+		RowCount:        rowCount,
+		CurrentPage:     params.Page,
+		AvailableFilter: nil,
+		Data:            datares,
+	}
+
+	return &res, nil
 }
 
 // func (s *impService) filterCompletedTransactions(tokens []string) []string {

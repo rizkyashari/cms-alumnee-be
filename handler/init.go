@@ -142,6 +142,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				feedback.PATCH("/question/:id", h.Feedback.EditFeedbackQuestion)
 			}
 
+			admin.GET("/transaction", h.Midtrans.GetAllTransactions)
+
 			admin.GET("/bill", h.Midtrans.GetAllBills)
 			admin.POST("/bill", h.Midtrans.CreateOneBill)
 			bill := admin.Group("/bill")
@@ -152,6 +154,13 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			}
 			admin.GET("/midtrans", h.Midtrans.GetMidtransCredentials)
 			admin.PATCH("/midtrans", h.Midtrans.SaveMidtransCredentials)
+
+			admin.GET("/count-student", h.Student.GetStudentCount)
+			admin.GET("/count-paid-bill", h.Student.GetStudentPaidBillCount)
+			admin.GET("/count-unpaid-bill", h.Student.GetStudentUnpaidBillCount)
+
+			admin.GET("/count-total-student", h.Student.CountStudents)
+			admin.GET("/count-total-teacher", h.Teacher.CountTeachers)
 		}
 
 		student := r.Group("/s")

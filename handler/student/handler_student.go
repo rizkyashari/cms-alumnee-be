@@ -32,6 +32,12 @@ type StudentHandler interface {
 	EditOwnData(c *gin.Context)
 	EditOwnFamilyData(c *gin.Context)
 	EditOwnAddressData(c *gin.Context)
+
+	GetStudentCount(c *gin.Context)
+	GetStudentPaidBillCount(c *gin.Context)
+	GetStudentUnpaidBillCount(c *gin.Context)
+
+	CountStudents(c *gin.Context)
 }
 
 type impHandler struct {
@@ -52,6 +58,7 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	}
 
 	searchName := c.DefaultQuery("name", "")
+	school_id := c.DefaultQuery("school_id", "")
 	classroom_id := c.DefaultQuery("classroom_id", "")
 	gender := c.DefaultQuery("gender", "")
 
@@ -61,14 +68,21 @@ func (h *impHandler) GetAll(c *gin.Context) {
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
 		Data: model.Account{
-			Name:    &searchName,
-			Student: &model.Student{},
+			Name: &searchName,
+			Student: &model.Student{
+				Classroom: model.Classroom{},
+			},
 		},
 	}
 
 	if len(classroom_id) >= 2 {
 		parsedClassroomID, _ := uuid.Parse(classroom_id)
 		params.Data.Student.ClassroomID = &parsedClassroomID
+	}
+
+	if len(school_id) >= 2 {
+		parsedSchoolID, _ := uuid.Parse(school_id)
+		params.Data.Student.Classroom.SchoolID = parsedSchoolID
 	}
 
 	if len(gender) >= 1 {
@@ -309,4 +323,303 @@ func (h *impHandler) EditOwnAddressData(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) GetStudentCount(c *gin.Context) {
+
+	schoolsResponse, err := h.s.School().GetAll(c, &rq.PaginationParams[model.School]{
+		Limit: 10000000,
+		Page:  1,
+	})
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	// Check if any schools were returned
+	if len(schoolsResponse.Data) == 0 {
+		rs.ErrorResponse(c, &errmsg.ErrNotFound{})
+		return
+	}
+
+	// Initialize a slice to store the school data with student counts
+	schoolDataList := make([]model.CountStudent, 0)
+
+	for _, school := range schoolsResponse.Data {
+
+		schoolID := school.ID.String()
+
+		students, err := h.getStudentsBySchoolID(c, schoolID)
+
+		if err != nil {
+			rs.ErrorResponse(c, err)
+			return
+		}
+
+		studentCount := len(students.Data)
+
+		schoolDataWithCount := model.CountStudent{
+			SchoolID:      school.ID,
+			SchoolName:    school.Name,
+			StudentAmount: studentCount,
+		}
+
+		schoolDataList = append(schoolDataList, schoolDataWithCount)
+	}
+
+	rs.SuccessResponse(c, schoolDataList, http.StatusOK)
+}
+
+func (h *impHandler) getStudentsBySchoolID(c *gin.Context, schoolID string) (*rs.PaginationResponse[any, rs.AccountResponse], error) {
+	parsedSchoolID, err := uuid.Parse(schoolID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return nil, err
+	}
+
+	params := rq.PaginationParams[model.Account]{
+		Limit:     10000000,
+		Page:      1,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Account{
+			Student: &model.Student{
+				Classroom: model.Classroom{
+					SchoolID: parsedSchoolID,
+				},
+			},
+		},
+	}
+
+	response, err := h.s.Student().GetAll(c, &params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (h *impHandler) GetStudentPaidBillCount(c *gin.Context) {
+	schoolsResponse, err := h.s.School().GetAll(c, &rq.PaginationParams[model.School]{
+		Limit: 10000000,
+		Page:  1,
+	})
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	if len(schoolsResponse.Data) == 0 {
+		rs.ErrorResponse(c, &errmsg.ErrNotFound{})
+		return
+	}
+
+	schoolDataList := make([]model.CountPaidBill, 0)
+
+	for _, school := range schoolsResponse.Data {
+		schoolID := school.ID.String()
+
+		students, err := h.getStudentsBySchoolID(c, schoolID)
+		if err != nil {
+			rs.ErrorResponse(c, err)
+			return
+		}
+
+		// Create a map to store the count of paid bills for each student
+		paidBillCounts := make(map[uuid.UUID]int)
+
+		for _, student := range students.Data {
+			searchAccountID := student.ID
+			_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+			if err != nil {
+				rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+				return
+			}
+
+			searchDescription := c.DefaultQuery("description", "")
+
+			billsResponse, err := h.s.Midtrans().GetAllBills(c, &rq.PaginationParams[model.Bill]{
+				Limit:     10000000,
+				Page:      1,
+				SortBy:    sortBy,
+				SortOrder: sortOrder,
+				Data: model.Bill{
+					Description: &searchDescription,
+					AccountID:   searchAccountID,
+				},
+			})
+
+			if err != nil {
+				rs.ErrorResponse(c, err)
+				return
+			}
+
+			// Count the paid bills for the current student
+			paidBillCount := 0
+			for _, billResponse := range billsResponse.Data {
+				if billResponse.RemainingAmount == 0 {
+					paidBillCount++
+				}
+			}
+
+			paidBillCounts[student.ID] = paidBillCount
+		}
+
+		// Calculate the total paid bills for the school
+		totalPaidBills := 0
+		for _, count := range paidBillCounts {
+			totalPaidBills += count
+		}
+
+		schoolDataWithCount := model.CountPaidBill{
+			SchoolID:       school.ID,
+			SchoolName:     school.Name,
+			PaidBillAmount: totalPaidBills,
+		}
+
+		schoolDataList = append(schoolDataList, schoolDataWithCount)
+	}
+
+	rs.SuccessResponse(c, schoolDataList, http.StatusOK)
+}
+
+func (h *impHandler) GetStudentUnpaidBillCount(c *gin.Context) {
+	schoolsResponse, err := h.s.School().GetAll(c, &rq.PaginationParams[model.School]{
+		Limit: 10000000,
+		Page:  1,
+	})
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	if len(schoolsResponse.Data) == 0 {
+		rs.ErrorResponse(c, &errmsg.ErrNotFound{})
+		return
+	}
+
+	schoolDataList := make([]model.CountUnpaidBill, 0)
+
+	for _, school := range schoolsResponse.Data {
+		schoolID := school.ID.String()
+
+		students, err := h.getStudentsBySchoolID(c, schoolID)
+		if err != nil {
+			rs.ErrorResponse(c, err)
+			return
+		}
+
+		// Create a map to store the count of paid bills for each student
+		paidBillCounts := make(map[uuid.UUID]int)
+
+		for _, student := range students.Data {
+			searchAccountID := student.ID
+			_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+			if err != nil {
+				rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+				return
+			}
+
+			searchDescription := c.DefaultQuery("description", "")
+
+			billsResponse, err := h.s.Midtrans().GetAllBills(c, &rq.PaginationParams[model.Bill]{
+				Limit:     10000000,
+				Page:      1,
+				SortBy:    sortBy,
+				SortOrder: sortOrder,
+				Data: model.Bill{
+					Description: &searchDescription,
+					AccountID:   searchAccountID,
+				},
+			})
+
+			if err != nil {
+				rs.ErrorResponse(c, err)
+				return
+			}
+
+			// Count the paid bills for the current student
+			paidBillCount := 0
+			for _, billResponse := range billsResponse.Data {
+				if billResponse.RemainingAmount != 0 {
+					paidBillCount++
+				}
+			}
+
+			paidBillCounts[student.ID] = paidBillCount
+		}
+
+		// Calculate the total paid bills for the school
+		totalPaidBills := 0
+		for _, count := range paidBillCounts {
+			totalPaidBills += count
+		}
+
+		schoolDataWithCount := model.CountUnpaidBill{
+			SchoolID:         school.ID,
+			SchoolName:       school.Name,
+			UnpaidBillAmount: totalPaidBills,
+		}
+
+		schoolDataList = append(schoolDataList, schoolDataWithCount)
+	}
+
+	rs.SuccessResponse(c, schoolDataList, http.StatusOK)
+}
+
+func (h *impHandler) CountStudents(c *gin.Context) {
+	searchName := c.DefaultQuery("name", "")
+	gender := c.DefaultQuery("gender", "")
+
+	_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	params := rq.PaginationParams[model.Account]{
+		Limit:     10000000,
+		Page:      1,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Account{
+			Name: &searchName,
+			Teacher: &model.Teacher{
+				TeacherData: model.TeacherData{},
+			},
+		},
+	}
+
+	if len(gender) >= 1 {
+		genderInt, err := strconv.Atoi(gender)
+		if err == nil && util.IsValidConstant(genderInt, constants.GenderMap) {
+			params.Data.Teacher.TeacherData.Gender = &genderInt
+		}
+	}
+
+	// Retrieve the list of teachers based on search criteria
+	students, err := h.s.Student().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	// Count the number of teachers based on the result
+	studentCount := len(students.Data)
+
+	// Create a response structure to return the teacher count
+	response := model.CountTotalStudent{
+		TotalStudents: studentCount,
+	}
+
+	rs.SuccessResponse(c, response, http.StatusOK)
 }

@@ -28,6 +28,7 @@ type SnapHandler interface {
 	SaveMidtransCredentials(c *gin.Context)
 	GetMidtransCredentials(c *gin.Context)
 	GetMidtransFrontendCredentials(c *gin.Context)
+	GetAllTransactions(c *gin.Context)
 }
 
 type impHandler struct {
@@ -290,4 +291,32 @@ func (h *impHandler) GetMidtransFrontendCredentials(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, frontendCredentials, http.StatusOK)
+}
+
+func (h *impHandler) GetAllTransactions(c *gin.Context) {
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchTransactionTime := c.DefaultQuery("transaction_time", "")
+
+	params := rq.PaginationParams[any]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Transaction{
+			TransactionTime: searchTransactionTime,
+		},
+	}
+
+	res, err := h.s.Midtrans().GetAllTransactions(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
 }

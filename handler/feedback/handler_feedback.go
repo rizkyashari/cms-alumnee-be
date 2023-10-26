@@ -177,6 +177,9 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	searchTeacherID := c.DefaultQuery("teacher_id", "")
 	parsedTeacherID, _ := uuid.Parse(searchTeacherID)
 
+	searchSchoolID := c.DefaultQuery("school_id", "") // Add school_id parameter
+	parsedSchoolID, _ := uuid.Parse(searchSchoolID)
+
 	filters := model.Feedback{
 		AcademicYearID: parsedAcademicYearID,
 		StudentID:      parsedStudentID,
@@ -210,6 +213,10 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	if len(searchAcademicYearID) >= 2 {
 		parsedAcademicYearID, _ := uuid.Parse(searchAcademicYearID)
 		params.Data.AcademicYearID = parsedAcademicYearID
+	}
+
+	if len(searchSchoolID) >= 2 {
+		params.Data.Teacher.SchoolID = parsedSchoolID
 	}
 
 	res, err := h.s.Feedback().GetAll(c, &params)

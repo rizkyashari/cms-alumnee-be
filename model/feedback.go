@@ -8,6 +8,7 @@ type Feedback struct {
 	AcademicYearID uuid.UUID
 	StudentID      uuid.UUID
 	TeacherID      uuid.UUID
+	Teacher        Teacher `gorm:"foreignKey:TeacherID;references:ID"`
 	FeedbackScores []FeedbackScore
 }
 

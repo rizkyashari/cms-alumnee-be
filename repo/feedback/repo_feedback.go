@@ -76,6 +76,11 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
 	}
 
+	if params.Data.Teacher.SchoolID != uuid.Nil {
+		chain = chain.Joins("JOIN teachers ON feedbacks.teacher_id = teachers.id").
+			Where("teachers.school_id = ?", params.Data.Teacher.SchoolID.String())
+	}
+
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&feedbacks), params.Limit)
 
 	validColumnTeacherID := []string{

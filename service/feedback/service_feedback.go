@@ -28,6 +28,7 @@ type FeedbackService interface {
 	EditFeedback(c context.Context, newRewardPunishment *rq.FeedbackRequest) error
 	EditOne(c context.Context, newRewardPunishment *rq.FeedbackRequest) error
 	EditFeedbackQuestion(c context.Context, feedbackQuestion *rq.FeedbackQuestionRequest) error
+	UpdateIsTaughtByTeacher(c context.Context, isTaught *rq.IsTaughtByTeacherRequest) error
 }
 
 type impService struct {
@@ -155,6 +156,23 @@ func (s *impService) EditOne(c context.Context, newFeedback *rq.FeedbackRequest)
 			if err := s.repo.Feedback().UpdateFeedbackScoreValue(*parsedFeedbackID, *parsedScoreID, *scoreRequest.Value); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func (s *impService) UpdateIsTaughtByTeacher(c context.Context, isTaught *rq.IsTaughtByTeacherRequest) error {
+
+	parsedFeedbackID, err := serviceutil.GetUUIDFromStringWithValidation("Feedback ID", isTaught.ID)
+	if err != nil {
+		return err
+	}
+
+	if isTaught.ID != nil && isTaught.IsTaughtByTeacher != nil {
+
+		if err := s.repo.Feedback().UpdateIsTaughtByTeacher(*parsedFeedbackID, *isTaught.IsTaughtByTeacher); err != nil {
+			return err
 		}
 	}
 

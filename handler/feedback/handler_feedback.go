@@ -36,6 +36,8 @@ type FeedbackHandler interface {
 	EditFeedbackQuestion(c *gin.Context)
 
 	EditFeedback(c *gin.Context)
+
+	EditIsTaughtByTeacher(c *gin.Context)
 }
 
 type impHandler struct {
@@ -112,6 +114,26 @@ func (h *impHandler) EditOne(c *gin.Context) {
 	}
 
 	err = h.s.Feedback().EditOne(c, &request)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditIsTaughtByTeacher(c *gin.Context) {
+	id := c.Param("id")
+
+	var request rq.IsTaughtByTeacherRequest = rq.IsTaughtByTeacherRequest{ID: &id}
+	err := c.ShouldBindJSON(&request)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Feedback().UpdateIsTaughtByTeacher(c, &request)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

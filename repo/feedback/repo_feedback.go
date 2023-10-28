@@ -18,6 +18,7 @@ type FeedbackRepo interface {
 	UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error
 	UpdateFeedbackQuestion(tx *gorm.DB, id uuid.UUID, feedbackQuestion *model.FeedbackQuestion) error
 	UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value int) error
+	UpdateIsTaughtByTeacher(feedbackID uuid.UUID, isTaught bool) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -162,6 +163,19 @@ func (r *impRepo) UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value 
 		return err
 	}
 
+	return nil
+}
+
+func (r *impRepo) UpdateIsTaughtByTeacher(feedbackID uuid.UUID, isTaught bool) error {
+	var feedback model.Feedback
+	if err := r.db.First(&feedback, "id = ?", feedbackID).Error; err != nil {
+		return err
+	}
+
+	feedback.IsTaughtByTeacher = &isTaught
+	if err := r.db.Save(&feedback).Error; err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -178,6 +178,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/reward-punishment", h.RewardPunishment.GetAllOwnStudent)
 
 			student.PATCH("/feedback", h.Feedback.EditOne)
+			student.PATCH("/feedback/is-taught", h.Feedback.EditIsTaughtByTeacher)
 			student.GET("/feedback", h.Feedback.GetAllOwnStudent)
 			student.GET("/payment-link", h.PaymentLink.GetPaymentLinksByEmail)
 

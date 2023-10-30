@@ -5,6 +5,7 @@ import (
 	account "github.com/fadhln/lms-be/handler/account"
 	auth "github.com/fadhln/lms-be/handler/auth"
 	classroom "github.com/fadhln/lms-be/handler/classroom"
+	event "github.com/fadhln/lms-be/handler/event"
 	feedback "github.com/fadhln/lms-be/handler/feedback"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
 	midtrans "github.com/fadhln/lms-be/handler/midtrans"
@@ -24,6 +25,7 @@ type Handler struct {
 	Auth             auth.AuthHandler
 	AcademicYear     academicyear.AcademicYearHandler
 	Classroom        classroom.ClassroomHandler
+	Event            event.EventHandler
 	MassCreate       masscreate.MassCreateHandler
 	School           school.SchoolHandler
 	Student          student.StudentHandler
@@ -42,6 +44,7 @@ func SetupHandler(s service.Service) *Handler {
 		Auth:             auth.Init(s),
 		AcademicYear:     academicyear.Init(s),
 		Classroom:        classroom.Init(s),
+		Event:            event.Init(s),
 		MassCreate:       masscreate.Init(s),
 		School:           school.Init(s),
 		Student:          student.Init(s),

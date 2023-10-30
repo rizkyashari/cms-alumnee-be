@@ -162,3 +162,15 @@ var AttendanceStatusMap = map[int]bool{
 	ATTENDANCE_STATUS_ABSENT_NO_REMARK: true,
 	ATTENDANCE_STATUS_OTHER:            true,
 }
+
+///
+
+const (
+	EVENT_TYPE_NORMAL  string = "normal"
+	EVENT_TYPE_SUBJECT string = "subject"
+)
+
+var EventTypeMap = map[string]bool{
+	EVENT_TYPE_NORMAL:  true,
+	EVENT_TYPE_SUBJECT: true,
+}

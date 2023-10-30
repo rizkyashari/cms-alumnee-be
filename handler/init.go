@@ -95,6 +95,18 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				classroom.POST("/:id/subject/delete", h.Classroom.RemoveSubjectsFromClassroom)
 			}
 
+			admin.POST("/event", h.Event.CreateOne)
+			event := admin.Group("/event")
+			{
+				event.GET("/by-classroom/:classroom_id", h.Event.GetAllByClassroomID)
+				event.GET("/by-teacher/:teacher_id", h.Event.GetAllByTeacherID)
+				event.GET("/by-student/:student_id", h.Event.GetAllByStudentID)
+				event.POST("/weekly", h.Event.CreateRepeated)
+				event.POST("/weekly/many", h.Event.CreateManyRepeated)
+				event.PATCH("/:id", h.Event.EditOne)
+				event.DELETE("/:id", h.Event.DeleteOne)
+			}
+
 			admin.POST("/school", h.School.CreateOne)
 			school := admin.Group("/school")
 			{

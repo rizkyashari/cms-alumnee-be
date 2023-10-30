@@ -1,6 +1,6 @@
 package util
 
-func IsValidConstant(constant int, constantMap map[int]bool) bool {
+func IsValidConstant[K comparable](constant K, constantMap map[K]bool) bool {
 	_, ok := constantMap[constant]
 	return ok
 }

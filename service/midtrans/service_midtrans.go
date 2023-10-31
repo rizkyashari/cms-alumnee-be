@@ -20,7 +20,6 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
-	"github.com/robfig/cron"
 	"gorm.io/gorm"
 )
 
@@ -36,35 +35,40 @@ type SnapService interface {
 	GetBillsByAccountID(c context.Context, accountID string, params *rq.PaginationParams[model.Bill]) (*rs.PaginationResponse[any, rs.BillResponse], error)
 	GetAllBills(c context.Context, params *rq.PaginationParams[model.Bill]) (*rs.PaginationResponse[any, rs.BillResponse], error)
 	GetBillByID(c context.Context, billID string) (*model.Bill, error)
-	StartCronJob()
+	UpdateDatabaseJob() error
+	// StartCronJob()
 }
 
 type impService struct {
 	r          repo.Repository
 	snapClient snap.Client
-	cron       *cron.Cron
+	// cron       *cron.Cron
 }
 
 func Init(r repo.Repository) SnapService {
-	// Create a new cron instance
-	c := cron.New()
-	s := &impService{
-		r:    r,
-		cron: c,
+	return &impService{
+		r: r,
 	}
 
-	c.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
+	// Create a new cron instance
+	// c := cron.New()
+	// s := &impService{
+	// 	r:    r,
+	// 	cron: c,
+	// }
 
-	c.Start()
+	// c.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
 
-	return s
+	// c.Start()
+
+	// return s
 }
 
-func (s *impService) StartCronJob() {
-	// Start the cron job
-	s.cron.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
-	s.cron.Start()
-}
+// func (s *impService) StartCronJob() {
+// 	// Start the cron job
+// 	s.cron.AddFunc("0 0 * * * *", s.UpdateDatabaseJob)
+// 	s.cron.Start()
+// }
 
 func (s *impService) SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials) error {
 	err := s.r.Midtrans().SaveMidtransCredentials(newRequest)
@@ -116,15 +120,13 @@ func (s *impService) initializeSnapClient() {
 	// midtrans.SetPaymentOverrideNotification("https://example.com/override")
 }
 
-func (s *impService) UpdateDatabaseJob() {
+func (s *impService) UpdateDatabaseJob() error {
 	// Fetch tokens to update from the database using the GetTokensFromDatabase function
 	tokensToUpdate, err := s.r.Midtrans().GetTokensFromDatabase()
 	if err != nil {
 		fmt.Printf("Error fetching tokens from the database: %v\n", err)
-		return
+		return err
 	}
-
-	// tokensToUpdate = s.filterCompletedTransactions(tokensToUpdate)
 
 	for _, token := range tokensToUpdate {
 		transactionResp, err := s.UpdateTransactionDetailByToken(token)
@@ -149,6 +151,8 @@ func (s *impService) UpdateDatabaseJob() {
 			}
 		}
 	}
+
+	return nil
 }
 
 func (s *impService) UpdateTransactionDetailByToken(token string) (*rs.TransactionResponse, error) {
@@ -623,23 +627,3 @@ func (s *impService) GetAllTransactions(c context.Context, params *rq.Pagination
 
 	return &res, nil
 }
-
-// func (s *impService) filterCompletedTransactions(tokens []string) []string {
-// 	var filteredTokens []string
-
-// 	for _, token := range tokens {
-// 		transactionResp, err := s.UpdateTransactionDetailByToken(token)
-// 		if err != nil {
-// 			fmt.Printf("Error updating transaction with token %s: %v\n", token, err)
-// 			// Handle the error as needed
-// 			continue
-// 		}
-
-// 		if transactionResp.TransactionStatus != "settlement" {
-// 			// Add the token to the filtered list if not settled
-// 			filteredTokens = append(filteredTokens, token)
-// 		}
-// 	}
-
-// 	return filteredTokens
-// }

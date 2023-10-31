@@ -143,6 +143,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			}
 
 			admin.GET("/transaction", h.Midtrans.GetAllTransactions)
+			admin.GET("/transaction/update-database-job", h.Midtrans.UpdateTransactionStatusAndBill)
 
 			admin.GET("/bill", h.Midtrans.GetAllBills)
 			admin.POST("/bill", h.Midtrans.CreateOneBill)
@@ -183,6 +184,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/payment-link", h.PaymentLink.GetPaymentLinksByEmail)
 
 			student.POST("/transaction", h.Midtrans.CreateTransaction)
+			student.GET("/transaction/update-database-job", h.Midtrans.UpdateTransactionStatusAndBill)
+
 			student.GET("/bill", h.Midtrans.GetAllOwnBills)
 		}
 

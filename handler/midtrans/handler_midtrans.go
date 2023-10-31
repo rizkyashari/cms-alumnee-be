@@ -29,6 +29,7 @@ type SnapHandler interface {
 	GetMidtransCredentials(c *gin.Context)
 	GetMidtransFrontendCredentials(c *gin.Context)
 	GetAllTransactions(c *gin.Context)
+	UpdateTransactionStatusAndBill(c *gin.Context)
 }
 
 type impHandler struct {
@@ -319,4 +320,13 @@ func (h *impHandler) GetAllTransactions(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) UpdateTransactionStatusAndBill(c *gin.Context) {
+	err := h.s.Midtrans().UpdateDatabaseJob()
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+	rs.SuccessResponse(c, "Database update job completed successfully", http.StatusOK)
 }

@@ -53,7 +53,7 @@ func Init(r repo.Repository) ClassroomService {
 	}
 }
 
-func getClassroomCSV(requestFile *multipart.FileHeader, academicYearID string, schoolID string) (*[]rq.ClassroomRequest, error) {
+func (s *impService) getClassroomCSV(requestFile *multipart.FileHeader, academicYearID string, schoolID string) (*[]rq.ClassroomRequest, error) {
 	if requestFile == nil {
 		return nil, errmsg.ErrRequestFileInvalid
 	}
@@ -75,10 +75,23 @@ func getClassroomCSV(requestFile *multipart.FileHeader, academicYearID string, s
 			continue
 		}
 
+		gotAccount, err := s.repo.Account().ReadOneByEmail(rec[1])
+		if err != nil {
+			return nil, err
+		}
+
+		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotAccount.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		teacherID := gotTeacher.ID.String()
+
 		classroom := rq.ClassroomRequest{
 			Name:           &rec[0],
 			TeacherEmail:   &rec[1],
 			AcademicYearID: &academicYearID,
+			TeacherID:      &teacherID,
 			SchoolID:       &schoolID,
 		}
 
@@ -341,6 +354,16 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Classro
 	successCount := 0
 	var errMsgs []model.ErrorMsg
 	for idx, newClassroom := range *requests {
+		fmt.Printf("Request[%d]: ID: %v, Name: %v, Code: %v, AcademicYearID: %v, SchoolID: %v, TeacherID: %v, TeacherEmail: %v\n",
+			idx,
+			safeDerefString(newClassroom.ID),
+			safeDerefString(newClassroom.Name),
+			safeDerefString(newClassroom.Code),
+			safeDerefString(newClassroom.AcademicYearID),
+			safeDerefString(newClassroom.SchoolID),
+			safeDerefString(newClassroom.TeacherID),
+			safeDerefString(newClassroom.TeacherEmail),
+		)
 		err := s.CreateOne(c, &newClassroom)
 		if err != nil {
 			errMsgs = append(errMsgs, model.ErrorMsg{
@@ -381,7 +404,7 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Classro
 func (s *impService) CreateMass(c *gin.Context, academicYearID string, schoolID string, requestFile *multipart.FileHeader) (
 	*rs.MassCreateResponse, error) {
 
-	newClassrooms, err := getClassroomCSV(requestFile, academicYearID, schoolID)
+	newClassrooms, err := s.getClassroomCSV(requestFile, academicYearID, schoolID)
 	if err != nil {
 		return nil, errmsg.ErrRequestFileInvalid
 	}
@@ -611,4 +634,11 @@ func (s *impService) RemoveSubjectsFromClassroom(c context.Context, classroomID 
 	}
 
 	return nil
+}
+
+func safeDerefString(s *string) string {
+	if s != nil {
+		return *s
+	}
+	return "<nil>"
 }

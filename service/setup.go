@@ -6,6 +6,7 @@ import (
 	account "github.com/fadhln/lms-be/service/account"
 	auth "github.com/fadhln/lms-be/service/auth"
 	classroom "github.com/fadhln/lms-be/service/classroom"
+	event "github.com/fadhln/lms-be/service/event"
 	feedback "github.com/fadhln/lms-be/service/feedback"
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
 	midtrans "github.com/fadhln/lms-be/service/midtrans"
@@ -22,6 +23,7 @@ type Service interface {
 	Account() account.AccountService
 	AcademicYear() academicyear.AcademicYearService
 	Classroom() classroom.ClassroomService
+	Event() event.EventService
 	MassCreate() masscreate.MassCreateService
 	School() school.SchoolService
 	Student() student.StudentService
@@ -57,6 +59,10 @@ func (s *impService) AcademicYear() academicyear.AcademicYearService {
 
 func (s *impService) Classroom() classroom.ClassroomService {
 	return classroom.Init(s.repo)
+}
+
+func (s *impService) Event() event.EventService {
+	return event.Init(s.repo)
 }
 
 func (s *impService) MassCreate() masscreate.MassCreateService {

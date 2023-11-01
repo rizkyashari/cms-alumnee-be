@@ -8,6 +8,7 @@ import (
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
 	classroom "github.com/fadhln/lms-be/repo/classroom"
+	event "github.com/fadhln/lms-be/repo/event"
 	"github.com/fadhln/lms-be/repo/feedback"
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	midtrans "github.com/fadhln/lms-be/repo/midtrans"
@@ -30,6 +31,7 @@ type Repository interface {
 	AcademicYear() acadmicyear.AcademicYearRepo
 	Admin() admin.AdminRepo
 	Classroom() classroom.ClassroomRepo
+	Event() event.EventRepo
 	MassCreate() masscreate.MassCreateRepo
 	RelationClassroomSubject() relationclassroomsubject.RelationClassroomSubjectRepo
 	School() school.SchoolRepo
@@ -73,6 +75,10 @@ func (r *impRepo) Admin() admin.AdminRepo {
 
 func (r *impRepo) Classroom() classroom.ClassroomRepo {
 	return classroom.Init(r.DB)
+}
+
+func (r *impRepo) Event() event.EventRepo {
+	return event.Init(r.DB)
 }
 
 func (r *impRepo) MassCreate() masscreate.MassCreateRepo {

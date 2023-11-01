@@ -29,4 +29,5 @@ var Entities = []interface{}{
 	&Transaction{},
 	&Bill{},
 	&MidtransCredentials{},
+	&Event{},
 }

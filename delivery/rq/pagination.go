@@ -3,7 +3,7 @@ package rq
 import (
 	"time"
 
-	"github.com/fadhln/lms-be/model"
+	"github.com/google/uuid"
 )
 
 type PaginationParams[T interface{}] struct {
@@ -14,8 +14,14 @@ type PaginationParams[T interface{}] struct {
 	Data      T
 }
 
-type ScheduleParams struct {
-	Start time.Time
+type EventParamsData struct {
+	ClassroomID *uuid.UUID
+	TeacherID   *uuid.UUID
+	StudentID   *uuid.UUID
+}
+
+type EventParams struct {
+	Begin time.Time
 	End   time.Time
-	Data  *model.Schedule
+	Data  *EventParamsData
 }

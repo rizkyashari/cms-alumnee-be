@@ -9,6 +9,7 @@ import (
 )
 
 type RelationClassroomSubjectRepo interface {
+	GetByClassroomIDAndSubjectID(classroomID *uuid.UUID, subjectID *uuid.UUID) (*model.RelationClassroomSubject, error)
 	GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, int, error)
 	CreateOne(tx *gorm.DB, newRelation *model.RelationClassroomSubject) error
 	DeleteOne(tx *gorm.DB, classroomID uuid.UUID, subjectID uuid.UUID) error
@@ -22,6 +23,15 @@ func Init(db *gorm.DB) RelationClassroomSubjectRepo {
 	return &impRepo{
 		db: db,
 	}
+}
+
+func (r *impRepo) GetByClassroomIDAndSubjectID(classroomID *uuid.UUID, subjectID *uuid.UUID) (*model.RelationClassroomSubject, error) {
+	var relation model.RelationClassroomSubject
+	if err := r.db.Where("classroom_id = ? AND subject_id = ?", classroomID, subjectID).First(&relation).Error; err != nil {
+		return nil, err
+	}
+
+	return &relation, nil
 }
 
 func (r *impRepo) GetAll(params *rq.PaginationParams[model.RelationClassroomSubject]) (*[]model.RelationClassroomSubject, int, int, error) {

@@ -27,25 +27,33 @@ func Init(s service.Service) AccountHandler {
 }
 
 func (h *impHandler) UploadAvatar(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	accountID := c.Param("account_id")
 
 	var imagefile rq.ImageUploadRequest
 	if err := c.ShouldBind(&imagefile); err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	if imagefile.ImageFile == nil {
+		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	err := h.s.Account().UploadAvatar(c, accountID, imagefile.ImageFile)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, http.StatusCreated)
 }
 

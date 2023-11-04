@@ -246,52 +246,72 @@ func (h *impHandler) GetDetailByID(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.ClassroomRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Classroom().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateMass(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	schoolID := c.DefaultQuery("school_id", "")
 	academicYearID := c.DefaultQuery("academic_year_id", "")
 
 	var csvfile rq.CSVFileUploadRequest
 	if err := c.ShouldBind(&csvfile); err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	if csvfile.CSVFile == nil {
+		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	res, err := h.s.Classroom().CreateMass(c, academicYearID, schoolID, csvfile.CSVFile)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, res, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.ClassroomRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -300,47 +320,63 @@ func (h *impHandler) EditOne(c *gin.Context) {
 
 	err = h.s.Classroom().EditOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) AssignSubjectsToClassroom(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	classroomID := c.Param("id")
 
 	var request rq.IDsRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Classroom().AssignSubjectsToClassroom(c, classroomID, request.IDs)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) RemoveSubjectsFromClassroom(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	classroomID := c.Param("id")
 
 	var request rq.IDsRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Classroom().RemoveSubjectsFromClassroom(c, classroomID, request.IDs)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }

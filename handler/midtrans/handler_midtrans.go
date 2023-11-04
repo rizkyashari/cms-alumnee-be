@@ -43,9 +43,13 @@ func Init(s service.Service) SnapHandler {
 }
 
 func (h *impHandler) CreateTransaction(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
 
 	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -53,12 +57,14 @@ func (h *impHandler) CreateTransaction(c *gin.Context) {
 	var request *snap.Request
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	billID := c.DefaultQuery("bill_id", "")
 	if billID == "" {
+		util.SaveResponseBody(c, "billID is required", nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "billID is required"})
 		return
 	}
@@ -66,6 +72,7 @@ func (h *impHandler) CreateTransaction(c *gin.Context) {
 	// Retrieve the Bill information from the database
 	bill, err := h.s.Midtrans().GetBillByID(c, billID)
 	if err != nil {
+		util.SaveResponseBody(c, "Failed to retrieve Bill information", nil)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Bill information"})
 		return
 	}
@@ -82,21 +89,25 @@ func (h *impHandler) CreateTransaction(c *gin.Context) {
 	fmt.Println(bill.Deadline)
 
 	if bill.Deadline.Before(currentLocalTime) {
+		util.SaveResponseBody(c, "cannot pay after deadline", nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot pay after deadline"})
 		return
 	}
 
 	if bill.RemainingAmount == 0 {
+		util.SaveResponseBody(c, "bill is already paid completely", nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "your bill is already paid completely"})
 		return
 	}
 
 	if request.TransactionDetails.GrossAmt < bill.AdminFee {
+		util.SaveResponseBody(c, "Gross amount should be greater than admin fee", nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gross amount should be greater than admin fee"})
 		return
 	}
 
 	if request.TransactionDetails.GrossAmt-bill.AdminFee > bill.RemainingAmount {
+		util.SaveResponseBody(c, "Gross amount should be less than remaining fee", nil)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gross amount should be less than remaining fee"})
 		return
 	}
@@ -104,55 +115,76 @@ func (h *impHandler) CreateTransaction(c *gin.Context) {
 	// Create the transaction using the service
 	response, err := h.s.Midtrans().CreateTransaction(c, request, billID, gotAccount.Email)
 	if err != nil {
+		util.SaveResponseBody(c, "Failed to create Snap transaction", nil)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Snap transaction"})
 		return
 	}
 
 	// Serialize the response to JSON and send it to the client
+	util.SaveResponseBody(c, nil, "success")
 	c.JSON(http.StatusOK, response)
 }
 
 func (h *impHandler) EditOneBill(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.BillRequest = rq.BillRequest{ID: &id}
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Midtrans().EditOneBill(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) CreateOneBill(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.BillRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Midtrans().CreateOneBill(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateMultipleBill(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var requests []*rq.BillRequest
 	err := c.ShouldBindJSON(&requests)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -160,10 +192,13 @@ func (h *impHandler) CreateMultipleBill(c *gin.Context) {
 	for _, request := range requests {
 		err = h.s.Midtrans().CreateOneBill(c, request)
 		if err != nil {
+			util.SaveResponseBody(c, err.Error(), nil)
 			rs.ErrorResponse(c, err)
 			return
 		}
 	}
+
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 

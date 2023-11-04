@@ -30,4 +30,5 @@ var Entities = []interface{}{
 	&Bill{},
 	&MidtransCredentials{},
 	&Event{},
+	&LogData{},
 }

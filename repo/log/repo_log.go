@@ -2,6 +2,7 @@ package repo_log
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
@@ -52,6 +53,11 @@ func (r *impRepo) GetActivityLogs(params *rq.PaginationParams[model.LogData]) (*
 	chain := r.db
 
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&logs), params.Limit)
+
+	fmt.Println(params.Data.UserRole)
+	if params.Data.UserRole != 0 {
+		chain = chain.Where(r.db.Where("user_role = ?", params.Data.UserRole))
+	}
 
 	validColumnTimeStamp := []string{
 		"timestamp",

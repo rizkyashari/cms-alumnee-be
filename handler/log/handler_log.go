@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/fadhln/lms-be/delivery/rq"
@@ -104,12 +105,28 @@ func (h *impHandler) GetActivityLogs(c *gin.Context) {
 		return
 	}
 
+	searchUserRole := c.DefaultQuery("user_role", "")
+	userRoleNum := 0
+
+	if searchUserRole != "" {
+		num, err := strconv.Atoi(searchUserRole)
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else {
+			userRoleNum = num
+		}
+	}
+
+	filters := model.LogData{
+		UserRole: userRoleNum,
+	}
+
 	params := rq.PaginationParams[model.LogData]{
 		Limit:     limit,
 		Page:      page,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
-		Data:      model.LogData{},
+		Data:      filters,
 	}
 
 	// Retrieve activity logs from the database using the service
@@ -120,7 +137,7 @@ func (h *impHandler) GetActivityLogs(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, logs)
+	rs.SuccessResponse(c, logs, http.StatusOK)
 }
 
 type responseBodyCapture struct {

@@ -10,6 +10,7 @@ import (
 )
 
 type EventRepo interface {
+	GetDetailByID(eventID uuid.UUID) (*model.Event, error)
 	GetAll(params rq.EventParams) ([]model.Event, error)
 	CreateOne(tx *gorm.DB, newEvent model.Event) error
 	UpdateOne(tx *gorm.DB, newEvent model.Event) error
@@ -24,6 +25,16 @@ func Init(db *gorm.DB) EventRepo {
 	return &impRepo{
 		db: db,
 	}
+}
+
+func (r *impRepo) GetDetailByID(eventID uuid.UUID) (*model.Event, error) {
+	var event model.Event
+	chain := r.db.Preload("Classroom").Preload("Classroom.AcademicYear").Preload("RelationClassroomSubject").Preload("RelationClassroomSubject.Subject")
+	if err := chain.Where("id = ?", eventID).Find(&event).Error; err != nil {
+		return nil, err
+	}
+
+	return &event, nil
 }
 
 func (r *impRepo) GetAll(params rq.EventParams) ([]model.Event, error) {

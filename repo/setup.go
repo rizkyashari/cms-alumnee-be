@@ -7,8 +7,10 @@ import (
 	acadmicyear "github.com/fadhln/lms-be/repo/academic_year"
 	account "github.com/fadhln/lms-be/repo/account"
 	admin "github.com/fadhln/lms-be/repo/admin"
+	attendance "github.com/fadhln/lms-be/repo/attendance"
 	classroom "github.com/fadhln/lms-be/repo/classroom"
 	event "github.com/fadhln/lms-be/repo/event"
+	eventdraft "github.com/fadhln/lms-be/repo/event_draft"
 	"github.com/fadhln/lms-be/repo/feedback"
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	midtrans "github.com/fadhln/lms-be/repo/midtrans"
@@ -30,8 +32,10 @@ type Repository interface {
 	Account() account.AccountRepo
 	AcademicYear() acadmicyear.AcademicYearRepo
 	Admin() admin.AdminRepo
+	Attendance() attendance.AttendanceRepo
 	Classroom() classroom.ClassroomRepo
 	Event() event.EventRepo
+	EventDraft() eventdraft.EventDraftRepo
 	MassCreate() masscreate.MassCreateRepo
 	RelationClassroomSubject() relationclassroomsubject.RelationClassroomSubjectRepo
 	School() school.SchoolRepo
@@ -73,12 +77,20 @@ func (r *impRepo) Admin() admin.AdminRepo {
 	return admin.Init(r.DB)
 }
 
+func (r *impRepo) Attendance() attendance.AttendanceRepo {
+	return attendance.Init(r.DB)
+}
+
 func (r *impRepo) Classroom() classroom.ClassroomRepo {
 	return classroom.Init(r.DB)
 }
 
 func (r *impRepo) Event() event.EventRepo {
 	return event.Init(r.DB)
+}
+
+func (r *impRepo) EventDraft() eventdraft.EventDraftRepo {
+	return eventdraft.Init(r.DB)
 }
 
 func (r *impRepo) MassCreate() masscreate.MassCreateRepo {

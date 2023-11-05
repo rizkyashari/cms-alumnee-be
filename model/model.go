@@ -3,6 +3,7 @@ package model
 var Entities = []interface{}{
 	&Account{},
 	&Admin{},
+	&Attendance{},
 	&Subject{},
 	&RelationClassroomSubject{},
 	&Schedule{},
@@ -30,4 +31,5 @@ var Entities = []interface{}{
 	&Bill{},
 	&MidtransCredentials{},
 	&Event{},
+	&EventDraft{},
 }

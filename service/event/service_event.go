@@ -19,6 +19,7 @@ import (
 )
 
 type EventService interface {
+	GetDetailByID(c context.Context, eventID string) (*rs.EventResponse, error)
 	GetAll(c context.Context, params rq.EventParams) (*rs.ManyEventReponse, error)
 	GetAllByClassroomID(c context.Context, classroomID string, params rq.EventParams) (*rs.ManyEventReponse, error)
 	GetAllByTeacherID(c context.Context, teacherID string, params rq.EventParams) (*rs.ManyEventReponse, error)
@@ -38,6 +39,57 @@ func Init(r repo.Repository) EventService {
 	return &impService{
 		repo: r,
 	}
+}
+
+func (s *impService) GetDetailByID(c context.Context, eventID string) (*rs.EventResponse, error) {
+	parsedEventID, err := serviceutil.GetUUIDFromStringWithValidation("Event ID", &eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	event, err := s.repo.Event().GetDetailByID(*parsedEventID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var eventResponse rs.EventResponse
+	err = copier.Copy(&eventResponse, event)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	var classroom rs.ClassroomResponse
+	err = copier.Copy(&classroom, event.Classroom)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	eventResponse.Classroom = classroom
+
+	if event.Type == constants.EVENT_TYPE_SUBJECT {
+		var subject rs.SubjectResponse
+		err = copier.Copy(&subject, event.RelationClassroomSubject.Subject)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
+		var teacher rs.AccountResponse
+		gotTeacher, _ := s.repo.Teacher().GetDetailByTeacherID(event.RelationClassroomSubject.Subject.TeacherID)
+
+		gotAccount, err := s.repo.Account().ReadOneByID(gotTeacher.AccountID)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
+		err = copier.Copy(&teacher, gotAccount)
+		if err != nil {
+			return nil, &errmsg.ErrInternal{Err: err}
+		}
+
+		subject.Teacher = teacher
+		eventResponse.Subject = &subject
+	}
+
+	return &eventResponse, nil
 }
 
 func (s *impService) GetAll(c context.Context, params rq.EventParams) (*rs.ManyEventReponse, error) {
@@ -83,8 +135,9 @@ func (s *impService) GetAll(c context.Context, params rq.EventParams) (*rs.ManyE
 			}
 
 			var teacher rs.AccountResponse
+			gotTeacher, _ := s.repo.Teacher().GetDetailByTeacherID(event.RelationClassroomSubject.Subject.TeacherID)
 
-			gotAccount, err := s.repo.Account().ReadOneByID(event.RelationClassroomSubject.Subject.Teacher.AccountID)
+			gotAccount, err := s.repo.Account().ReadOneByID(gotTeacher.AccountID)
 			if err != nil {
 				return nil, &errmsg.ErrInternal{Err: err}
 			}
@@ -251,12 +304,15 @@ func (s *impService) CreateRepeated(c context.Context, newEvents rq.CreateRepeat
 		return &errmsg.ErrFieldIsWrong{FieldName: "Repeat Begin Date"}
 	}
 
-	repeatEndTime, err := util.EventDateParse(newEvents.RepeatBeginDate)
+	repeatEndTime, err := util.EventDateParse(newEvents.RepeatEndDate)
 	if err != nil {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Repeat End Date"}
 	}
 
 	if !repeatEndTime.After(*repeatBeginTime) {
+		fmt.Println("repeatBeginTime", repeatBeginTime)
+		fmt.Println("repeatEndTime", repeatEndTime)
+
 		return &errmsg.ErrFieldIsWrong{FieldName: "End Date"}
 	}
 

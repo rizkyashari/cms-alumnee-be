@@ -192,7 +192,12 @@ func getTeacherDataFromRequest(body *rq.TeacherUpdateRequest) (*model.TeacherDat
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Birth Date"}
 		}
 
-		parsedBirthDate, err := time.Parse(constants.DateLayout, *body.BirthDate)
+		location, err := time.LoadLocation("Asia/Jakarta")
+		if err != nil {
+			return nil, false, &errmsg.ErrInternal{Err: err}
+		}
+
+		parsedBirthDate, err := time.ParseInLocation(constants.DateLayout, *body.BirthDate, location)
 		if err != nil {
 			return nil, false, &errmsg.ErrInternal{Err: err}
 		}

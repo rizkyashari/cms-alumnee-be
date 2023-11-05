@@ -14,6 +14,7 @@ import (
 )
 
 type EventHandler interface {
+	GetDetailByID(c *gin.Context)
 	GetAllByClassroomID(c *gin.Context)
 	GetAllByTeacherID(c *gin.Context)
 	GetAllByStudentID(c *gin.Context)
@@ -36,6 +37,17 @@ func Init(s service.Service) EventHandler {
 	}
 }
 
+func (h *impHandler) GetDetailByID(c *gin.Context) {
+	id := c.Param("id")
+	res, err := h.s.Event().GetDetailByID(c, id)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
 func (h *impHandler) GetAllByClassroomID(c *gin.Context) {
 	classroomID := c.Param("classroom_id")
 
@@ -53,6 +65,9 @@ func (h *impHandler) GetAllByClassroomID(c *gin.Context) {
 		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
 		return
 	}
+
+	beginTime = util.ForceCorrectTimeZone(beginTime)
+	endTime = util.ForceCorrectTimeZone(endTime)
 
 	params := rq.EventParams{
 		Begin: beginTime,
@@ -86,6 +101,9 @@ func (h *impHandler) GetAllByTeacherID(c *gin.Context) {
 		return
 	}
 
+	beginTime = util.ForceCorrectTimeZone(beginTime)
+	endTime = util.ForceCorrectTimeZone(endTime)
+
 	params := rq.EventParams{
 		Begin: beginTime,
 		End:   endTime,
@@ -117,6 +135,9 @@ func (h *impHandler) GetAllByStudentID(c *gin.Context) {
 		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
 		return
 	}
+
+	beginTime = util.ForceCorrectTimeZone(beginTime)
+	endTime = util.ForceCorrectTimeZone(endTime)
 
 	params := rq.EventParams{
 		Begin: beginTime,
@@ -154,6 +175,9 @@ func (h *impHandler) GetAllByOwnTeacherID(c *gin.Context) {
 		return
 	}
 
+	beginTime = util.ForceCorrectTimeZone(beginTime)
+	endTime = util.ForceCorrectTimeZone(endTime)
+
 	params := rq.EventParams{
 		Begin: beginTime,
 		End:   endTime,
@@ -189,6 +213,9 @@ func (h *impHandler) GetAllByOwnStudentID(c *gin.Context) {
 		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
 		return
 	}
+
+	beginTime = util.ForceCorrectTimeZone(beginTime)
+	endTime = util.ForceCorrectTimeZone(endTime)
 
 	params := rq.EventParams{
 		Begin: beginTime,
@@ -285,5 +312,5 @@ func (h *impHandler) DeleteOne(c *gin.Context) {
 		return
 	}
 
-	rs.SuccessResponse(c, nil, http.StatusNoContent)
+	rs.SuccessResponse(c, nil, http.StatusOK)
 }

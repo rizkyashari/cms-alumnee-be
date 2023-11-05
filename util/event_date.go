@@ -8,11 +8,18 @@ const EventDateLayout = "2006/01/02 15:04:05"
 // Match the format -> "HH:mm"
 const TimeLayout = "15:04"
 
+func ForceCorrectTimeZone(t time.Time) time.Time {
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc)
+}
+
 func TimeParse(timeStr string) (*time.Time, error) {
 	parsedTime, err := time.Parse(TimeLayout, timeStr)
 	if err != nil {
 		return nil, err
 	}
+
+	parsedTime = ForceCorrectTimeZone(parsedTime)
 
 	return &parsedTime, nil
 }
@@ -22,6 +29,8 @@ func EventDateParse(dateStr string) (*time.Time, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	parsedTime = ForceCorrectTimeZone(parsedTime)
 
 	return &parsedTime, nil
 }

@@ -38,6 +38,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		r.GET("/school", h.School.GetAll)
 		r.GET("/school/:id", h.School.GetDetailByID)
 
+		r.GET("/event/:id", h.Event.GetDetailByID)
+		r.GET("/event/:id/attendance", h.Attendance.GetAllForEventID)
+
 		r.GET("/student", h.Student.GetAll)
 		r.GET("/student/:account_id", h.Student.GetDetailByAccountID)
 		r.GET("/student/data/:student_id", h.Student.GetStudentDataByStudentID)
@@ -95,6 +98,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				classroom.POST("/:id/subject/delete", h.Classroom.RemoveSubjectsFromClassroom)
 			}
 
+			admin.POST("/attendance", h.Attendance.CreateMany)
+			admin.PATCH("/attendance", h.Attendance.EditOne)
+
 			admin.POST("/event", h.Event.CreateOne)
 			event := admin.Group("/event")
 			{
@@ -106,6 +112,10 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				event.PATCH("/:id", h.Event.EditOne)
 				event.DELETE("/:id", h.Event.DeleteOne)
 			}
+
+			admin.GET("/event-draft", h.EventDraft.GetAll)
+			admin.POST("/event-draft", h.EventDraft.CreateOrSaveOne)
+			admin.DELETE("/event-draft/:id", h.EventDraft.DeleteOne)
 
 			admin.POST("/school", h.School.CreateOne)
 			school := admin.Group("/school")
@@ -178,6 +188,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			student.GET("/subject", h.Subject.GetAllOwnStudent)
 
+			student.GET("/attendance", h.Attendance.GetForOwnStudentWithClassroomIDAndSubjectID)
+
 			student.GET("/reward-punishment", h.RewardPunishment.GetAllOwnStudent)
 
 			student.PATCH("/feedback", h.Feedback.EditOne)
@@ -186,6 +198,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			student.POST("/transaction", h.Midtrans.CreateTransaction)
 			student.GET("/bill", h.Midtrans.GetAllOwnBills)
+
+			student.GET("/event", h.Event.GetAllByOwnStudentID)
 		}
 
 		teacher := r.Group("/t")
@@ -214,6 +228,11 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			{
 				reward_punishment.PATCH("/:id", h.RewardPunishment.EditOne)
 			}
+
+			teacher.GET("/event", h.Event.GetAllByOwnTeacherID)
+
+			teacher.POST("/attendance", h.Attendance.CreateMany)
+			teacher.PATCH("/attendance", h.Attendance.EditOne)
 
 			teacher.GET("/classroom-student", h.Teacher.GetAllClassroomStudents)
 

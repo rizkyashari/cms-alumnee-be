@@ -3,9 +3,11 @@ package handler
 import (
 	academicyear "github.com/fadhln/lms-be/handler/academic_year"
 	account "github.com/fadhln/lms-be/handler/account"
+	attendance "github.com/fadhln/lms-be/handler/attendance"
 	auth "github.com/fadhln/lms-be/handler/auth"
 	classroom "github.com/fadhln/lms-be/handler/classroom"
 	event "github.com/fadhln/lms-be/handler/event"
+	eventdraft "github.com/fadhln/lms-be/handler/event_draft"
 	feedback "github.com/fadhln/lms-be/handler/feedback"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
 	midtrans "github.com/fadhln/lms-be/handler/midtrans"
@@ -22,10 +24,12 @@ type Handler struct {
 	s service.Service
 
 	Account          account.AccountHandler
+	Attendance       attendance.AttendanceHandler
 	Auth             auth.AuthHandler
 	AcademicYear     academicyear.AcademicYearHandler
 	Classroom        classroom.ClassroomHandler
 	Event            event.EventHandler
+	EventDraft       eventdraft.EventDraftHandler
 	MassCreate       masscreate.MassCreateHandler
 	School           school.SchoolHandler
 	Student          student.StudentHandler
@@ -41,10 +45,12 @@ func SetupHandler(s service.Service) *Handler {
 	return &Handler{
 		s:                s,
 		Account:          account.Init(s),
+		Attendance:       attendance.Init(s),
 		Auth:             auth.Init(s),
 		AcademicYear:     academicyear.Init(s),
 		Classroom:        classroom.Init(s),
 		Event:            event.Init(s),
+		EventDraft:       eventdraft.Init(s),
 		MassCreate:       masscreate.Init(s),
 		School:           school.Init(s),
 		Student:          student.Init(s),

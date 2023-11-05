@@ -30,7 +30,7 @@ func Init(db *gorm.DB) TeacherRepo {
 
 func (r *impRepo) GetDetailByTeacherID(teacherId uuid.UUID) (*model.Teacher, error) {
 	var teacher model.Teacher
-	if err := r.db.Where("teacher_id = ?", teacherId).Find(&teacher).Error; err != nil {
+	if err := r.db.Where("id = ?", teacherId).Find(&teacher).Error; err != nil {
 		return nil, err
 	}
 

@@ -116,8 +116,15 @@ func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]
 		"name",
 	}
 
+	sortBy := "name"
+	sortOrder := "DESC"
+	if params.SortBy != "created_at" {
+		sortBy = params.SortBy
+		sortOrder = params.SortOrder
+	}
+
 	result := chain.Scopes(
-		util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).
+		util.Pagination(params.Limit, params.Page, sortBy, sortOrder, validColumnName)).
 		Find(&accounts)
 
 	if result.Error != nil {
@@ -167,8 +174,15 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 		"name",
 	}
 
+	sortBy := "name"
+	sortOrder := "ASC"
+	if params.SortBy != "created_at" {
+		sortBy = params.SortBy
+		sortOrder = params.SortOrder
+	}
+
 	result := chain.Scopes(
-		util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnName)).
+		util.Pagination(params.Limit, params.Page, sortBy, sortOrder, validColumnName)).
 		Find(&accounts)
 
 	if result.Error != nil {

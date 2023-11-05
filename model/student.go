@@ -10,4 +10,5 @@ type Student struct {
 	Classroom         Classroom `gorm:"foreignKey:ClassroomID;references:ID"`
 	Scores            []Score
 	RewardPunishments []RewardPunishment
+	Attendances       []Attendance
 }

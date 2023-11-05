@@ -1,6 +1,7 @@
 package rq
 
 type CreateSingleEventRequest struct {
+	ID          *string `json:"id,omitempty"`
 	BeginDate   string  `json:"begin_date"`
 	EndDate     string  `json:"end_date"`
 	Type        string  `json:"type"`

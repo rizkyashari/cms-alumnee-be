@@ -4,8 +4,8 @@ import "github.com/google/uuid"
 
 type Attendance struct {
 	Base
-	StudentID   uuid.UUID
-	ScheduleID  uuid.UUID
-	Status      int
-	Description *string
+	StudentID uuid.UUID
+	EventID   uuid.UUID
+	Status    int
+	Remarks   *string
 }

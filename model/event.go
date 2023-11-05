@@ -17,4 +17,5 @@ type Event struct {
 	Description                *string
 	RelationClassroomSubjectID *uuid.UUID
 	RelationClassroomSubject   *RelationClassroomSubject
+	Attendances                []Attendance
 }

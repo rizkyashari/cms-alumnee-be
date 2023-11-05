@@ -4,9 +4,11 @@ import (
 	"github.com/fadhln/lms-be/repo"
 	academicyear "github.com/fadhln/lms-be/service/academic_year"
 	account "github.com/fadhln/lms-be/service/account"
+	attendance "github.com/fadhln/lms-be/service/attendance"
 	auth "github.com/fadhln/lms-be/service/auth"
 	classroom "github.com/fadhln/lms-be/service/classroom"
 	event "github.com/fadhln/lms-be/service/event"
+	eventdraft "github.com/fadhln/lms-be/service/event_draft"
 	feedback "github.com/fadhln/lms-be/service/feedback"
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
 	midtrans "github.com/fadhln/lms-be/service/midtrans"
@@ -21,9 +23,11 @@ import (
 type Service interface {
 	Auth() auth.AuthService
 	Account() account.AccountService
+	Attendance() attendance.AttendanceService
 	AcademicYear() academicyear.AcademicYearService
 	Classroom() classroom.ClassroomService
 	Event() event.EventService
+	EventDraft() eventdraft.EventDraftService
 	MassCreate() masscreate.MassCreateService
 	School() school.SchoolService
 	Student() student.StudentService
@@ -53,6 +57,10 @@ func (s *impService) Account() account.AccountService {
 	return account.Init(s.repo)
 }
 
+func (s *impService) Attendance() attendance.AttendanceService {
+	return attendance.Init(s.repo)
+}
+
 func (s *impService) AcademicYear() academicyear.AcademicYearService {
 	return academicyear.Init(s.repo)
 }
@@ -63,6 +71,10 @@ func (s *impService) Classroom() classroom.ClassroomService {
 
 func (s *impService) Event() event.EventService {
 	return event.Init(s.repo)
+}
+
+func (s *impService) EventDraft() eventdraft.EventDraftService {
+	return eventdraft.Init(s.repo)
 }
 
 func (s *impService) MassCreate() masscreate.MassCreateService {

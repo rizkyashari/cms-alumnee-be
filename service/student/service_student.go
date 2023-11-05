@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -121,7 +122,292 @@ func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWith
 		}
 
 		if len(rec[10]) > 0 {
-			student.Data.EthnicGroup = &rec[9]
+			student.Data.EthnicGroup = &rec[10]
+		}
+
+		if len(rec[11]) > 0 {
+			student.Data.Nickname = &rec[11]
+		}
+
+		if len(rec[12]) > 0 {
+			student.Data.OriginSchoolNumber = &rec[12]
+		}
+
+		if len(rec[13]) > 0 {
+			student.Data.DistanceToSchool = &rec[13]
+		}
+
+		if len(rec[14]) > 0 {
+			student.Data.TransportationToSchool = &rec[14]
+		}
+
+		if len(rec[15]) > 0 {
+			student.Data.Hobby = &rec[15]
+		}
+
+		if len(rec[16]) > 0 {
+			student.Data.Ideal = &rec[16]
+		}
+
+		if len(rec[17]) > 0 {
+			strPtr := rec[17]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.FamilyData.ChildNumber = &intValue
+		}
+
+		if len(rec[18]) > 0 {
+			if rec[18] == "Adopsi" {
+				status := constants.STUDENT_CHILD_STATUS_ADOPTED
+				student.Data.FamilyData.ChildStatus = &status
+			} else if rec[18] == "Kandung" {
+				status := constants.STUDENT_CHILD_STATUS_BIOLOGICAL
+				student.Data.FamilyData.ChildStatus = &status
+			} else if rec[18] == "Tiri" {
+				status := constants.STUDENT_CHILD_STATUS_STEP
+				student.Data.FamilyData.ChildStatus = &status
+			}
+		}
+
+		if len(rec[19]) > 0 {
+			strPtr := rec[19]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.FamilyData.SiblingCount = &intValue
+		}
+
+		if len(rec[20]) > 0 {
+			student.Data.FamilyData.SpokenLanguage = &rec[20]
+		}
+
+		if len(rec[21]) > 0 {
+			student.Data.AddressData.District = &rec[22]
+		}
+		if len(rec[22]) > 0 {
+			student.Data.AddressData.FullAddress = &rec[23]
+		}
+		if len(rec[23]) > 0 {
+			student.Data.AddressData.HouseNumber = &rec[24]
+		}
+		if len(rec[24]) > 0 {
+			strPtr := rec[24]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AddressData.PostalCode = &intValue
+		}
+		if len(rec[25]) > 0 {
+			student.Data.AddressData.Province = &rec[25]
+		}
+		if len(rec[26]) > 0 {
+			strPtr := rec[26]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AddressData.RT = &intValue
+		}
+		if len(rec[27]) > 0 {
+			strPtr := rec[27]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AddressData.RW = &intValue
+		}
+		if len(rec[28]) > 0 {
+			student.Data.AddressData.SubDistrict = &rec[28]
+		}
+
+		if len(rec[29]) > 0 {
+			strPtr := rec[29]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AddressData.Village = &intValue
+		}
+
+		if len(rec[30]) > 0 {
+			student.Data.MedicalHistoryData.BloodGroup = &rec[30]
+		}
+		if len(rec[31]) > 0 {
+			strPtr := rec[31]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.MedicalHistoryData.BodyWeight = &intValue
+		}
+		if len(rec[32]) > 0 {
+			student.Data.MedicalHistoryData.Disease = &rec[32]
+		}
+		if len(rec[33]) > 0 {
+			student.Data.MedicalHistoryData.SpecialNeeds = &rec[33]
+		}
+
+		if len(rec[34]) > 0 {
+			student.Data.SelfDevelopmentData.MandatoryExtracurricular = &rec[34]
+		}
+		if len(rec[35]) > 0 {
+			student.Data.SelfDevelopmentData.NonAcademicAchievement = &rec[35]
+		}
+		if len(rec[36]) > 0 {
+			student.Data.SelfDevelopmentData.OptionalExtracurricular = &rec[36]
+		}
+		if len(rec[37]) > 0 {
+			student.Data.SelfDevelopmentData.QuranReadingLevel = &rec[37]
+		}
+
+		if len(rec[38]) > 0 {
+			student.Data.AcademicData.BankAccountNumber = &rec[38]
+		}
+		if len(rec[39]) > 0 {
+			strPtr := rec[39]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AcademicData.NationalExamScore = &intValue
+		}
+
+		if len(rec[40]) > 0 {
+			strPtr := rec[40]
+			intValue, _ := strconv.Atoi(strPtr)
+			student.Data.AcademicData.NationalIslamicExamScore = &intValue
+		}
+
+		if len(rec[41]) > 0 {
+			student.Data.AcademicData.BankDKIAccountNumber = &rec[41]
+		}
+
+		if len(rec[42]) > 0 {
+			student.Data.AcademicData.NationalExamNumber = &rec[42]
+		}
+		if len(rec[43]) > 0 {
+			student.Data.AcademicData.OriginSchool = &rec[43]
+		}
+		if len(rec[44]) > 0 {
+			student.Data.AcademicData.OriginSchoolType = &rec[44]
+		}
+		if len(rec[45]) > 0 {
+			student.Data.AcademicData.SchoolStatus = &rec[45]
+		}
+
+		if len(rec[46]) > 0 {
+			student.Data.AcademicData.SchoolAddress = &rec[46]
+		}
+		if len(rec[47]) > 0 {
+			student.Data.AcademicData.SchoolAccreditation = &rec[47]
+		}
+
+		if len(rec[48]) > 0 {
+			student.Data.SchoolTransferData.Origin = &rec[48]
+		}
+
+		if len(rec[49]) > 0 {
+			student.Data.SchoolTransferData.Reason = &rec[49]
+		}
+		if len(rec[50]) > 0 {
+			student.Data.SchoolTransferData.AcceptedInClass = &rec[50]
+		}
+
+		if len(rec[51]) > 0 {
+			student.Data.StudentFatherData.BirthDate = &rec[51]
+		}
+		if len(rec[52]) > 0 {
+			student.Data.StudentFatherData.BirthPlace = &rec[52]
+		}
+		if len(rec[53]) > 0 {
+			student.Data.StudentFatherData.Education = &rec[53]
+		}
+		if len(rec[54]) > 0 {
+			student.Data.StudentFatherData.Email = &rec[54]
+		}
+
+		if len(rec[55]) > 0 {
+			student.Data.StudentFatherData.Existence = &rec[55]
+		}
+		if len(rec[56]) > 0 {
+			strPtr := rec[56]
+			intValue, _ := strconv.Atoi(strPtr)
+			uintValue := uint(intValue)
+			student.Data.StudentFatherData.Income = &uintValue
+		}
+
+		if len(rec[57]) > 0 {
+			student.Data.StudentFatherData.Job = &rec[57]
+		}
+
+		if len(rec[58]) > 0 {
+			student.Data.StudentFatherData.PhoneNumber = &rec[58]
+		}
+		if len(rec[59]) > 0 {
+			student.Data.StudentFatherData.Religion = &rec[59]
+		}
+
+		if len(rec[60]) > 0 {
+			student.Data.StudentFatherData.FullAddress = &rec[60]
+		}
+		if len(rec[61]) > 0 {
+			student.Data.StudentFatherData.Fullname = &rec[61]
+		}
+
+		if len(rec[62]) > 0 {
+			student.Data.StudentMotherData.BirthPlace = &rec[62]
+		}
+		if len(rec[63]) > 0 {
+			student.Data.StudentMotherData.Education = &rec[63]
+		}
+		if len(rec[64]) > 0 {
+			student.Data.StudentMotherData.Email = &rec[64]
+		}
+
+		if len(rec[65]) > 0 {
+			student.Data.StudentMotherData.Existence = &rec[65]
+		}
+		if len(rec[66]) > 0 {
+			strPtr := rec[66]
+			intValue, _ := strconv.Atoi(strPtr)
+			uintValue := uint(intValue)
+			student.Data.StudentMotherData.Income = &uintValue
+		}
+
+		if len(rec[67]) > 0 {
+			student.Data.StudentMotherData.Job = &rec[67]
+		}
+
+		if len(rec[68]) > 0 {
+			student.Data.StudentMotherData.PhoneNumber = &rec[68]
+		}
+		if len(rec[69]) > 0 {
+			student.Data.StudentMotherData.Religion = &rec[69]
+		}
+
+		if len(rec[70]) > 0 {
+			student.Data.StudentMotherData.FullAddress = &rec[70]
+		}
+		if len(rec[71]) > 0 {
+			student.Data.StudentMotherData.Fullname = &rec[71]
+		}
+
+		if len(rec[72]) > 0 {
+			student.Data.StudentGuardianData.BirthPlace = &rec[72]
+		}
+		if len(rec[73]) > 0 {
+			student.Data.StudentGuardianData.Education = &rec[73]
+		}
+		if len(rec[74]) > 0 {
+			student.Data.StudentGuardianData.Email = &rec[74]
+		}
+
+		if len(rec[75]) > 0 {
+			student.Data.StudentGuardianData.Existence = &rec[75]
+		}
+		if len(rec[76]) > 0 {
+			strPtr := rec[76]
+			intValue, _ := strconv.Atoi(strPtr)
+			uintValue := uint(intValue)
+			student.Data.StudentGuardianData.Income = &uintValue
+		}
+
+		if len(rec[77]) > 0 {
+			student.Data.StudentGuardianData.Job = &rec[77]
+		}
+
+		if len(rec[78]) > 0 {
+			student.Data.StudentGuardianData.PhoneNumber = &rec[78]
+		}
+		if len(rec[79]) > 0 {
+			student.Data.StudentGuardianData.Religion = &rec[79]
+		}
+
+		if len(rec[80]) > 0 {
+			student.Data.StudentGuardianData.FullAddress = &rec[80]
+		}
+		if len(rec[81]) > 0 {
+			student.Data.StudentGuardianData.Fullname = &rec[81]
 		}
 
 		students = append(students, student)
@@ -192,6 +478,54 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Ethnic Group"}
 		}
 		newStudentData.EthnicGroup = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.Nickname != nil {
+		if len(*body.Nickname) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Nickname"}
+		}
+		newStudentData.Nickname = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.OriginSchoolNumber != nil {
+		if len(*body.OriginSchoolNumber) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Origin School Number"}
+		}
+		newStudentData.EthnicGroup = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.DistanceToSchool != nil {
+		if len(*body.DistanceToSchool) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Distance To School"}
+		}
+		newStudentData.DistanceToSchool = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.TransportationToSchool != nil {
+		if len(*body.TransportationToSchool) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Transportation To School"}
+		}
+		newStudentData.TransportationToSchool = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.Hobby != nil {
+		if len(*body.Hobby) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Hobby"}
+		}
+		newStudentData.Hobby = body.EthnicGroup
+		isUpdate = true
+	}
+
+	if body.Ideal != nil {
+		if len(*body.Ideal) <= 0 {
+			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Ideal"}
+		}
+		newStudentData.Ideal = body.EthnicGroup
 		isUpdate = true
 	}
 

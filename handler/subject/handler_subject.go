@@ -35,6 +35,7 @@ type SubjectHandler interface {
 	EditOneWithValidation(c *gin.Context)
 	EditOneSubjectComponent(c *gin.Context)
 	EditOneSubjectComponentWithValidation(c *gin.Context)
+	DeleteOneComponent(c *gin.Context)
 
 	AssignClassroomsToSubject(c *gin.Context)
 	RemoveClassroomsFromSubject(c *gin.Context)
@@ -481,6 +482,18 @@ func (h *impHandler) EditOneSubjectComponentWithValidation(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) DeleteOneComponent(c *gin.Context) {
+	id := c.Param("id")
+
+	err := h.s.Subject().DeleteOneComponent(c, id)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, nil, http.StatusOK)
 }
 
 func (h *impHandler) AssignClassroomsToSubject(c *gin.Context) {

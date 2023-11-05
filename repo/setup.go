@@ -18,6 +18,7 @@ import (
 	relationclassroomsubject "github.com/fadhln/lms-be/repo/relation_classroom_subject"
 	rewardpunishment "github.com/fadhln/lms-be/repo/reward_punishment"
 	school "github.com/fadhln/lms-be/repo/school"
+	score "github.com/fadhln/lms-be/repo/score"
 	student "github.com/fadhln/lms-be/repo/student"
 	studentdata "github.com/fadhln/lms-be/repo/student_data"
 	subject "github.com/fadhln/lms-be/repo/subject"
@@ -40,6 +41,7 @@ type Repository interface {
 	MassCreate() masscreate.MassCreateRepo
 	RelationClassroomSubject() relationclassroomsubject.RelationClassroomSubjectRepo
 	School() school.SchoolRepo
+	Score() score.ScoreRepo
 	Student() student.StudentRepo
 	StudentData() studentdata.StudentDataRepo
 	Subject() subject.SubjectRepo
@@ -105,6 +107,10 @@ func (r *impRepo) RelationClassroomSubject() relationclassroomsubject.RelationCl
 
 func (r *impRepo) School() school.SchoolRepo {
 	return school.Init(r.DB)
+}
+
+func (r *impRepo) Score() score.ScoreRepo {
+	return score.Init(r.DB)
 }
 
 func (r *impRepo) Student() student.StudentRepo {

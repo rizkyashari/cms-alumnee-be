@@ -7,5 +7,7 @@ type Score struct {
 	StudentID          uuid.UUID
 	SubjectComponentID uuid.UUID
 	Value              float64
+	Percentage         int
+	Description        string
 	SubjectComponent   SubjectComponent
 }

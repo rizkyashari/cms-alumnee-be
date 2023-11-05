@@ -16,6 +16,7 @@ import (
 	paymentlink "github.com/fadhln/lms-be/service/payment_link"
 	rewardpunishment "github.com/fadhln/lms-be/service/reward_punishment"
 	school "github.com/fadhln/lms-be/service/school"
+	score "github.com/fadhln/lms-be/service/score"
 	student "github.com/fadhln/lms-be/service/student"
 	subject "github.com/fadhln/lms-be/service/subject"
 	teacher "github.com/fadhln/lms-be/service/teacher"
@@ -31,6 +32,7 @@ type Service interface {
 	EventDraft() eventdraft.EventDraftService
 	MassCreate() masscreate.MassCreateService
 	School() school.SchoolService
+	Score() score.ScoreService
 	Student() student.StudentService
 	Subject() subject.SubjectService
 	Teacher() teacher.TeacherService
@@ -85,6 +87,10 @@ func (s *impService) MassCreate() masscreate.MassCreateService {
 
 func (s *impService) School() school.SchoolService {
 	return school.Init(s.repo)
+}
+
+func (s *impService) Score() score.ScoreService {
+	return score.Init(s.repo)
 }
 
 func (s *impService) Student() student.StudentService {

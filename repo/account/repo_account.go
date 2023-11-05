@@ -150,6 +150,13 @@ func (r *impRepo) GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]
 			r.db.Debug().Model(&model.Classroom{}).Where("school_id = ?", params.Data.Student.Classroom.SchoolID).Select("id"))
 	}
 
+	if params.Data.Student != nil && len(params.Data.Student.Classroom.RelationClassroomSubjects) > 0 {
+		filterSubjectID := params.Data.Student.Classroom.RelationClassroomSubjects[0].SubjectID
+		chain = chain.Where("students.classroom_id IN (?)",
+			r.db.Debug().Model(&model.RelationClassroomSubject{}).Where("subject_id = ?", filterSubjectID).Select("classroom_id"),
+		)
+	}
+
 	chain = chain.Where("account_type = ?", constants.ACCOUNT_STUDENT)
 
 	var preloadStudentDataArgs []any

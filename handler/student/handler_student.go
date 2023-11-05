@@ -60,6 +60,7 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	searchName := c.DefaultQuery("name", "")
 	school_id := c.DefaultQuery("school_id", "")
 	classroom_id := c.DefaultQuery("classroom_id", "")
+	subject_id := c.DefaultQuery("subject_id", "")
 	gender := c.DefaultQuery("gender", "")
 
 	params := rq.PaginationParams[model.Account]{
@@ -78,6 +79,13 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	if len(classroom_id) >= 2 {
 		parsedClassroomID, _ := uuid.Parse(classroom_id)
 		params.Data.Student.ClassroomID = &parsedClassroomID
+	}
+
+	if len(subject_id) >= 2 {
+		parsedSubjectID, _ := uuid.Parse(subject_id)
+		params.Data.Student.Classroom.RelationClassroomSubjects = []model.RelationClassroomSubject{{
+			SubjectID: parsedSubjectID,
+		}}
 	}
 
 	if len(school_id) >= 2 {

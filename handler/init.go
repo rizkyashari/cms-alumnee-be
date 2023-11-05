@@ -68,6 +68,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 		r.GET("/midtrans-frontend", h.Midtrans.GetMidtransFrontendCredentials)
 
+		r.GET("/score", h.Score.GetByStudentIDAndComponentID)
+
 		r.POST("/log", h.Log.LogActivity)
 		// r.Use(h.Log.LogActivity)
 
@@ -190,6 +192,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			admin.GET("/count-total-teacher", h.Teacher.CountTeachers)
 
 			admin.GET("/log", h.Log.GetActivityLogs)
+			admin.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndStudentID)
+
 		}
 
 		student := r.Group("/s")
@@ -219,6 +223,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/bill", h.Midtrans.GetAllOwnBills)
 
 			student.GET("/event", h.Event.GetAllByOwnStudentID)
+
+			student.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndOwnStudent)
 		}
 
 		teacher := r.Group("/t")
@@ -239,6 +245,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 				subject.POST("/component", h.Subject.CreateOneSubjectComponentWithValidation, h.Log.LogActivity)
 				subject.PATCH("/component/:subject_component_id", h.Subject.EditOneSubjectComponentWithValidation, h.Log.LogActivity)
+				subject.DELETE("/component/:id", h.Subject.DeleteOneComponent, h.Log.LogActivity)
 			}
 
 			teacher.GET("/reward-punishment", h.RewardPunishment.GetAllRewardPunishmentForTeacher)
@@ -249,6 +256,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			}
 
 			teacher.GET("/event", h.Event.GetAllByOwnTeacherID)
+			teacher.POST("/score", h.Score.SaveForStudentID)
 
 			teacher.POST("/attendance", h.Attendance.CreateMany)
 			teacher.PATCH("/attendance", h.Attendance.EditOne)
@@ -256,6 +264,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			teacher.GET("/classroom-student", h.Teacher.GetAllClassroomStudents)
 
 			teacher.GET("/feedback", h.Feedback.GetAllOwnTeacher)
+			teacher.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndStudentID)
+
 		}
 	}
 

@@ -62,7 +62,7 @@ func (r *impRepo) GetAll(params rq.EventParams) ([]model.Event, error) {
 
 		// Get By StudentID
 		if params.Data.StudentID != nil && *params.Data.StudentID != uuid.Nil {
-			chain = chain.Where(r.db.Where("classroom_id = ?",
+			chain = chain.Where(r.db.Where("classroom_id = (?)",
 				r.db.Debug().Model(&model.Student{}).Where("id = ?", params.Data.StudentID).Select("classroom_id"),
 			))
 		}

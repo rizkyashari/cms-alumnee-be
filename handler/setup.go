@@ -15,6 +15,7 @@ import (
 	paymentlink "github.com/fadhln/lms-be/handler/payment_link"
 	rewardpunishment "github.com/fadhln/lms-be/handler/reward_punishment"
 	school "github.com/fadhln/lms-be/handler/school"
+	score "github.com/fadhln/lms-be/handler/score"
 	student "github.com/fadhln/lms-be/handler/student"
 	subject "github.com/fadhln/lms-be/handler/subject"
 	teacher "github.com/fadhln/lms-be/handler/teacher"
@@ -33,6 +34,7 @@ type Handler struct {
 	EventDraft       eventdraft.EventDraftHandler
 	MassCreate       masscreate.MassCreateHandler
 	School           school.SchoolHandler
+	Score            score.ScoreHandler
 	Student          student.StudentHandler
 	Subject          subject.SubjectHandler
 	Teacher          teacher.TeacherHandler
@@ -55,6 +57,7 @@ func SetupHandler(s service.Service) *Handler {
 		EventDraft:       eventdraft.Init(s),
 		MassCreate:       masscreate.Init(s),
 		School:           school.Init(s),
+		Score:            score.Init(s),
 		Student:          student.Init(s),
 		Subject:          subject.Init(s),
 		Teacher:          teacher.Init(s),

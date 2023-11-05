@@ -47,6 +47,7 @@ type SubjectService interface {
 	EditOneWithValidation(c context.Context, teacherId string, subjectID string, newSubject *rq.SubjectRequest) error
 	EditOneSubjectComponent(c context.Context, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
 	EditOneSubjectComponentWithValidation(c context.Context, teacherId string, subjectCompID string, newSubjectComp *rq.SubjectComponentRequest) error
+	DeleteOneComponent(c context.Context, subjectCompID string) error
 
 	GetAllSubjectNotInClassroom(c context.Context, classroomID string, params *rq.PaginationParams[model.Subject]) (*rs.PaginationResponse[any, rs.SubjectResponse], error)
 	AssignClassroomsToSubject(c context.Context, subjectID string, classroomIDs []string) error
@@ -483,6 +484,27 @@ func (s *impService) CreateOneSubjectComponentWithValidation(c context.Context, 
 	}
 
 	return s.CreateOneSubjectComponent(c, newSubjectComp)
+}
+
+func (s *impService) DeleteOneComponent(c context.Context, componentID string) error {
+	parsedComponentSubjectID, err := serviceutil.GetUUIDFromStringWithValidation("Subject Component ID", &componentID)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.Transaction(func(tx *gorm.DB) error {
+		if err := s.repo.Subject().DeleteOneComponent(tx, *parsedComponentSubjectID); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &errmsg.ErrInternal{Err: err}
+	}
+
+	return nil
 }
 
 func (s *impService) EditOne(c context.Context, subjectID string, body *rq.SubjectRequest) error {

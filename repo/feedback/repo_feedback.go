@@ -18,6 +18,7 @@ type FeedbackRepo interface {
 	UpdateOne(tx *gorm.DB, newFeedback *model.Feedback) error
 	UpdateFeedbackQuestion(tx *gorm.DB, id uuid.UUID, feedbackQuestion *model.FeedbackQuestion) error
 	UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value int) error
+	UpdateIsTaughtByTeacher(feedbackID uuid.UUID, isTaught bool) error
 	DeleteOne(tx *gorm.DB, id uuid.UUID) error
 }
 
@@ -74,6 +75,11 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.
 
 	if params.Data.TeacherID != uuid.Nil {
 		chain = chain.Where(r.db.Where("teacher_id = ?", params.Data.TeacherID.String()))
+	}
+
+	if params.Data.Teacher.SchoolID != uuid.Nil {
+		chain = chain.Joins("JOIN teachers ON feedbacks.teacher_id = teachers.id").
+			Where("teachers.school_id = ?", params.Data.Teacher.SchoolID.String())
 	}
 
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&feedbacks), params.Limit)
@@ -157,6 +163,19 @@ func (r *impRepo) UpdateFeedbackScoreValue(feedbackID, scoreID uuid.UUID, value 
 		return err
 	}
 
+	return nil
+}
+
+func (r *impRepo) UpdateIsTaughtByTeacher(feedbackID uuid.UUID, isTaught bool) error {
+	var feedback model.Feedback
+	if err := r.db.First(&feedback, "id = ?", feedbackID).Error; err != nil {
+		return err
+	}
+
+	feedback.IsTaughtByTeacher = &isTaught
+	if err := r.db.Save(&feedback).Error; err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -10,6 +10,7 @@ import (
 	event "github.com/fadhln/lms-be/service/event"
 	eventdraft "github.com/fadhln/lms-be/service/event_draft"
 	feedback "github.com/fadhln/lms-be/service/feedback"
+	log "github.com/fadhln/lms-be/service/log"
 	masscreate "github.com/fadhln/lms-be/service/mass_create"
 	midtrans "github.com/fadhln/lms-be/service/midtrans"
 	paymentlink "github.com/fadhln/lms-be/service/payment_link"
@@ -37,6 +38,7 @@ type Service interface {
 	Feedback() feedback.FeedbackService
 	PaymentLink() paymentlink.PaymentLinkService
 	Midtrans() midtrans.SnapService
+	Log() log.LogService
 }
 
 type impService struct {
@@ -111,4 +113,8 @@ func (s *impService) PaymentLink() paymentlink.PaymentLinkService {
 
 func (s *impService) Midtrans() midtrans.SnapService {
 	return midtrans.Init(s.repo)
+}
+
+func (s *impService) Log() log.LogService {
+	return log.Init(s.repo)
 }

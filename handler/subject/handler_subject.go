@@ -287,19 +287,27 @@ func (h *impHandler) GetSubjectComponentDetailByID(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.SubjectRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Subject().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 

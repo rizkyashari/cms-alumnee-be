@@ -9,6 +9,7 @@ import (
 	event "github.com/fadhln/lms-be/handler/event"
 	eventdraft "github.com/fadhln/lms-be/handler/event_draft"
 	feedback "github.com/fadhln/lms-be/handler/feedback"
+	log "github.com/fadhln/lms-be/handler/log"
 	masscreate "github.com/fadhln/lms-be/handler/mass_create"
 	midtrans "github.com/fadhln/lms-be/handler/midtrans"
 	paymentlink "github.com/fadhln/lms-be/handler/payment_link"
@@ -39,6 +40,7 @@ type Handler struct {
 	Feedback         feedback.FeedbackHandler
 	PaymentLink      paymentlink.PaymentLinkHandler
 	Midtrans         midtrans.SnapHandler
+	Log              log.LogHandler
 }
 
 func SetupHandler(s service.Service) *Handler {
@@ -60,5 +62,6 @@ func SetupHandler(s service.Service) *Handler {
 		Feedback:         feedback.Init(s),
 		PaymentLink:      paymentlink.Init(s),
 		Midtrans:         midtrans.Init(s),
+		Log:              log.Init(s),
 	}
 }

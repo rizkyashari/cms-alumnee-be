@@ -21,3 +21,8 @@ type FeedbackScoreRequest struct {
 	FeedbackQuestion   *FeedbackQuestionRequest `json:"feedback_question"`
 	Value              *int                     `json:"value,omitempty"`
 }
+
+type IsTaughtByTeacherRequest struct {
+	ID                *string `json:"id,omitempty"`
+	IsTaughtByTeacher *bool   `json:"is_taught_by_teacher,omitempty"`
+}

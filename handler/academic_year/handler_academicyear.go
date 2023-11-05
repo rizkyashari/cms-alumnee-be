@@ -72,23 +72,34 @@ func (h *impHandler) GetDetailByID(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.AcademicYearRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.AcademicYear().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) EditYear(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.AcademicYearRequest
@@ -96,20 +107,27 @@ func (h *impHandler) EditYear(c *gin.Context) {
 	request.ID = &id
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.AcademicYear().EditYear(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) EditStatus(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.AcademicYearRequest
@@ -117,15 +135,18 @@ func (h *impHandler) EditStatus(c *gin.Context) {
 	request.ID = &id
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.AcademicYear().EditStatus(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }

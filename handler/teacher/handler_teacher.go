@@ -30,6 +30,7 @@ type TeacherHandler interface {
 	EditOne(c *gin.Context)
 
 	EditOwnData(c *gin.Context)
+	CountTeachers(c *gin.Context)
 }
 
 type impHandler struct {
@@ -182,68 +183,95 @@ func (h *impHandler) GetOwnTeacherData(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.TeacherRegisterRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Teacher().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateMass(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	schoolID := c.DefaultQuery("school_id", "")
 
 	var csvfile rq.CSVFileUploadRequest
 	if err := c.ShouldBind(&csvfile); err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	if csvfile.CSVFile == nil {
+		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
 		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
 		return
 	}
 
 	res, err := h.s.Teacher().CreateMass(c, schoolID, csvfile.CSVFile)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, res, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	teacherID := c.Param("teacher_id")
 
 	var request rq.TeacherUpdateRequest
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Teacher().EditOne(c, teacherID, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) EditOwnData(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_TEACHER)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -252,16 +280,19 @@ func (h *impHandler) EditOwnData(c *gin.Context) {
 	err = c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Teacher().EditOne(c, gotAccount.Teacher.ID.String(), &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
@@ -281,6 +312,68 @@ func (h *impHandler) GetAllClassroomStudents(c *gin.Context) {
 	response := rs.ClassroomStudentsResponse{
 		Classrooms: classrooms,
 		Students:   students,
+	}
+
+	rs.SuccessResponse(c, response, http.StatusOK)
+}
+
+func (h *impHandler) CountTeachers(c *gin.Context) {
+	searchName := c.DefaultQuery("name", "")
+	schoolID := c.DefaultQuery("school_id", "")
+	gender := c.DefaultQuery("gender", "")
+	employmentStatus := c.DefaultQuery("employment_status", "")
+
+	_, _, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	params := rq.PaginationParams[model.Account]{
+		Limit:     10000000,
+		Page:      1,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.Account{
+			Name: &searchName,
+			Teacher: &model.Teacher{
+				TeacherData: model.TeacherData{},
+			},
+		},
+	}
+
+	if len(schoolID) >= 2 {
+		parsedSchoolID, _ := uuid.Parse(schoolID)
+		params.Data.Teacher.SchoolID = parsedSchoolID
+	}
+
+	if len(gender) >= 1 {
+		genderInt, err := strconv.Atoi(gender)
+		if err == nil && util.IsValidConstant(genderInt, constants.GenderMap) {
+			params.Data.Teacher.TeacherData.Gender = &genderInt
+		}
+	}
+
+	if len(employmentStatus) >= 1 {
+		statusInt, err := strconv.Atoi(employmentStatus)
+		if err == nil && util.IsValidConstant(statusInt, constants.TeacherStatusMap) {
+			params.Data.Teacher.TeacherData.EmploymentStatus = &statusInt
+		}
+	}
+
+	// Retrieve the list of teachers based on search criteria
+	teachers, err := h.s.Teacher().GetAll(c, &params)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	// Count the number of teachers based on the result
+	teacherCount := len(teachers.Data)
+
+	// Create a response structure to return the teacher count
+	response := model.CountTotalTeacher{
+		TotalTeachers: teacherCount,
 	}
 
 	rs.SuccessResponse(c, response, http.StatusOK)

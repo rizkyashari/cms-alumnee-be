@@ -9,3 +9,7 @@ type Teacher struct {
 	Subjects    []Subject
 	TeacherData TeacherData
 }
+
+type CountTotalTeacher struct {
+	TotalTeachers int `json:"total_teachers"`
+}

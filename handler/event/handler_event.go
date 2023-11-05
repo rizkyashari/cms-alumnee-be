@@ -232,62 +232,88 @@ func (h *impHandler) GetAllByOwnStudentID(c *gin.Context) {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.CreateSingleEventRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Event().CreateOne(c, request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateRepeated(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.CreateRepeatWeeklyEventRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Event().CreateRepeated(c, request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateManyRepeated(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.CreateManyRepeatEventRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Event().CreateManyRepeated(c, request.Events)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	eventID := c.Param("id")
 
 	var request rq.EditEventRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -296,18 +322,25 @@ func (h *impHandler) EditOne(c *gin.Context) {
 
 	err = h.s.Event().EditOne(c, request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) DeleteOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	eventID := c.Param("id")
 
 	err := h.s.Event().DeleteOne(c, eventID)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}

@@ -12,6 +12,7 @@ import (
 	event "github.com/fadhln/lms-be/repo/event"
 	eventdraft "github.com/fadhln/lms-be/repo/event_draft"
 	"github.com/fadhln/lms-be/repo/feedback"
+	log "github.com/fadhln/lms-be/repo/log"
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	midtrans "github.com/fadhln/lms-be/repo/midtrans"
 	relationclassroomsubject "github.com/fadhln/lms-be/repo/relation_classroom_subject"
@@ -47,6 +48,7 @@ type Repository interface {
 	RewardPunishment() rewardpunishment.RewardPunishmentRepo
 	Feedback() feedback.FeedbackRepo
 	Midtrans() midtrans.MidtransRepo
+	Log() log.LogRepo
 }
 
 type impRepo struct {
@@ -135,4 +137,8 @@ func (r *impRepo) Feedback() feedback.FeedbackRepo {
 
 func (r *impRepo) Midtrans() midtrans.MidtransRepo {
 	return midtrans.Init(r.DB)
+}
+
+func (r *impRepo) Log() log.LogRepo {
+	return log.Init(r.DB)
 }

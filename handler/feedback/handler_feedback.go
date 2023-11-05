@@ -36,6 +36,8 @@ type FeedbackHandler interface {
 	EditFeedbackQuestion(c *gin.Context)
 
 	EditFeedback(c *gin.Context)
+
+	EditIsTaughtByTeacher(c *gin.Context)
 }
 
 type impHandler struct {
@@ -49,26 +51,38 @@ func Init(s service.Service) FeedbackHandler {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.FeedbackRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Feedback().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateMultiple(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var requests []*rq.FeedbackRequest
 	err := c.ShouldBindJSON(&requests)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
@@ -76,71 +90,125 @@ func (h *impHandler) CreateMultiple(c *gin.Context) {
 	for _, request := range requests {
 		err = h.s.Feedback().CreateOne(c, request)
 		if err != nil {
+			util.SaveResponseBody(c, err.Error(), nil)
 			rs.ErrorResponse(c, err)
 			return
 		}
 	}
+
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) CreateOneFeedbackQuestion(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.FeedbackQuestionRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Feedback().CreateOneFeedbackQuestion(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.FeedbackRequest = rq.FeedbackRequest{ID: &id}
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Feedback().EditOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
+	rs.SuccessResponse(c, nil, http.StatusAccepted)
+}
+
+func (h *impHandler) EditIsTaughtByTeacher(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
+	id := c.Param("id")
+
+	var request rq.IsTaughtByTeacherRequest = rq.IsTaughtByTeacherRequest{ID: &id}
+	err := c.ShouldBindJSON(&request)
+
+	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	err = h.s.Feedback().UpdateIsTaughtByTeacher(c, &request)
+	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) EditFeedbackQuestion(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.FeedbackQuestionRequest = rq.FeedbackQuestionRequest{ID: &id}
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Feedback().EditFeedbackQuestion(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
 func (h *impHandler) EditFeedback(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
 
 	id := c.Param("id")
 
@@ -148,16 +216,19 @@ func (h *impHandler) EditFeedback(c *gin.Context) {
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.Feedback().EditFeedback(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 
@@ -176,6 +247,9 @@ func (h *impHandler) GetAll(c *gin.Context) {
 
 	searchTeacherID := c.DefaultQuery("teacher_id", "")
 	parsedTeacherID, _ := uuid.Parse(searchTeacherID)
+
+	searchSchoolID := c.DefaultQuery("school_id", "") // Add school_id parameter
+	parsedSchoolID, _ := uuid.Parse(searchSchoolID)
 
 	filters := model.Feedback{
 		AcademicYearID: parsedAcademicYearID,
@@ -210,6 +284,10 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	if len(searchAcademicYearID) >= 2 {
 		parsedAcademicYearID, _ := uuid.Parse(searchAcademicYearID)
 		params.Data.AcademicYearID = parsedAcademicYearID
+	}
+
+	if len(searchSchoolID) >= 2 {
+		params.Data.Teacher.SchoolID = parsedSchoolID
 	}
 
 	res, err := h.s.Feedback().GetAll(c, &params)

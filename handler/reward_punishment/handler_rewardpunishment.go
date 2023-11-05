@@ -36,39 +36,53 @@ func Init(s service.Service) RewardPunishmentHandler {
 }
 
 func (h *impHandler) CreateOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	var request rq.RewardPunishmentRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.RewardPunishment().CreateOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusCreated)
 }
 
 func (h *impHandler) EditOne(c *gin.Context) {
+	if err := util.SaveRequestBody(c, c.Request.Body); err != nil {
+		return
+	}
+
 	id := c.Param("id")
 
 	var request rq.RewardPunishmentRequest = rq.RewardPunishmentRequest{ID: &id}
 	err := c.ShouldBindJSON(&request)
 
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
 	err = h.s.RewardPunishment().EditOne(c, &request)
 	if err != nil {
+		util.SaveResponseBody(c, err.Error(), nil)
 		rs.ErrorResponse(c, err)
 		return
 	}
 
+	util.SaveResponseBody(c, nil, "success")
 	rs.SuccessResponse(c, nil, http.StatusAccepted)
 }
 

@@ -11,6 +11,7 @@ import (
 
 type FeedbackRepo interface {
 	GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.Feedback, int, int, error)
+	GetAllUniqueFeedbackTitles() ([]string, error)
 	GetAllFeedbackQuestions(params *rq.PaginationParams[model.FeedbackQuestion]) (*[]model.FeedbackQuestion, int, int, error)
 	GetByID(id uuid.UUID) (*model.Feedback, error)
 	CreateOne(tx *gorm.DB, newFeedback *model.Feedback) error
@@ -37,6 +38,26 @@ func (r *impRepo) CreateOne(tx *gorm.DB, newFeedback *model.Feedback) error {
 		return err
 	}
 	return nil
+}
+
+func (r *impRepo) GetAllUniqueFeedbackTitles() ([]string, error) {
+	var uniqueTitles []string
+
+	result := r.db.Model(&model.Feedback{}).Select("DISTINCT COALESCE(NULLIF(title, ''), '') as title").Pluck("title", &uniqueTitles)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Filter out empty strings
+	filteredTitles := make([]string, 0, len(uniqueTitles))
+	for _, title := range uniqueTitles {
+		if title != "" {
+			filteredTitles = append(filteredTitles, title)
+		}
+	}
+
+	return filteredTitles, nil
 }
 
 func (r *impRepo) CreateOneFeedbackQuestion(tx *gorm.DB, newFeedbackQuestion *model.FeedbackQuestion) error {
@@ -80,6 +101,10 @@ func (r *impRepo) GetAll(params *rq.PaginationParams[model.Feedback]) (*[]model.
 	if params.Data.Teacher.SchoolID != uuid.Nil {
 		chain = chain.Joins("JOIN teachers ON feedbacks.teacher_id = teachers.id").
 			Where("teachers.school_id = ?", params.Data.Teacher.SchoolID.String())
+	}
+
+	if params.Data.Title != "" {
+		chain = chain.Where(r.db.Where("title = ?", params.Data.Title))
 	}
 
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&feedbacks), params.Limit)

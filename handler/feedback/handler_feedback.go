@@ -17,6 +17,8 @@ import (
 type FeedbackHandler interface {
 	GetAll(c *gin.Context)
 
+	GetAllUniqueFeedbackTitles(c *gin.Context)
+
 	GetAllFeedbackQuestions(c *gin.Context)
 
 	GetAllOwnStudent(c *gin.Context)
@@ -251,7 +253,10 @@ func (h *impHandler) GetAll(c *gin.Context) {
 	searchSchoolID := c.DefaultQuery("school_id", "") // Add school_id parameter
 	parsedSchoolID, _ := uuid.Parse(searchSchoolID)
 
+	title := c.DefaultQuery("title", "")
+
 	filters := model.Feedback{
+		Title:          title,
 		AcademicYearID: parsedAcademicYearID,
 		StudentID:      parsedStudentID,
 		TeacherID:      parsedTeacherID,
@@ -440,4 +445,16 @@ func (h *impHandler) GetDetailByID(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetAllUniqueFeedbackTitles(c *gin.Context) {
+
+	titles, err := h.s.Feedback().GetAllUniqueFeedbackTitles(c)
+
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, titles, http.StatusOK)
 }

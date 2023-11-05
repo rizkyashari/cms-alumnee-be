@@ -345,7 +345,7 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 		return &errmsg.ErrInternal{Err: err}
 	}
 
-	gotTeacher, err := s.repo.Teacher().GetDetailByTeacherID(*parsedTeacherID)
+	gotTeacher, err := s.repo.Teacher().GetTeacherByID(*parsedTeacherID)
 	if err != nil {
 		return &errmsg.ErrInternal{Err: err}
 	}

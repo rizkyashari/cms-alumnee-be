@@ -66,6 +66,8 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		r.GET("/feedback", h.Feedback.GetAll)
 		r.GET("/feedback/:id", h.Feedback.GetDetailByID)
 
+		r.GET("/feedback/title", h.Feedback.GetAllUniqueFeedbackTitles)
+
 		r.GET("/midtrans-frontend", h.Midtrans.GetMidtransFrontendCredentials)
 
 		r.GET("/score", h.Score.GetByStudentIDAndComponentID)

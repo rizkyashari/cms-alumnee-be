@@ -18,6 +18,7 @@ import (
 
 type FeedbackService interface {
 	GetAll(c context.Context, params *rq.PaginationParams[model.Feedback]) (*rs.PaginationResponse[any, rs.FeedbackResponse], error)
+	GetAllUniqueFeedbackTitles(c context.Context) ([]string, error)
 	GetAllByStudentID(c context.Context, studentID string, params *rq.PaginationParams[model.Feedback]) (*rs.PaginationResponse[any, rs.FeedbackResponse], error)
 	GetAllByTeacherID(c context.Context, teacherID string, params *rq.PaginationParams[model.Feedback]) (*rs.PaginationResponse[any, rs.FeedbackResponse], error)
 	GetAllFeedbackQuestions(c context.Context, params *rq.PaginationParams[model.FeedbackQuestion]) (*rs.PaginationResponse[any, rs.FeedbackQuestionResponse], error)
@@ -428,4 +429,12 @@ func (s *impService) GetAllFeedbackQuestions(c context.Context, params *rq.Pagin
 	}
 
 	return &res, nil
+}
+
+func (s *impService) GetAllUniqueFeedbackTitles(c context.Context) ([]string, error) {
+	uniqueTitles, err := s.repo.Feedback().GetAllUniqueFeedbackTitles()
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	return uniqueTitles, nil
 }

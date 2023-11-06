@@ -17,6 +17,7 @@ import (
 )
 
 type AttendanceService interface {
+	GetSummaryForStudent(c context.Context, gotStudentAccount *rs.AccountResponse) (*rs.AttendanceSummaryResponse, error)
 	GetAll(c context.Context, params *rq.GetAllAttendanceParams) (*rs.ManyAttendanceResponse, error)
 	CreateMany(c context.Context, newAttendances *rq.CreateAttendanceRequest) error
 	EditOne(c context.Context, newAttendance *rq.EditAttendanceRequest) error
@@ -30,6 +31,68 @@ func Init(r repo.Repository) AttendanceService {
 	return &impService{
 		repo: r,
 	}
+}
+
+func (s *impService) GetSummaryForStudent(c context.Context, gotStudentAccount *rs.AccountResponse) (*rs.AttendanceSummaryResponse, error) {
+	var res rs.AttendanceSummaryResponse
+	tempAttendances := []rs.SubjectAttendance{}
+
+	if gotStudentAccount == nil {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Account"}
+	}
+
+	res.StudentID = gotStudentAccount.Student.ID
+	gotStudentDetail, err := s.repo.Student().GetDetailByAccountID(gotStudentAccount.ID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	gotClassroom, err := s.repo.Classroom().GetDetailByID(*gotStudentDetail.ClassroomID)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.ClassroomID = gotClassroom.ID
+
+	subjectParams := rq.PaginationParams[model.Subject]{
+		Limit: 1000,
+		Page:  1,
+		Data:  model.Subject{},
+	}
+	subjectParams.Data.RelationClassroomSubjects = []model.RelationClassroomSubject{
+		{ClassroomID: gotClassroom.ID},
+	}
+
+	gotSubjects, _, _, err := s.repo.Subject().GetAll(&subjectParams)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	for _, gotsubject := range *gotSubjects {
+		gotAttendances, err := s.GetAll(c, &rq.GetAllAttendanceParams{
+			StudentID:   &gotStudentAccount.Student.ID,
+			ClassroomID: &gotClassroom.ID,
+			SubjectID:   &gotsubject.ID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		tempAttendanceCount := 0
+		for _, stat := range gotAttendances.Statuses {
+			if stat.Status == constants.ATTENDANCE_STATUS_ATTEND {
+				tempAttendanceCount++
+			}
+		}
+
+		tempAttendances = append(tempAttendances, rs.SubjectAttendance{
+			SubjectID:             gotsubject.ID,
+			TotalEventCountToDate: len(gotAttendances.Statuses),
+			AttendCount:           tempAttendanceCount,
+		})
+	}
+
+	res.Attendances = tempAttendances
+	return &res, nil
 }
 
 func (s *impService) GetAll(c context.Context, params *rq.GetAllAttendanceParams) (*rs.ManyAttendanceResponse, error) {

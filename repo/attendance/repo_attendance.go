@@ -34,7 +34,7 @@ func (r *impRepo) GetAll(params *rq.GetAllAttendanceParams) ([]model.Attendance,
 	}
 
 	if params.StudentID != nil && *params.StudentID != uuid.Nil {
-		chain = chain.Where(r.db.Where("student_id = ?`", params.StudentID))
+		chain = chain.Where(r.db.Where("student_id = ?", params.StudentID))
 
 		if (params.SubjectID != nil && *params.SubjectID != uuid.Nil) && (params.ClassroomID != nil && *params.ClassroomID != uuid.Nil) {
 			chain = chain.Where(r.db.Where("event_id IN (?)",

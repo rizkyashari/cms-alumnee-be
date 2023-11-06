@@ -15,6 +15,7 @@ import (
 type AttendanceHandler interface {
 	GetAllForEventID(c *gin.Context)
 	GetForOwnStudentWithClassroomIDAndSubjectID(c *gin.Context)
+	GetSummaryForStudent(c *gin.Context)
 	CreateMany(c *gin.Context)
 	EditOne(c *gin.Context)
 }
@@ -64,6 +65,22 @@ func (h *impHandler) GetForOwnStudentWithClassroomIDAndSubjectID(c *gin.Context)
 		SubjectID:   parsedSubjectID,
 	})
 
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, res, http.StatusOK)
+}
+
+func (h *impHandler) GetSummaryForStudent(c *gin.Context) {
+	gotAccount, err := util.GetAccountContext(c, constants.ACCOUNT_STUDENT)
+	if err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	res, err := h.s.Attendance().GetSummaryForStudent(c, gotAccount)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return

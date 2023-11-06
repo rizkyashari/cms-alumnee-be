@@ -211,6 +211,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/subject", h.Subject.GetAllOwnStudent)
 
 			student.GET("/attendance", h.Attendance.GetForOwnStudentWithClassroomIDAndSubjectID)
+			student.GET("/attendance/summary", h.Attendance.GetSummaryForStudent)
 
 			student.GET("/reward-punishment", h.RewardPunishment.GetAllOwnStudent)
 

@@ -73,7 +73,7 @@ func (s *impService) UploadAvatar(c *gin.Context, accountID string, requestFile 
 			Avatar: gotProcessedAvatar,
 		}
 
-		if err := s.repo.Account().UpdateOne(tx, *parsedAccountID, &newAccount); err != nil {
+		if err := s.repo.Account().UpdateOne(c, tx, *parsedAccountID, &newAccount); err != nil {
 			return err
 		}
 

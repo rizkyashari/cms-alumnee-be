@@ -3,6 +3,7 @@ package repo_account
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -20,12 +21,13 @@ import (
 type AccountRepo interface {
 	SetOneRedis(ctx context.Context, key string, acc *model.Account) error
 	ReadOneRedis(ctx context.Context, key string) (*model.Account, error)
+	ClearOneRedis(ctx context.Context, email string)
 	GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error)
 	GetAllStudent(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error)
 	CreateOne(tx *gorm.DB, newAccount *model.Account) error
 	ReadOneByEmail(email string) (*model.Account, error)
 	ReadOneByID(id uuid.UUID) (*model.Account, error)
-	UpdateOne(tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error
+	UpdateOne(ctx context.Context, tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error
 }
 
 type impRepo struct {
@@ -75,6 +77,11 @@ func (r *impRepo) ReadOneRedis(ctx context.Context, key string) (*model.Account,
 	}
 
 	return &gotAccount, nil
+}
+
+func (r *impRepo) ClearOneRedis(ctx context.Context, email string) {
+	key := fmt.Sprintf("account:%s", email)
+	r.redis.Del(ctx, key)
 }
 
 func (r *impRepo) GetAllTeacher(params *rq.PaginationParams[model.Account]) (*[]model.Account, int, int, error) {
@@ -231,7 +238,7 @@ func (r *impRepo) ReadOneByID(accountID uuid.UUID) (*model.Account, error) {
 	return &account, nil
 }
 
-func (r *impRepo) UpdateOne(tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error {
+func (r *impRepo) UpdateOne(ctx context.Context, tx *gorm.DB, accountID uuid.UUID, newAccount *model.Account) error {
 	if newAccount == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Account"}
 	}
@@ -240,6 +247,10 @@ func (r *impRepo) UpdateOne(tx *gorm.DB, accountID uuid.UUID, newAccount *model.
 	if result.Error != nil {
 		return result.Error
 	}
+
+	var account model.Account
+	r.db.Where("id = ?", accountID).First(&account)
+	r.ClearOneRedis(ctx, account.Email)
 
 	return nil
 }

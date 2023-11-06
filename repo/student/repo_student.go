@@ -28,8 +28,12 @@ func Init(db *gorm.DB) StudentRepo {
 }
 
 func (r *impRepo) GetDetailByAccountID(id uuid.UUID) (*model.Student, error) {
-	var student model.Student
-	if err := r.db.Where("account_id = ?", id).Find(&student).Error; err != nil {
+	student := model.Student{
+		StudentData: model.StudentData{
+			MedicalHistoryData: &model.MedicalHistoryData{},
+		},
+	}
+	if err := r.db.Where("account_id = ?", id).Preload("StudentData.StudentFamilyData").Preload("StudentData.AddressData").Preload("StudentData.MedicalHistoryData").Preload("StudentData.SelfDevelopmentData").Preload("StudentData.AcademicData").Preload("StudentData.SchoolTransferData").Preload("StudentData.StudentFatherData").Preload("StudentData.StudentMotherData").Preload("StudentData.StudentGuardianData").Find(&student).Error; err != nil {
 		return nil, err
 	}
 

@@ -55,7 +55,7 @@ type AddressDataUpdateRequest struct {
 	HouseNumber *string `json:"house_number,omitempty"`
 	RT          *int    `json:"rt,omitempty"`
 	RW          *int    `json:"rw,omitempty"`
-	Village     *int    `json:"village,omitempty"`
+	Village     *string `json:"village,omitempty"`
 	SubDistrict *string `json:"sub_district,omitempty"`
 	District    *string `json:"district,omitempty"`
 	Province    *string `json:"province,omitempty"`

@@ -50,7 +50,7 @@ type AddressData struct {
 	HouseNumber   *string
 	RT            *int
 	RW            *int
-	Village       *int
+	Village       *string
 	SubDistrict   *string
 	District      *string
 	Province      *string

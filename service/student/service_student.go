@@ -179,13 +179,13 @@ func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWith
 		}
 
 		if len(rec[21]) > 0 {
-			student.Data.AddressData.District = &rec[22]
+			student.Data.AddressData.District = &rec[21]
 		}
 		if len(rec[22]) > 0 {
-			student.Data.AddressData.FullAddress = &rec[23]
+			student.Data.AddressData.FullAddress = &rec[22]
 		}
 		if len(rec[23]) > 0 {
-			student.Data.AddressData.HouseNumber = &rec[24]
+			student.Data.AddressData.HouseNumber = &rec[23]
 		}
 		if len(rec[24]) > 0 {
 			strPtr := rec[24]
@@ -210,9 +210,7 @@ func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWith
 		}
 
 		if len(rec[29]) > 0 {
-			strPtr := rec[29]
-			intValue, _ := strconv.Atoi(strPtr)
-			student.Data.AddressData.Village = &intValue
+			student.Data.AddressData.Village = &rec[29]
 		}
 
 		if len(rec[30]) > 0 {
@@ -335,79 +333,88 @@ func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWith
 		}
 
 		if len(rec[62]) > 0 {
-			student.Data.StudentMotherData.BirthPlace = &rec[62]
-		}
-		if len(rec[63]) > 0 {
-			student.Data.StudentMotherData.Education = &rec[63]
-		}
-		if len(rec[64]) > 0 {
-			student.Data.StudentMotherData.Email = &rec[64]
+			student.Data.StudentMotherData.BirthDate = &rec[62]
 		}
 
-		if len(rec[65]) > 0 {
-			student.Data.StudentMotherData.Existence = &rec[65]
+		if len(rec[63]) > 0 {
+			student.Data.StudentMotherData.BirthPlace = &rec[63]
 		}
+
+		if len(rec[64]) > 0 {
+			student.Data.StudentMotherData.Education = &rec[64]
+		}
+		if len(rec[65]) > 0 {
+			student.Data.StudentMotherData.Email = &rec[65]
+		}
+
 		if len(rec[66]) > 0 {
-			strPtr := rec[66]
+			student.Data.StudentMotherData.Existence = &rec[66]
+		}
+		if len(rec[67]) > 0 {
+			strPtr := rec[67]
 			intValue, _ := strconv.Atoi(strPtr)
 			uintValue := uint(intValue)
 			student.Data.StudentMotherData.Income = &uintValue
 		}
 
-		if len(rec[67]) > 0 {
-			student.Data.StudentMotherData.Job = &rec[67]
-		}
-
 		if len(rec[68]) > 0 {
-			student.Data.StudentMotherData.PhoneNumber = &rec[68]
+			student.Data.StudentMotherData.Job = &rec[68]
 		}
+
 		if len(rec[69]) > 0 {
-			student.Data.StudentMotherData.Religion = &rec[69]
+			student.Data.StudentMotherData.PhoneNumber = &rec[69]
 		}
-
 		if len(rec[70]) > 0 {
-			student.Data.StudentMotherData.FullAddress = &rec[70]
+			student.Data.StudentMotherData.Religion = &rec[70]
 		}
+
 		if len(rec[71]) > 0 {
-			student.Data.StudentMotherData.Fullname = &rec[71]
+			student.Data.StudentMotherData.FullAddress = &rec[71]
 		}
-
 		if len(rec[72]) > 0 {
-			student.Data.StudentGuardianData.BirthPlace = &rec[72]
-		}
-		if len(rec[73]) > 0 {
-			student.Data.StudentGuardianData.Education = &rec[73]
-		}
-		if len(rec[74]) > 0 {
-			student.Data.StudentGuardianData.Email = &rec[74]
+			student.Data.StudentMotherData.Fullname = &rec[72]
 		}
 
+		if len(rec[73]) > 0 {
+			student.Data.StudentGuardianData.BirthDate = &rec[73]
+		}
+
+		if len(rec[74]) > 0 {
+			student.Data.StudentGuardianData.BirthPlace = &rec[74]
+		}
 		if len(rec[75]) > 0 {
-			student.Data.StudentGuardianData.Existence = &rec[75]
+			student.Data.StudentGuardianData.Education = &rec[75]
 		}
 		if len(rec[76]) > 0 {
-			strPtr := rec[76]
+			student.Data.StudentGuardianData.Email = &rec[76]
+		}
+
+		if len(rec[77]) > 0 {
+			student.Data.StudentGuardianData.Existence = &rec[77]
+		}
+		if len(rec[78]) > 0 {
+			strPtr := rec[78]
 			intValue, _ := strconv.Atoi(strPtr)
 			uintValue := uint(intValue)
 			student.Data.StudentGuardianData.Income = &uintValue
 		}
 
-		if len(rec[77]) > 0 {
-			student.Data.StudentGuardianData.Job = &rec[77]
-		}
-
-		if len(rec[78]) > 0 {
-			student.Data.StudentGuardianData.PhoneNumber = &rec[78]
-		}
 		if len(rec[79]) > 0 {
-			student.Data.StudentGuardianData.Religion = &rec[79]
+			student.Data.StudentGuardianData.Job = &rec[79]
 		}
 
 		if len(rec[80]) > 0 {
-			student.Data.StudentGuardianData.FullAddress = &rec[80]
+			student.Data.StudentGuardianData.PhoneNumber = &rec[80]
 		}
 		if len(rec[81]) > 0 {
-			student.Data.StudentGuardianData.Fullname = &rec[81]
+			student.Data.StudentGuardianData.Religion = &rec[81]
+		}
+
+		if len(rec[82]) > 0 {
+			student.Data.StudentGuardianData.FullAddress = &rec[82]
+		}
+		if len(rec[83]) > 0 {
+			student.Data.StudentGuardianData.Fullname = &rec[83]
 		}
 
 		students = append(students, student)
@@ -418,7 +425,18 @@ func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWith
 
 func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentData, bool, error) {
 	isUpdate := false
-	var newStudentData model.StudentData
+	// var newStudentData model.StudentData
+	newStudentData := &model.StudentData{
+		StudentFamilyData:   &model.StudentFamilyData{},
+		AddressData:         &model.AddressData{},
+		MedicalHistoryData:  &model.MedicalHistoryData{},
+		SelfDevelopmentData: &model.SelfDevelopmentData{},
+		AcademicData:        &model.AcademicData{},
+		SchoolTransferData:  &model.SchoolTransferData{},
+		StudentFatherData:   &model.StudentFatherData{},
+		StudentMotherData:   &model.StudentMotherData{},
+		StudentGuardianData: &model.StudentGuardianData{},
+	}
 
 	if body.Gender != nil {
 		if !(util.IsValidConstant(*body.Gender, constants.GenderMap)) {
@@ -490,7 +508,7 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.Nickname) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Nickname"}
 		}
-		newStudentData.Nickname = body.EthnicGroup
+		newStudentData.Nickname = body.Nickname
 		isUpdate = true
 	}
 
@@ -498,7 +516,7 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.OriginSchoolNumber) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Origin School Number"}
 		}
-		newStudentData.EthnicGroup = body.EthnicGroup
+		newStudentData.OriginSchoolNumber = body.OriginSchoolNumber
 		isUpdate = true
 	}
 
@@ -506,7 +524,7 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.DistanceToSchool) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Distance To School"}
 		}
-		newStudentData.DistanceToSchool = body.EthnicGroup
+		newStudentData.DistanceToSchool = body.DistanceToSchool
 		isUpdate = true
 	}
 
@@ -514,7 +532,7 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.TransportationToSchool) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Transportation To School"}
 		}
-		newStudentData.TransportationToSchool = body.EthnicGroup
+		newStudentData.TransportationToSchool = body.TransportationToSchool
 		isUpdate = true
 	}
 
@@ -522,7 +540,7 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.Hobby) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Hobby"}
 		}
-		newStudentData.Hobby = body.EthnicGroup
+		newStudentData.Hobby = body.Hobby
 		isUpdate = true
 	}
 
@@ -530,11 +548,358 @@ func getStudentDataFromRequest(body *rq.StudentUpdateRequest) (*model.StudentDat
 		if len(*body.Ideal) <= 0 {
 			return nil, false, &errmsg.ErrFieldIsWrong{FieldName: "Ideal"}
 		}
-		newStudentData.Ideal = body.EthnicGroup
+		newStudentData.Ideal = body.Ideal
 		isUpdate = true
 	}
 
-	return &newStudentData, isUpdate, nil
+	if body.FamilyData.ChildNumber != nil {
+		newStudentData.StudentFamilyData.ChildNumber = body.FamilyData.ChildNumber
+		isUpdate = true
+	}
+
+	if body.FamilyData.ChildStatus != nil {
+		newStudentData.StudentFamilyData.ChildStatus = body.FamilyData.ChildStatus
+		isUpdate = true
+	}
+
+	if body.FamilyData.SiblingCount != nil {
+		newStudentData.StudentFamilyData.SiblingCount = body.FamilyData.SiblingCount
+		isUpdate = true
+	}
+
+	if body.FamilyData.SpokenLanguage != nil {
+		newStudentData.StudentFamilyData.SpokenLanguage = body.FamilyData.SpokenLanguage
+		isUpdate = true
+	}
+
+	if body.AddressData.District != nil {
+		newStudentData.AddressData.District = body.AddressData.District
+		isUpdate = true
+	}
+
+	if body.AddressData.FullAddress != nil {
+		newStudentData.AddressData.FullAddress = body.AddressData.FullAddress
+		isUpdate = true
+	}
+
+	if body.AddressData.HouseNumber != nil {
+		newStudentData.AddressData.HouseNumber = body.AddressData.HouseNumber
+		isUpdate = true
+	}
+
+	if body.AddressData.PostalCode != nil {
+		newStudentData.AddressData.PostalCode = body.AddressData.PostalCode
+		isUpdate = true
+	}
+
+	if body.AddressData.Province != nil {
+		newStudentData.AddressData.Province = body.AddressData.Province
+		isUpdate = true
+	}
+
+	if body.AddressData.RT != nil {
+		newStudentData.AddressData.RT = body.AddressData.RT
+		isUpdate = true
+	}
+
+	if body.AddressData.RW != nil {
+		newStudentData.AddressData.RT = body.AddressData.RW
+		isUpdate = true
+	}
+
+	if body.AddressData.SubDistrict != nil {
+		newStudentData.AddressData.SubDistrict = body.AddressData.SubDistrict
+		isUpdate = true
+	}
+
+	if body.AddressData.Village != nil {
+		newStudentData.AddressData.Village = body.AddressData.Village
+		isUpdate = true
+	}
+
+	if body.MedicalHistoryData.BloodGroup != nil {
+		newStudentData.MedicalHistoryData.BloodGroup = body.MedicalHistoryData.BloodGroup
+		isUpdate = true
+	}
+
+	if body.MedicalHistoryData.BodyWeight != nil {
+		newStudentData.MedicalHistoryData.BodyWeight = body.MedicalHistoryData.BodyWeight
+		isUpdate = true
+	}
+
+	if body.MedicalHistoryData.Disease != nil {
+		newStudentData.MedicalHistoryData.Disease = body.MedicalHistoryData.Disease
+		isUpdate = true
+	}
+
+	if body.MedicalHistoryData.SpecialNeeds != nil {
+		newStudentData.MedicalHistoryData.SpecialNeeds = body.MedicalHistoryData.SpecialNeeds
+		isUpdate = true
+	}
+
+	if body.SelfDevelopmentData.MandatoryExtracurricular != nil {
+		newStudentData.SelfDevelopmentData.MandatoryExtracurricular = body.SelfDevelopmentData.MandatoryExtracurricular
+		isUpdate = true
+	}
+
+	if body.SelfDevelopmentData.NonAcademicAchievement != nil {
+		newStudentData.SelfDevelopmentData.NonAcademicAchievement = body.SelfDevelopmentData.NonAcademicAchievement
+		isUpdate = true
+	}
+
+	if body.SelfDevelopmentData.OptionalExtracurricular != nil {
+		newStudentData.SelfDevelopmentData.OptionalExtracurricular = body.SelfDevelopmentData.OptionalExtracurricular
+		isUpdate = true
+	}
+
+	if body.SelfDevelopmentData.QuranReadingLevel != nil {
+		newStudentData.SelfDevelopmentData.QuranReadingLevel = body.SelfDevelopmentData.QuranReadingLevel
+		isUpdate = true
+	}
+
+	if body.AcademicData.BankAccountNumber != nil {
+		newStudentData.AcademicData.BankAccountNumber = body.AcademicData.BankAccountNumber
+		isUpdate = true
+	}
+
+	if body.AcademicData.NationalExamScore != nil {
+		newStudentData.AcademicData.NationalExamScore = body.AcademicData.NationalExamScore
+		isUpdate = true
+	}
+
+	if body.AcademicData.NationalIslamicExamScore != nil {
+		newStudentData.AcademicData.NationalIslamicExamScore = body.AcademicData.NationalIslamicExamScore
+		isUpdate = true
+	}
+
+	if body.AcademicData.BankDKIAccountNumber != nil {
+		newStudentData.AcademicData.BankDKIAccountNumber = body.AcademicData.BankDKIAccountNumber
+		isUpdate = true
+	}
+
+	if body.AcademicData.NationalExamNumber != nil {
+		newStudentData.AcademicData.NationalExamNumber = body.AcademicData.NationalExamNumber
+		isUpdate = true
+	}
+
+	if body.AcademicData.OriginSchool != nil {
+		newStudentData.AcademicData.OriginSchool = body.AcademicData.OriginSchool
+		isUpdate = true
+	}
+
+	if body.AcademicData.OriginSchoolType != nil {
+		newStudentData.AcademicData.OriginSchoolType = body.AcademicData.OriginSchoolType
+		isUpdate = true
+	}
+
+	if body.AcademicData.SchoolStatus != nil {
+		newStudentData.AcademicData.SchoolStatus = body.AcademicData.SchoolStatus
+		isUpdate = true
+	}
+
+	if body.AcademicData.SchoolAddress != nil {
+		newStudentData.AcademicData.SchoolAddress = body.AcademicData.SchoolAddress
+		isUpdate = true
+	}
+
+	if body.AcademicData.SchoolAccreditation != nil {
+		newStudentData.AcademicData.SchoolAccreditation = body.AcademicData.SchoolAccreditation
+		isUpdate = true
+	}
+
+	if body.SchoolTransferData.Origin != nil {
+		newStudentData.SchoolTransferData.Origin = body.SchoolTransferData.Origin
+		isUpdate = true
+	}
+
+	if body.SchoolTransferData.Reason != nil {
+		newStudentData.SchoolTransferData.Reason = body.SchoolTransferData.Reason
+		isUpdate = true
+	}
+
+	if body.SchoolTransferData.AcceptedInClass != nil {
+		newStudentData.SchoolTransferData.AcceptedInClass = body.SchoolTransferData.AcceptedInClass
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.BirthDate != nil {
+		parsedBirthDate, err := time.Parse(constants.DateLayout, *body.StudentFatherData.BirthDate)
+		if err != nil {
+			return nil, false, &errmsg.ErrInternal{Err: err}
+		}
+		newStudentData.StudentFatherData.BirthDate = &parsedBirthDate
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.BirthPlace != nil {
+		newStudentData.StudentFatherData.BirthPlace = body.StudentFatherData.BirthPlace
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Education != nil {
+		newStudentData.StudentFatherData.Education = body.StudentFatherData.Education
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Email != nil {
+		newStudentData.StudentFatherData.Email = body.StudentFatherData.Email
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Existence != nil {
+		newStudentData.StudentFatherData.Existence = body.StudentFatherData.Existence
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Income != nil {
+		newStudentData.StudentFatherData.Income = body.StudentFatherData.Income
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Job != nil {
+		newStudentData.StudentFatherData.Job = body.StudentFatherData.Job
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.PhoneNumber != nil {
+		newStudentData.StudentFatherData.PhoneNumber = body.StudentFatherData.PhoneNumber
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Religion != nil {
+		newStudentData.StudentFatherData.Religion = body.StudentFatherData.Religion
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.FullAddress != nil {
+		newStudentData.StudentFatherData.FullAddress = body.StudentFatherData.FullAddress
+		isUpdate = true
+	}
+
+	if body.StudentFatherData.Fullname != nil {
+		newStudentData.StudentFatherData.Fullname = body.StudentFatherData.Fullname
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.BirthDate != nil {
+		parsedBirthDate, err := time.Parse(constants.DateLayout, *body.StudentMotherData.BirthDate)
+		if err != nil {
+			return nil, false, &errmsg.ErrInternal{Err: err}
+		}
+		newStudentData.StudentMotherData.BirthDate = &parsedBirthDate
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.BirthPlace != nil {
+		newStudentData.StudentMotherData.BirthPlace = body.StudentMotherData.BirthPlace
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Education != nil {
+		newStudentData.StudentMotherData.Education = body.StudentMotherData.Education
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Email != nil {
+		newStudentData.StudentMotherData.Email = body.StudentMotherData.Email
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Existence != nil {
+		newStudentData.StudentMotherData.Existence = body.StudentMotherData.Existence
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Income != nil {
+		newStudentData.StudentMotherData.Income = body.StudentMotherData.Income
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Job != nil {
+		newStudentData.StudentMotherData.Job = body.StudentMotherData.Job
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.PhoneNumber != nil {
+		newStudentData.StudentMotherData.PhoneNumber = body.StudentMotherData.PhoneNumber
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Religion != nil {
+		newStudentData.StudentMotherData.Religion = body.StudentMotherData.Religion
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.FullAddress != nil {
+		newStudentData.StudentMotherData.FullAddress = body.StudentMotherData.FullAddress
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Fullname != nil {
+		newStudentData.StudentMotherData.Fullname = body.StudentMotherData.Fullname
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.BirthDate != nil {
+		parsedBirthDate, err := time.Parse(constants.DateLayout, *body.StudentGuardianData.BirthDate)
+		if err != nil {
+			return nil, false, &errmsg.ErrInternal{Err: err}
+		}
+		newStudentData.StudentGuardianData.BirthDate = &parsedBirthDate
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.BirthPlace != nil {
+		newStudentData.StudentGuardianData.BirthPlace = body.StudentGuardianData.BirthPlace
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Education != nil {
+		newStudentData.StudentGuardianData.Education = body.StudentGuardianData.Education
+		isUpdate = true
+	}
+
+	if body.StudentMotherData.Email != nil {
+		newStudentData.StudentMotherData.Email = body.StudentMotherData.Email
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Existence != nil {
+		newStudentData.StudentGuardianData.Existence = body.StudentGuardianData.Existence
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Income != nil {
+		newStudentData.StudentGuardianData.Income = body.StudentGuardianData.Income
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Job != nil {
+		newStudentData.StudentGuardianData.Job = body.StudentGuardianData.Job
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.PhoneNumber != nil {
+		newStudentData.StudentGuardianData.PhoneNumber = body.StudentGuardianData.PhoneNumber
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Religion != nil {
+		newStudentData.StudentGuardianData.Religion = body.StudentGuardianData.Religion
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.FullAddress != nil {
+		newStudentData.StudentGuardianData.FullAddress = body.StudentGuardianData.FullAddress
+		isUpdate = true
+	}
+
+	if body.StudentGuardianData.Fullname != nil {
+		newStudentData.StudentGuardianData.Fullname = body.StudentGuardianData.Fullname
+		isUpdate = true
+	}
+
+	return newStudentData, isUpdate, nil
 }
 
 func (s *impService) convertToAccountResponse(studentAccount *model.Account) (*rs.AccountResponse, error) {
@@ -641,6 +1006,71 @@ func (s *impService) GetDetailByAccountID(c context.Context, id string) (*rs.Stu
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
+
+	var tempStudentFamilyData rs.StudentFamilyDataResponse
+	err = copier.Copy(&tempStudentFamilyData, gotStudent.StudentData.StudentFamilyData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.FamilyData = tempStudentFamilyData
+
+	var tempAddressData rs.AddressDataResponse
+	err = copier.Copy(&tempAddressData, gotStudent.StudentData.AddressData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.AddressData = tempAddressData
+
+	var tempMedicalHistoryData rs.MedicalHistoryDataResponse
+	err = copier.Copy(&tempMedicalHistoryData, gotStudent.StudentData.MedicalHistoryData)
+	fmt.Println(gotStudent.StudentData.MedicalHistoryData)
+	if err != nil {
+		fmt.Println(err)
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.MedicalHistoryData = tempMedicalHistoryData
+
+	var tempSelfDevelopmentData rs.SelfDevelopmentDataResponse
+	err = copier.Copy(&tempSelfDevelopmentData, gotStudent.StudentData.SelfDevelopmentData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.SelfDevelopmentData = tempSelfDevelopmentData
+
+	var tempAcademicData rs.AcademicDataResponse
+	err = copier.Copy(&tempAcademicData, gotStudent.StudentData.AcademicData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.AcademicData = tempAcademicData
+
+	var tempSchoolTransferData rs.SchoolTransferDataResponse
+	err = copier.Copy(&tempSchoolTransferData, gotStudent.StudentData.SchoolTransferData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.SchoolTransferData = tempSchoolTransferData
+
+	var tempFatherData rs.StudentFatherDataResponse
+	err = copier.Copy(&tempFatherData, gotStudent.StudentData.StudentFatherData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.StudentFatherData = tempFatherData
+
+	var tempMotherData rs.StudentMotherDataResponse
+	err = copier.Copy(&tempMotherData, gotStudent.StudentData.StudentMotherData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.StudentMotherData = tempMotherData
+
+	var tempGuardianData rs.StudentGuardianDataResponse
+	err = copier.Copy(&tempGuardianData, gotStudent.StudentData.StudentGuardianData)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+	res.StudentData.StudentGuardianData = tempGuardianData
 
 	return &res, nil
 }

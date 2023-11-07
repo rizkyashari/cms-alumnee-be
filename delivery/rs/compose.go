@@ -44,7 +44,7 @@ func ErrorResponse(c *gin.Context, err error) {
 	if errors.Is(err, &errmsg.ErrInternal{}) {
 		code = http.StatusInternalServerError
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		code = http.StatusNoContent
+		code = http.StatusOK
 		msg = "Not found"
 	} else if err.Error() == "EOF" {
 		code = http.StatusBadRequest

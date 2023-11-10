@@ -17,6 +17,7 @@ type StudentRequest struct {
 
 type StudentUpdateRequest struct {
 	StudentID              *string                          `json:"student_id,omitempty"`
+	StudentDataID          *string                          `json:"student_data_id,omitempty"`
 	ClassroomID            *string                          `json:"classroom_id,omitempty"`
 	ClassroomCode          *string                          `json:"classroom_code,omitempty"`
 	Gender                 *int                             `json:"gender,omitempty"`
@@ -32,7 +33,7 @@ type StudentUpdateRequest struct {
 	TransportationToSchool *string                          `json:"transportation_to_school,omitempty"`
 	Hobby                  *string                          `json:"hobby,omitempty"`
 	Ideal                  *string                          `json:"ideal,omitempty"`
-	FamilyData             StudentFamilyDataUpdateRequest   `json:"student_family_data,omitempty"`
+	FamilyData             StudentFamilyDataUpdateRequest   `json:"family_data,omitempty"`
 	AddressData            AddressDataUpdateRequest         `json:"address_data,omitempty"`
 	MedicalHistoryData     MedicalHistoryDataUpdateRequest  `json:"medical_history_data,omitempty"`
 	SelfDevelopmentData    SelfDevelopmentDataUpdateRequest `json:"self_development_data,omitempty"`

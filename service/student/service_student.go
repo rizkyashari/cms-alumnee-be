@@ -1390,6 +1390,11 @@ func (s *impService) EditOne(c context.Context, studentID string, body *rq.Stude
 		return err
 	}
 
+	parsedStudentDataID, err := serviceutil.GetUUIDFromStringWithValidation("Student Data ID", body.StudentDataID)
+	if err != nil {
+		return err
+	}
+
 	if body.ClassroomID != nil || body.ClassroomCode != nil {
 		if body.ClassroomCode != nil {
 			gotClassroom, err := s.repo.Classroom().GetDetailByCode(*body.ClassroomCode)
@@ -1436,6 +1441,7 @@ func (s *impService) EditOne(c context.Context, studentID string, body *rq.Stude
 
 	if isUpdateData {
 		err = s.repo.Transaction(func(tx *gorm.DB) error {
+			newStudentData.ID = *parsedStudentDataID
 			if err := s.repo.StudentData().UpdateOne(tx, *parsedStudentID, newStudentData); err != nil {
 				return err
 			}

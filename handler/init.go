@@ -184,7 +184,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 				bill.POST("/multiple", h.Midtrans.CreateMultipleBill, h.Log.LogActivity)
 			}
 			admin.GET("/midtrans", h.Midtrans.GetMidtransCredentials)
-			admin.PATCH("/midtrans", h.Midtrans.SaveMidtransCredentials)
+			admin.PATCH("/midtrans/:school_id", h.Midtrans.SaveMidtransCredentials)
 
 			admin.GET("/count-student", h.Student.GetStudentCount)
 			admin.GET("/count-paid-bill", h.Student.GetStudentPaidBillCount)

@@ -25,9 +25,9 @@ import (
 
 type SnapService interface {
 	GetAllTransactions(c context.Context, params *rq.PaginationParams[any]) (*rs.PaginationResponse[any, rs.TransactionResponse], error)
-	SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials) error
-	GetMidtransCredentials() (*rs.MidtransCredentialsResponse, error)
-	GetMidtransFrontendCredentials() (*rs.MidtransFrontendResponse, error)
+	SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials, schoolID string) error
+	GetMidtransCredentials(c context.Context, params *rq.PaginationParams[model.MidtransCredentials]) (*rs.PaginationResponse[any, rs.MidtransCredentialsResponse], error)
+	GetMidtransFrontendCredentials(c context.Context, params *rq.PaginationParams[model.MidtransCredentials]) (*rs.PaginationResponse[any, rs.MidtransFrontendResponse], error)
 	CreateTransaction(c context.Context, newRequest *snap.Request, billID string, email string) (*snap.Response, error)
 	UpdateTransactionDetailByToken(token string) (*rs.TransactionResponse, error)
 	CreateOneBill(c context.Context, newBill *rq.BillRequest) error
@@ -70,52 +70,162 @@ func Init(r repo.Repository) SnapService {
 // 	s.cron.Start()
 // }
 
-func (s *impService) SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials) error {
-	err := s.r.Midtrans().SaveMidtransCredentials(newRequest)
+func (s *impService) SetMidtransCredentials(c context.Context, newRequest *rq.MidtransCredentials, schoolID string) error {
+
+	err := s.r.Midtrans().SaveMidtransCredentials(newRequest, schoolID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *impService) GetMidtransCredentials() (*rs.MidtransCredentialsResponse, error) {
-	credentials, err := s.r.Midtrans().GetMidtransCredentials()
+func (s *impService) GetMidtransCredentials(c context.Context, params *rq.PaginationParams[model.MidtransCredentials]) (*rs.PaginationResponse[any, rs.MidtransCredentialsResponse], error) {
+	// credentials, err := s.r.Midtrans().GetMidtransCredentials()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// credentialsResponse := rs.MidtransCredentialsResponse{
+	// 	ServerKey:      credentials.ServerKey,
+	// 	Environment:    credentials.Environment,
+	// 	TransactionAPI: credentials.TransactionAPI,
+	// 	ClientKey:      credentials.ClientKey,
+	// 	SnapJSUrl:      credentials.SnapJSUrl,
+	// }
+
+	// return &credentialsResponse, nil
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
+	gotMidtransCredentials, maxPage, rowCount, err := s.r.Midtrans().GetMidtransCredentials(params)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := rs.PaginationResponse[any, rs.MidtransCredentialsResponse]{}
+			return &res, nil
+		}
+
+		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	credentialsResponse := rs.MidtransCredentialsResponse{
-		ServerKey:      credentials.ServerKey,
-		Environment:    credentials.Environment,
-		TransactionAPI: credentials.TransactionAPI,
-		ClientKey:      credentials.ClientKey,
-		SnapJSUrl:      credentials.SnapJSUrl,
+	if gotMidtransCredentials == nil {
+		return &rs.PaginationResponse[any, rs.MidtransCredentialsResponse]{
+			Data: []rs.MidtransCredentialsResponse{},
+		}, nil
 	}
 
-	return &credentialsResponse, nil
+	if len(*gotMidtransCredentials) < 1 {
+		return &rs.PaginationResponse[any, rs.MidtransCredentialsResponse]{
+			Data: []rs.MidtransCredentialsResponse{},
+		}, nil
+	}
+
+	var datares []rs.MidtransCredentialsResponse
+	err = copier.Copy(&datares, gotMidtransCredentials)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	res := rs.PaginationResponse[any, rs.MidtransCredentialsResponse]{
+		MaxPage:         maxPage,
+		RowCount:        rowCount,
+		CurrentPage:     params.Page,
+		AvailableFilter: nil,
+		Data:            datares,
+	}
+
+	return &res, nil
 }
 
-func (s *impService) GetMidtransFrontendCredentials() (*rs.MidtransFrontendResponse, error) {
-	frontendCredentials, err := s.r.Midtrans().GetMidtransCredentials()
+func (s *impService) GetMidtransFrontendCredentials(c context.Context, params *rq.PaginationParams[model.MidtransCredentials]) (*rs.PaginationResponse[any, rs.MidtransFrontendResponse], error) {
+	// frontendCredentials, err := s.r.Midtrans().GetMidtransCredentials()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// frontendCredentialsResponse := rs.MidtransFrontendResponse{
+	// 	ClientKey: frontendCredentials.ClientKey,
+	// 	SnapJSUrl: frontendCredentials.SnapJSUrl,
+	// }
+
+	// return &frontendCredentialsResponse, nil
+	checkParam := rq.PaginationParams[any]{
+		Limit:     params.Limit,
+		Page:      params.Page,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+	}
+	if !(util.IsParamValid(&checkParam)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Parameter"}
+	}
+
+	gotFrontendCredentials, maxPage, rowCount, err := s.r.Midtrans().GetMidtransCredentials(params)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			res := rs.PaginationResponse[any, rs.MidtransFrontendResponse]{}
+			return &res, nil
+		}
+
+		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
-	frontendCredentialsResponse := rs.MidtransFrontendResponse{
-		ClientKey: frontendCredentials.ClientKey,
-		SnapJSUrl: frontendCredentials.SnapJSUrl,
+	if gotFrontendCredentials == nil {
+		return &rs.PaginationResponse[any, rs.MidtransFrontendResponse]{
+			Data: []rs.MidtransFrontendResponse{},
+		}, nil
 	}
 
-	return &frontendCredentialsResponse, nil
+	if len(*gotFrontendCredentials) < 1 {
+		return &rs.PaginationResponse[any, rs.MidtransFrontendResponse]{
+			Data: []rs.MidtransFrontendResponse{},
+		}, nil
+	}
+
+	var datares []rs.MidtransFrontendResponse
+	err = copier.Copy(&datares, gotFrontendCredentials)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	res := rs.PaginationResponse[any, rs.MidtransFrontendResponse]{
+		MaxPage:         maxPage,
+		RowCount:        rowCount,
+		CurrentPage:     params.Page,
+		AvailableFilter: nil,
+		Data:            datares,
+	}
+
+	return &res, nil
 }
 
-func (s *impService) initializeSnapClient() {
-	credentials, err := s.r.Midtrans().GetMidtransCredentials()
+func (s *impService) initializeSnapClient(schoolID uuid.UUID) {
+	var params rq.PaginationParams[model.MidtransCredentials]
+	params.Data = model.MidtransCredentials{SchoolID: schoolID}
+	params.Limit = 100
+	params.Page = 1
+
+	if params.Limit <= 0 {
+		params.Limit = 10
+		params.Page = 1
+	}
+
+	params.Data = model.MidtransCredentials{SchoolID: schoolID}
+
+	credentials, _, _, err := s.r.Midtrans().GetMidtransCredentials(&params)
 	if err != nil {
+		fmt.Println("snap client initialization error")
 		return
 	}
-	s.snapClient.New(credentials.ServerKey, midtrans.EnvironmentType(credentials.Environment))
 
+	if len(*credentials) > 0 {
+		s.snapClient.New((*credentials)[0].ServerKey, midtrans.EnvironmentType((*credentials)[0].Environment))
+	}
 	// midtrans.SetPaymentAppendNotification("https://example.com/append")
 	// midtrans.SetPaymentOverrideNotification("https://example.com/override")
 }
@@ -156,26 +266,46 @@ func (s *impService) UpdateDatabaseJob() error {
 }
 
 func (s *impService) UpdateTransactionDetailByToken(token string) (*rs.TransactionResponse, error) {
-	s.initializeSnapClient()
 
-	credentials, err := s.r.Midtrans().GetMidtransCredentials()
+	billID, _ := s.r.Midtrans().GetBillIDByToken(token)
+
+	bill, _ := s.r.Midtrans().GetBillByID(billID.String())
+
+	var params rq.PaginationParams[model.MidtransCredentials]
+
+	params.Data = model.MidtransCredentials{SchoolID: bill.SchoolID}
+	params.Limit = 100
+	params.Page = 1
+
+	s.initializeSnapClient(bill.SchoolID)
+
+	// credentials, err := s.r.Midtrans().GetMidtransCredentials()
+
+	credentials, _, _, err := s.r.Midtrans().GetMidtransCredentials(&params)
 	if err != nil {
 		return nil, err
 	}
 
-	apiUrl := credentials.TransactionAPI
+	var apiURL string
+	var username string
 
-	newAPIURL := apiUrl + token + "/status"
+	if len(*credentials) > 0 {
+		apiURL = (*credentials)[0].TransactionAPI
+		username = (*credentials)[0].ServerKey
+	} else {
+		return nil, errors.New("no midtrans credentials found")
+	}
+
+	apiURL = apiURL + token + "/status"
 
 	client := http.Client{}
 
-	req, err := http.NewRequest(http.MethodGet, newAPIURL, nil)
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set Basic Authentication headers
-	username := credentials.ServerKey
 	password := ""
 	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
 	req.Header.Set("Authorization", authHeader)
@@ -264,13 +394,14 @@ func (s *impService) calculateRemainingAmount(billID string, purchasedAmount int
 }
 
 func (s *impService) CreateTransaction(c context.Context, newRequest *snap.Request, billID string, email string) (*snap.Response, error) {
-	s.initializeSnapClient()
 
 	// Retrieve the Bill information from the database
 	bill, err := s.r.Midtrans().GetBillByID(billID) // Replace with your actual method and struct
 	if err != nil {
 		return nil, err
 	}
+
+	s.initializeSnapClient(bill.SchoolID)
 
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 
@@ -380,6 +511,10 @@ func (s *impService) CreateTransaction(c context.Context, newRequest *snap.Reque
 }
 
 func (s *impService) CreateOneBill(c context.Context, newBill *rq.BillRequest) error {
+	if newBill.SchoolID == nil {
+		return &errmsg.ErrIsEmpty{FieldName: "SchoolID"}
+	}
+
 	if newBill.AccountID == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "AccountID"}
 	}
@@ -397,6 +532,11 @@ func (s *impService) CreateOneBill(c context.Context, newBill *rq.BillRequest) e
 	}
 
 	parsedAccountID, err := serviceutil.GetUUIDFromStringWithValidation("Account ID", newBill.AccountID)
+	if err != nil {
+		return err
+	}
+
+	parsedSchoolID, err := serviceutil.GetUUIDFromStringWithValidation("School ID", newBill.SchoolID)
 	if err != nil {
 		return err
 	}
@@ -419,6 +559,7 @@ func (s *impService) CreateOneBill(c context.Context, newBill *rq.BillRequest) e
 
 	bill := model.Bill{
 		AccountID:       *parsedAccountID,
+		SchoolID:        *parsedSchoolID,
 		GrossAmount:     newBill.GrossAmount,
 		RemainingAmount: newBill.GrossAmount,
 		Description:     &newBill.Description,

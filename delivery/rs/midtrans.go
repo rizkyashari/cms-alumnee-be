@@ -6,6 +6,7 @@ type MidtransCredentialsResponse struct {
 	TransactionAPI string `json:"transaction_api"`
 	ClientKey      string `json:"client_key"`
 	SnapJSUrl      string `json:"snapjs_url"`
+	SchoolID       string `json:"school_id"`
 }
 
 type MidtransFrontendResponse struct {

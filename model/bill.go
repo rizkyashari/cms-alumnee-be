@@ -10,6 +10,8 @@ type Bill struct {
 	Base
 	AccountID       uuid.UUID `json:"account_id"`
 	Account         Account   `gorm:"foreignKey:AccountID;references:ID"`
+	SchoolID        uuid.UUID `json:"school_id"`
+	School          School    `gorm:"foreignKey:SchoolID;references:ID"`
 	GrossAmount     int64     `json:"gross_amount"`
 	PurchasedAmount int64     `json:"purchased_amount"`
 	RemainingAmount int64     `json:"remaining_amount"`

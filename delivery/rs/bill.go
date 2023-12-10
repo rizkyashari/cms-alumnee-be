@@ -11,6 +11,7 @@ type BillResponse struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	AccountID       *string   `json:"account_id"`
+	SchoolID        *string   `json:"school_id"`
 	GrossAmount     int64     `json:"gross_amount"`
 	PurchasedAmount int64     `json:"purchased_amount"`
 	RemainingAmount int64     `json:"remaining_amount"`

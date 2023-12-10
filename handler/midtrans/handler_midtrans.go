@@ -246,10 +246,14 @@ func (h *impHandler) GetAllBills(c *gin.Context) {
 	searchAccountID := c.DefaultQuery("account_id", "")
 	parsedAccountID, _ := uuid.Parse(searchAccountID)
 
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	parsedSchoolID, _ := uuid.Parse(searchSchoolID)
+
 	searchDescription := c.DefaultQuery("description", "")
 
 	filters := model.Bill{
 		AccountID:   parsedAccountID,
+		SchoolID:    parsedSchoolID,
 		Description: &searchDescription,
 	}
 
@@ -294,7 +298,9 @@ func (h *impHandler) SaveMidtransCredentials(c *gin.Context) {
 		return
 	}
 
-	err := h.s.Midtrans().SetMidtransCredentials(c, &request)
+	schoolID := c.Param("school_id")
+
+	err := h.s.Midtrans().SetMidtransCredentials(c, &request, schoolID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Midtrans credentials"})
 		return
@@ -307,26 +313,78 @@ func (h *impHandler) SaveMidtransCredentials(c *gin.Context) {
 
 func (h *impHandler) GetMidtransCredentials(c *gin.Context) {
 	// Handle getting Midtrans credentials here
-	credentials, err := h.s.Midtrans().GetMidtransCredentials()
+	// credentials, err := h.s.Midtrans().GetMidtransCredentials()
 
+	// if err != nil {
+	// 	rs.ErrorResponse(c, err)
+	// 	return
+	// }
+
+	// rs.SuccessResponse(c, credentials, http.StatusOK)
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
+
+	params := rq.PaginationParams[model.MidtransCredentials]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.MidtransCredentials{
+			SchoolID: parsedSearchSchoolID,
+		},
+	}
+
+	res, err := h.s.Midtrans().GetMidtransCredentials(c, &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
 
-	rs.SuccessResponse(c, credentials, http.StatusOK)
+	rs.SuccessResponse(c, res, http.StatusOK)
 }
 
 func (h *impHandler) GetMidtransFrontendCredentials(c *gin.Context) {
 	// Handle getting Midtrans credentials here
-	frontendCredentials, err := h.s.Midtrans().GetMidtransFrontendCredentials()
+	// frontendCredentials, err := h.s.Midtrans().GetMidtransFrontendCredentials()
 
+	// if err != nil {
+	// 	rs.ErrorResponse(c, err)
+	// 	return
+	// }
+
+	// rs.SuccessResponse(c, frontendCredentials, http.StatusOK)
+	limit, page, sortBy, sortOrder, err := util.ParseQuery(c)
+	if err != nil {
+		rs.ErrorResponse(c, errmsg.ErrRequestParamsInvalid)
+		return
+	}
+
+	searchSchoolID := c.DefaultQuery("school_id", "")
+	parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
+
+	params := rq.PaginationParams[model.MidtransCredentials]{
+		Limit:     limit,
+		Page:      page,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Data: model.MidtransCredentials{
+			SchoolID: parsedSearchSchoolID,
+		},
+	}
+
+	res, err := h.s.Midtrans().GetMidtransFrontendCredentials(c, &params)
 	if err != nil {
 		rs.ErrorResponse(c, err)
 		return
 	}
 
-	rs.SuccessResponse(c, frontendCredentials, http.StatusOK)
+	rs.SuccessResponse(c, res, http.StatusOK)
 }
 
 func (h *impHandler) GetAllTransactions(c *gin.Context) {
@@ -358,6 +416,7 @@ func (h *impHandler) GetAllTransactions(c *gin.Context) {
 }
 
 func (h *impHandler) UpdateTransactionStatusAndBill(c *gin.Context) {
+
 	err := h.s.Midtrans().UpdateDatabaseJob()
 	if err != nil {
 		rs.ErrorResponse(c, err)

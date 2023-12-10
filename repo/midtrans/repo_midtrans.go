@@ -26,8 +26,8 @@ type MidtransRepo interface {
 	GetSettledTransactionsByBillID(billID string) ([]model.Transaction, error)
 	UpdateBillAmounts(billID string, purchasedAmount int64, remainingAmount int64) error
 	GetBillIDByToken(token string) (uuid.UUID, error)
-	SaveMidtransCredentials(newCredential *rq.MidtransCredentials) error
-	GetMidtransCredentials() (*model.MidtransCredentials, error)
+	SaveMidtransCredentials(newCredential *rq.MidtransCredentials, schoolID string) error
+	GetMidtransCredentials(params *rq.PaginationParams[model.MidtransCredentials]) (*[]model.MidtransCredentials, int, int, error)
 }
 
 type impRepo struct {
@@ -162,6 +162,10 @@ func (r *impRepo) GetAllBills(params *rq.PaginationParams[model.Bill]) (*[]model
 		chain = chain.Where(r.db.Where("account_id = ?", params.Data.AccountID.String()))
 	}
 
+	if params.Data.SchoolID != uuid.Nil {
+		chain = chain.Where(r.db.Where("school_id = ?", params.Data.SchoolID.String()))
+	}
+
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&bills), params.Limit)
 
 	validColumDescription := []string{
@@ -209,12 +213,14 @@ func (r *impRepo) GetBillIDByToken(token string) (uuid.UUID, error) {
 	return transaction.BillID, nil
 }
 
-func (r *impRepo) SaveMidtransCredentials(newCredential *rq.MidtransCredentials) error {
+func (r *impRepo) SaveMidtransCredentials(newCredential *rq.MidtransCredentials, schoolID string) error {
 	// Check if the record exists based on the serverKey
 	existingCredentials := model.MidtransCredentials{}
 
-	// Attempt to retrieve the record with the given serverKey
-	err := r.db.Where("server_key IS NOT NULL").First(&existingCredentials).Error
+	// // Attempt to retrieve the record with the given serverKey
+	// err := r.db.Where("server_key IS NOT NULL").First(&existingCredentials).Error
+	// Attempt to retrieve the record with the given schoolID
+	err := r.db.Where("school_id = ?", schoolID).First(&existingCredentials).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -225,6 +231,7 @@ func (r *impRepo) SaveMidtransCredentials(newCredential *rq.MidtransCredentials)
 				Environment:    newCredential.Environment,
 				TransactionAPI: newCredential.TransactionAPI,
 				SnapJSUrl:      newCredential.SnapJSUrl,
+				SchoolID:       uuid.MustParse(schoolID), // Add school ID to the new row
 			}
 
 			if err := r.db.Create(&newCredentials).Error; err != nil {
@@ -234,8 +241,17 @@ func (r *impRepo) SaveMidtransCredentials(newCredential *rq.MidtransCredentials)
 			return err // Return any database error other than "not found"
 		}
 	} else {
-		// If the record exists, update its serverKey and environment fields with a WHERE condition
-		if err := r.db.Where("server_key IS NOT NULL").Model(&existingCredentials).Updates(model.MidtransCredentials{
+		// // If the record exists, update its serverKey and environment fields with a WHERE condition
+		// if err := r.db.Where("server_key IS NOT NULL").Model(&existingCredentials).Updates(model.MidtransCredentials{
+		// 	ServerKey:      newCredential.ServerKey,
+		// 	ClientKey:      newCredential.ClientKey,
+		// 	Environment:    newCredential.Environment,
+		// 	TransactionAPI: newCredential.TransactionAPI,
+		// 	SnapJSUrl:      newCredential.SnapJSUrl,
+		// }).Error; err != nil {
+		// 	return err // Return any database error
+		// }
+		if err := r.db.Model(&existingCredentials).Updates(model.MidtransCredentials{
 			ServerKey:      newCredential.ServerKey,
 			ClientKey:      newCredential.ClientKey,
 			Environment:    newCredential.Environment,
@@ -249,13 +265,35 @@ func (r *impRepo) SaveMidtransCredentials(newCredential *rq.MidtransCredentials)
 	return nil
 }
 
-func (r *impRepo) GetMidtransCredentials() (*model.MidtransCredentials, error) {
+func (r *impRepo) GetMidtransCredentials(params *rq.PaginationParams[model.MidtransCredentials]) (*[]model.MidtransCredentials, int, int, error) {
 	// Example: Retrieving Midtrans credentials from a database table.
-	var credentials model.MidtransCredentials
+	// var credentials model.MidtransCredentials
 
-	if err := r.db.First(&credentials).Error; err != nil {
-		return nil, err
+	// if err := r.db.First(&credentials).Error; err != nil {
+	// 	return nil, err
+	// }
+
+	// return &credentials, nil
+
+	var credentials []model.MidtransCredentials
+
+	chain := r.db
+
+	if len(params.Data.SchoolID) >= 2 {
+		chain = chain.Where(r.db.Where("school_id = ?", params.Data.SchoolID))
 	}
 
-	return &credentials, nil
+	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&credentials), params.Limit)
+
+	validColumnSchoolID := []string{
+		"school_id",
+	}
+
+	result := chain.Scopes(util.Pagination(params.Limit, params.Page, params.SortBy, params.SortOrder, validColumnSchoolID)).Find(&credentials)
+
+	if result.Error != nil {
+		return nil, 0, 0, result.Error
+	}
+
+	return &credentials, maxPage, rowCount, nil
 }

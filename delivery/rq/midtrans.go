@@ -6,4 +6,5 @@ type MidtransCredentials struct {
 	Environment    int    `json:"environment"`
 	TransactionAPI string `json:"transaction_api"`
 	SnapJSUrl      string `json:"snapjs_url"`
+	SchoolID       string `json:"school_id"`
 }

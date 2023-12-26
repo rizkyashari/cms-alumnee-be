@@ -10,7 +10,6 @@ var (
 	ErrRequestBodyInvalid   = errors.New("request body is invalid")
 	ErrRequestHeaderInvalid = errors.New("request header is invalid")
 	ErrRequestParamsInvalid = errors.New("request parameter is invalid")
-	ErrRequestFileInvalid   = errors.New("request file is invalid")
 )
 
 type ErrUserIsNot struct {
@@ -112,4 +111,12 @@ type ErrANotSameB struct {
 
 func (e *ErrANotSameB) Error() string {
 	return fmt.Sprintf("%s is not the same as %s", e.A, e.B)
+}
+
+type ErrRequestFileInvalid struct {
+	Info string
+}
+
+func (e *ErrRequestFileInvalid) Error() string {
+	return fmt.Sprintf("Request file is invalid. Info: %s", e.Info)
 }

@@ -36,13 +36,13 @@ func (h *impHandler) UploadAvatar(c *gin.Context) {
 	var imagefile rq.ImageUploadRequest
 	if err := c.ShouldBind(&imagefile); err != nil {
 		util.SaveResponseBody(c, err.Error(), nil)
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: err.Error()})
 		return
 	}
 
 	if imagefile.ImageFile == nil {
-		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		util.SaveResponseBody(c, &errmsg.ErrRequestFileInvalid{Info: "Imagefile error"}, nil)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: "Imagefile error"})
 		return
 	}
 
@@ -66,12 +66,12 @@ func (h *impHandler) UploadOwnAvatar(c *gin.Context) {
 
 	var imagefile rq.ImageUploadRequest
 	if err := c.ShouldBind(&imagefile); err != nil {
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: err.Error()})
 		return
 	}
 
 	if imagefile.ImageFile == nil {
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: "imagefile is empty"})
 		return
 	}
 

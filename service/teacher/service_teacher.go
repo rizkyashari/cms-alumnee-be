@@ -52,18 +52,18 @@ func Init(r repo.Repository) TeacherService {
 
 func getTeacherCSV(school_id uuid.UUID, requestFile *multipart.FileHeader) (*[]rq.TeacherRegisterWithDetailRequest, error) {
 	if requestFile == nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: "requestFile is empty"}
 	}
 
 	file, err := requestFile.Open()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 	defer file.Close()
 
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	var teachers []rq.TeacherRegisterWithDetailRequest
@@ -639,7 +639,7 @@ func (s *impService) CreateMass(c *gin.Context, school_id string, requestFile *m
 
 	newTeachers, err := getTeacherCSV(parsedSchoolID, requestFile)
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	nowStr := time.Now().Format(constants.FilenameTimeFormat)

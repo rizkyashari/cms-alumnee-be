@@ -194,14 +194,14 @@ func (h *impHandler) CreateMass(c *gin.Context) {
 
 	var csvfile rq.CSVFileUploadRequest
 	if err := c.ShouldBind(&csvfile); err != nil {
-		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		util.SaveResponseBody(c, &errmsg.ErrRequestFileInvalid{Info: err.Error()}, nil)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: err.Error()})
 		return
 	}
 
 	if csvfile.CSVFile == nil {
-		util.SaveResponseBody(c, errmsg.ErrRequestFileInvalid, nil)
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		util.SaveResponseBody(c, &errmsg.ErrRequestFileInvalid{Info: "csvfile is empty"}, nil)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: "csvfile is empty"})
 		return
 	}
 

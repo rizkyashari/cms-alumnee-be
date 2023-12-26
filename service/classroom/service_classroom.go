@@ -55,18 +55,18 @@ func Init(r repo.Repository) ClassroomService {
 
 func (s *impService) getClassroomCSV(requestFile *multipart.FileHeader, academicYearID string, schoolID string) (*[]rq.ClassroomRequest, error) {
 	if requestFile == nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: "requestFile is empty"}
 	}
 
 	file, err := requestFile.Open()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 	defer file.Close()
 
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	var classrooms []rq.ClassroomRequest
@@ -75,23 +75,10 @@ func (s *impService) getClassroomCSV(requestFile *multipart.FileHeader, academic
 			continue
 		}
 
-		gotAccount, err := s.repo.Account().ReadOneByEmail(rec[1])
-		if err != nil {
-			return nil, err
-		}
-
-		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotAccount.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		teacherID := gotTeacher.ID.String()
-
 		classroom := rq.ClassroomRequest{
 			Name:           &rec[0],
 			TeacherEmail:   &rec[1],
 			AcademicYearID: &academicYearID,
-			TeacherID:      &teacherID,
 			SchoolID:       &schoolID,
 		}
 
@@ -354,6 +341,27 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Classro
 	successCount := 0
 	var errMsgs []model.ErrorMsg
 	for idx, newClassroom := range *requests {
+		tempNewClassroom := newClassroom
+
+		gotAccount, err := s.repo.Account().ReadOneByEmail(*newClassroom.TeacherEmail)
+		if err != nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: err.Error()})
+			continue
+		}
+
+		gotTeacher, err := s.repo.Teacher().GetDetailByAccountID(gotAccount.ID)
+		if err != nil {
+			errMsgs = append(errMsgs, model.ErrorMsg{
+				Row:     idx + 1,
+				Message: err.Error()})
+			continue
+		}
+
+		teacherID := gotTeacher.ID.String()
+		tempNewClassroom.TeacherID = &teacherID
+
 		fmt.Printf("Request[%d]: ID: %v, Name: %v, Code: %v, AcademicYearID: %v, SchoolID: %v, TeacherID: %v, TeacherEmail: %v\n",
 			idx,
 			safeDerefString(newClassroom.ID),
@@ -364,7 +372,7 @@ func (s *impService) processMassCreate(c context.Context, requests *[]rq.Classro
 			safeDerefString(newClassroom.TeacherID),
 			safeDerefString(newClassroom.TeacherEmail),
 		)
-		err := s.CreateOne(c, &newClassroom)
+		err = s.CreateOne(c, &tempNewClassroom)
 		if err != nil {
 			errMsgs = append(errMsgs, model.ErrorMsg{
 				Row:     idx + 1,
@@ -406,7 +414,7 @@ func (s *impService) CreateMass(c *gin.Context, academicYearID string, schoolID 
 
 	newClassrooms, err := s.getClassroomCSV(requestFile, academicYearID, schoolID)
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	nowStr := time.Now().Format(constants.FilenameTimeFormat)

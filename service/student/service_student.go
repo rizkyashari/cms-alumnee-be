@@ -53,18 +53,18 @@ func Init(r repo.Repository) StudentService {
 
 func getStudentCSV(requestFile *multipart.FileHeader) (*[]rq.StudentRegisterWithDetailRequest, error) {
 	if requestFile == nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: "requestFile is empty"}
 	}
 
 	file, err := requestFile.Open()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 	defer file.Close()
 
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	var students []rq.StudentRegisterWithDetailRequest
@@ -1340,7 +1340,7 @@ func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeade
 
 	newStudents, err := getStudentCSV(requestFile)
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	nowStr := time.Now().Format(constants.FilenameTimeFormat)

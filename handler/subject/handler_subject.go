@@ -374,12 +374,12 @@ func (h *impHandler) CreateOneSubjectComponentWithValidation(c *gin.Context) {
 func (h *impHandler) CreateMass(c *gin.Context) {
 	var csvfile rq.CSVFileUploadRequest
 	if err := c.ShouldBind(&csvfile); err != nil {
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: err.Error()})
 		return
 	}
 
 	if csvfile.CSVFile == nil {
-		rs.ErrorResponse(c, errmsg.ErrRequestFileInvalid)
+		rs.ErrorResponse(c, &errmsg.ErrRequestFileInvalid{Info: "csvfile is empty"})
 		return
 	}
 

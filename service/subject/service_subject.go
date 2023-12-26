@@ -571,18 +571,18 @@ func (s *impService) EditOne(c context.Context, subjectID string, body *rq.Subje
 
 func getSubjectCSV(requestFile *multipart.FileHeader) (*[]rq.SubjectRequestWithTeacherEmail, error) {
 	if requestFile == nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: "requestFile is empty"}
 	}
 
 	file, err := requestFile.Open()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 	defer file.Close()
 
 	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	var subjects []rq.SubjectRequestWithTeacherEmail
@@ -699,7 +699,7 @@ func (s *impService) CreateMass(c *gin.Context, requestFile *multipart.FileHeade
 
 	newSubjects, err := getSubjectCSV(requestFile)
 	if err != nil {
-		return nil, errmsg.ErrRequestFileInvalid
+		return nil, &errmsg.ErrRequestFileInvalid{Info: err.Error()}
 	}
 
 	nowStr := time.Now().Format(constants.FilenameTimeFormat)

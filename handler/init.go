@@ -28,6 +28,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		// Register for public is not exist
 		// r.POST("/register", h.Auth.Register)
 
+		r.POST("/forgot-password", h.Auth.ForgotPassword)
+		r.POST("/reset-password", h.Auth.ResetPassword)
+
 		r.GET("/academic_year", h.AcademicYear.GetAll)
 		r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
 

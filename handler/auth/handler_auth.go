@@ -25,6 +25,9 @@ type AuthHandler interface {
 	Login(c *gin.Context)
 	Register(c *gin.Context)
 	CheckEmailExist(c *gin.Context)
+
+	ForgotPassword(c *gin.Context)
+	ResetPassword(c *gin.Context)
 }
 
 type impHandler struct {
@@ -188,4 +191,34 @@ func (h *impHandler) GetOwnAccountDetail(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, *res, http.StatusOK)
+}
+
+func (h *impHandler) ForgotPassword(c *gin.Context) {
+	var req rq.EmailOnlyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	if _, err := h.s.Auth().ForgotPassword(c, &req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, rs.StatusResponse{Status: "Reset password link sent successfully"}, http.StatusOK)
+}
+
+func (h *impHandler) ResetPassword(c *gin.Context) {
+	var req rq.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	if _, err := h.s.Auth().ResetPassword(c, &req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, rs.StatusResponse{Status: "Password reset successful"}, http.StatusOK)
 }

@@ -16,6 +16,7 @@ import (
 	masscreate "github.com/fadhln/lms-be/repo/mass_create"
 	midtrans "github.com/fadhln/lms-be/repo/midtrans"
 	relationclassroomsubject "github.com/fadhln/lms-be/repo/relation_classroom_subject"
+	resetpassword "github.com/fadhln/lms-be/repo/reset_password"
 	rewardpunishment "github.com/fadhln/lms-be/repo/reward_punishment"
 	school "github.com/fadhln/lms-be/repo/school"
 	score "github.com/fadhln/lms-be/repo/score"
@@ -51,6 +52,7 @@ type Repository interface {
 	Feedback() feedback.FeedbackRepo
 	Midtrans() midtrans.MidtransRepo
 	Log() log.LogRepo
+	ResetPassword() resetpassword.ResetPasswordRepo
 }
 
 type impRepo struct {
@@ -147,4 +149,8 @@ func (r *impRepo) Midtrans() midtrans.MidtransRepo {
 
 func (r *impRepo) Log() log.LogRepo {
 	return log.Init(r.DB)
+}
+
+func (r *impRepo) ResetPassword() resetpassword.ResetPasswordRepo {
+	return resetpassword.Init(r.DB)
 }

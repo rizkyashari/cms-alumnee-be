@@ -3,6 +3,7 @@ package service_auth
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
@@ -22,6 +23,8 @@ type AuthService interface {
 	Login(context.Context, *rq.LoginRequest) (*rs.TokenResponse, error)
 	Register(context.Context, *rq.RegisterRequest) (*rs.StatusResponse, error)
 	GetOwnAccountDetail(*gin.Context) (*rs.AccountResponse, error)
+	ForgotPassword(context.Context, *rq.EmailOnlyRequest) (*rs.StatusResponse, error)
+	ResetPassword(context.Context, *rq.ResetPasswordRequest) (*rs.StatusResponse, error)
 }
 
 type impService struct {
@@ -174,4 +177,82 @@ func (s *impService) GetOwnAccountDetail(c *gin.Context) (*rs.AccountResponse, e
 	}
 
 	return gotUser, nil
+}
+
+func (s *impService) ForgotPassword(c context.Context, body *rq.EmailOnlyRequest) (*rs.StatusResponse, error) {
+	if len(body.Email) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
+	}
+
+	email := strings.ToLower(body.Email)
+
+	if !(util.IsEmailValid(email)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Email"}
+	}
+
+	account, err := s.repo.Account().ReadOneByEmail(email)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if account == nil {
+		return nil, &errmsg.ErrNotFound{FieldName: "User"}
+	}
+
+	// Generate reset password token and set expiry time
+	token := util.RandString(32)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	// Store the reset password request
+	_, err = s.repo.ResetPassword().CreateResetPassword(account.ID, token, expiresAt)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Send reset password email to the user with the token
+
+	return &rs.StatusResponse{Status: "Reset password email sent successfully"}, nil
+}
+
+func (s *impService) ResetPassword(c context.Context, body *rq.ResetPasswordRequest) (*rs.StatusResponse, error) {
+	if len(body.Token) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Token"}
+	}
+	if len(body.NewPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "New Password"}
+	}
+
+	// Retrieve reset password request by token
+	resetPassword, err := s.repo.ResetPassword().GetResetPasswordByToken(body.Token)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if resetPassword == nil {
+		return nil, &errmsg.ErrNotFound{FieldName: "Reset Password Request"}
+	}
+
+	// Check if the token has expired
+	if time.Now().After(resetPassword.ResetPasswordExpires) {
+		return nil, &errmsg.ErrFieldIsExpired{FieldName: "Reset Password Token"}
+	}
+
+	// Update user's password
+	hashedPassword, err := auth.HashAndSalt(body.NewPassword)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	accountID := resetPassword.AccountID
+	// Update the password for the account with the specified accountID
+	if err := s.repo.Account().UpdatePassword(c, accountID, hashedPassword); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Delete the reset password request from the database
+	if err := s.repo.ResetPassword().DeleteResetPassword(body.Token); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &rs.StatusResponse{Status: "Password reset successful"}, nil
 }

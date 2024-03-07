@@ -16,7 +16,7 @@ services:
       - db
       - adminer
       - redis
-      - strapi
+      # - strapi
 
   db:
     container_name: lms-db
@@ -55,19 +55,19 @@ services:
         aliases:
           - ${REDIS_HOST}
 
-  strapi:
-    container_name: lms-strapi
-    build:
-      context: ./strapi
-    restart: unless-stopped
-    ports:
-      - "1337:1337"
-    volumes:
-      - ./strapi:/usr/src/app
-    env_file:
-      - ./strapi/.env
-    depends_on:
-      - db 
+  # strapi:
+  #   container_name: lms-strapi
+  #   build:
+  #     context: ./strapi
+  #   restart: unless-stopped
+  #   ports:
+  #     - "1337:1337"
+  #   volumes:
+  #     - ./strapi:/usr/src/app
+  #   env_file:
+  #     - ./strapi/.env
+  #   depends_on:
+  #     - db 
 
 volumes:
   postgres-db:

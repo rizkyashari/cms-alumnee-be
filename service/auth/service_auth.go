@@ -2,6 +2,9 @@ package service_auth
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 	"github.com/fadhln/lms-be/util/errmsg"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
 
@@ -210,16 +214,27 @@ func (s *impService) ForgotPassword(c context.Context, body *rq.EmailOnlyRequest
 	}
 
 	// Send reset password email to the user with the token
+	err = s.sendResetPasswordEmail(email, token)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
 
 	return &rs.StatusResponse{Status: "Reset password email sent successfully"}, nil
 }
 
 func (s *impService) ResetPassword(c context.Context, body *rq.ResetPasswordRequest) (*rs.StatusResponse, error) {
+
 	if len(body.Token) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "Token"}
 	}
 	if len(body.NewPassword) <= 0 {
 		return nil, &errmsg.ErrIsEmpty{FieldName: "New Password"}
+	}
+	if len(body.ConfirmPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Confirm Password"}
+	}
+	if body.NewPassword != body.ConfirmPassword {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Confirm Password"}
 	}
 
 	// Retrieve reset password request by token
@@ -255,4 +270,39 @@ func (s *impService) ResetPassword(c context.Context, body *rq.ResetPasswordRequ
 	}
 
 	return &rs.StatusResponse{Status: "Password reset successful"}, nil
+}
+
+func (s *impService) sendResetPasswordEmail(email, token string) error {
+
+	SMTP_EMAIL := os.Getenv("SMTP_EMAIL")
+	SMTP_SERVER := os.Getenv("SMTP_SERVER")
+	SMTP_PASSWORD := os.Getenv("SMTP_PASSWORD")
+	SMTP_PORT, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if err != nil {
+		return err
+	}
+	RESET_PASSWORD_HOST_URL := os.Getenv("RESET_PASSWORD_HOST_URL")
+
+	// Compose the email
+	m := gomail.NewMessage()
+	m.SetHeader("From", SMTP_EMAIL)
+	m.SetHeader("To", email)
+	m.SetHeader("Subject", "Reset Password Akun SIMA (Sistem Informasi Al-Muddatsiriyah)")
+
+	// Create the reset password link
+	resetLink := fmt.Sprintf(RESET_PASSWORD_HOST_URL+"reset-password?token=%s", token)
+
+	// Compose the email body
+	body := fmt.Sprintf("Klik link di bawah ini untuk melakukan reset password:\n\n%s\n\nPERHATIAN! Token akan kadaluarsa setelah 24 jam.", resetLink)
+	m.SetBody("text/plain", body)
+
+	// Create a new SMTP client
+	d := gomail.NewDialer(SMTP_SERVER, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD)
+
+	// Send the email
+	if err := d.DialAndSend(m); err != nil {
+		return err
+	}
+
+	return nil
 }

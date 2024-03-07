@@ -12,7 +12,6 @@ import (
 	"github.com/fadhln/lms-be/delivery/rq"
 	"github.com/fadhln/lms-be/model"
 	"github.com/fadhln/lms-be/util"
-	"github.com/fadhln/lms-be/util/auth"
 	"github.com/fadhln/lms-be/util/errmsg"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -262,16 +261,10 @@ func (r *impRepo) UpdatePassword(ctx context.Context, accountID uuid.UUID, newPa
 		return &errmsg.ErrIsEmpty{FieldName: "New Password"}
 	}
 
-	// Hash and salt the new password
-	hashedPassword, err := auth.HashAndSalt(newPassword)
-	if err != nil {
-		return &errmsg.ErrInternal{Err: err}
-	}
-
 	// Update the password in the database
 	result := r.db.Model(&model.Account{}).
 		Where("id = ?", accountID).
-		Update("password", hashedPassword)
+		Update("password", newPassword)
 
 	if result.Error != nil {
 		return &errmsg.ErrInternal{Err: result.Error}

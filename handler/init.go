@@ -231,6 +231,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/event", h.Event.GetAllByOwnStudentID)
 
 			student.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndOwnStudent)
+			student.PATCH("/change-password", h.Auth.ChangePassword)
 		}
 
 		teacher := r.Group("/t")
@@ -271,6 +272,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			teacher.GET("/feedback", h.Feedback.GetAllOwnTeacher)
 			teacher.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndStudentID)
+			teacher.PATCH("/change-password", h.Auth.ChangePassword)
 
 		}
 	}

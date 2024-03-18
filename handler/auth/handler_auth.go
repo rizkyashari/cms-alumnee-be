@@ -28,6 +28,7 @@ type AuthHandler interface {
 
 	ForgotPassword(c *gin.Context)
 	ResetPassword(c *gin.Context)
+	ChangePassword(c *gin.Context)
 }
 
 type impHandler struct {
@@ -221,4 +222,19 @@ func (h *impHandler) ResetPassword(c *gin.Context) {
 	}
 
 	rs.SuccessResponse(c, rs.StatusResponse{Status: "Password reset successful"}, http.StatusOK)
+}
+
+func (h *impHandler) ChangePassword(c *gin.Context) {
+	var req rq.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	if _, err := h.s.Auth().ChangePassword(c, &req); err != nil {
+		rs.ErrorResponse(c, err)
+		return
+	}
+
+	rs.SuccessResponse(c, rs.StatusResponse{Status: "Password change successful"}, http.StatusOK)
 }

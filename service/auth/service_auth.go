@@ -29,6 +29,7 @@ type AuthService interface {
 	GetOwnAccountDetail(*gin.Context) (*rs.AccountResponse, error)
 	ForgotPassword(context.Context, *rq.EmailOnlyRequest) (*rs.StatusResponse, error)
 	ResetPassword(context.Context, *rq.ResetPasswordRequest) (*rs.StatusResponse, error)
+	ChangePassword(c context.Context, body *rq.ChangePasswordRequest) (*rs.StatusResponse, error)
 }
 
 type impService struct {
@@ -290,7 +291,7 @@ func (s *impService) sendResetPasswordEmail(email, token string) error {
 	m.SetHeader("Subject", "Reset Password Akun SIMA (Sistem Informasi Al-Muddatsiriyah)")
 
 	// Create the reset password link
-	resetLink := fmt.Sprintf(RESET_PASSWORD_HOST_URL+"reset-password?token=%s", token)
+	resetLink := fmt.Sprintf(RESET_PASSWORD_HOST_URL+"reset-password?email=%s&token=%s", email, token)
 
 	// Compose the email body
 	body := fmt.Sprintf("Klik link di bawah ini untuk melakukan reset password:\n\n%s\n\nPERHATIAN! Token akan kadaluarsa setelah 24 jam.", resetLink)
@@ -305,4 +306,48 @@ func (s *impService) sendResetPasswordEmail(email, token string) error {
 	}
 
 	return nil
+}
+
+func (s *impService) ChangePassword(c context.Context, body *rq.ChangePasswordRequest) (*rs.StatusResponse, error) {
+	if len(body.OldPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Old Password"}
+	}
+	if len(body.NewPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "New Password"}
+	}
+	if len(body.ConfirmPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Confirm Password"}
+	}
+	if body.NewPassword != body.ConfirmPassword {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Confirm Password"}
+	}
+
+	if len(body.Email) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
+	}
+	email := strings.ToLower(body.Email)
+
+	// Retrieve account details
+	account, err := s.repo.Account().ReadOneByEmail(email)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Check if old password matches
+	if !auth.ComparePassword(account.Password, body.OldPassword) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Old Password"}
+	}
+
+	// Update password
+	hashedPassword, err := auth.HashAndSalt(body.NewPassword)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Update the password for the account
+	if err := s.repo.Account().UpdatePassword(c, account.ID, hashedPassword); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &rs.StatusResponse{Status: "Password changed successfully"}, nil
 }

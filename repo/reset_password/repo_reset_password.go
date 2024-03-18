@@ -38,7 +38,7 @@ func (r *impRepo) CreateResetPassword(accountID uuid.UUID, token string, expires
 
 func (r *impRepo) GetResetPasswordByToken(token string) (*model.ResetPassword, error) {
 	resetPassword := &model.ResetPassword{}
-	if err := r.db.Where("reset_password_token = ?", token).First(resetPassword).Error; err != nil {
+	if err := r.db.Where("reset_password_token = ?", token).Where("reset_password_expires >= ?", time.Now()).First(resetPassword).Error; err != nil {
 		return nil, err
 	}
 	return resetPassword, nil

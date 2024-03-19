@@ -28,6 +28,9 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		// Register for public is not exist
 		// r.POST("/register", h.Auth.Register)
 
+		r.POST("/forgot-password", h.Auth.ForgotPassword)
+		r.POST("/reset-password", h.Auth.ResetPassword)
+
 		r.GET("/academic_year", h.AcademicYear.GetAll)
 		r.GET("/academic_year/:id", h.AcademicYear.GetDetailByID)
 
@@ -228,6 +231,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 			student.GET("/event", h.Event.GetAllByOwnStudentID)
 
 			student.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndOwnStudent)
+			student.PATCH("/change-password", h.Auth.ChangePassword)
 		}
 
 		teacher := r.Group("/t")
@@ -268,6 +272,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 
 			teacher.GET("/feedback", h.Feedback.GetAllOwnTeacher)
 			teacher.GET("/total-score", h.Score.GetTotalScoreForSubjectIDAndStudentID)
+			teacher.PATCH("/change-password", h.Auth.ChangePassword)
 
 		}
 	}

@@ -2,7 +2,11 @@ package service_auth
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fadhln/lms-be/constants"
 	"github.com/fadhln/lms-be/delivery/rq"
@@ -14,6 +18,7 @@ import (
 	"github.com/fadhln/lms-be/util/errmsg"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
 
@@ -22,6 +27,9 @@ type AuthService interface {
 	Login(context.Context, *rq.LoginRequest) (*rs.TokenResponse, error)
 	Register(context.Context, *rq.RegisterRequest) (*rs.StatusResponse, error)
 	GetOwnAccountDetail(*gin.Context) (*rs.AccountResponse, error)
+	ForgotPassword(context.Context, *rq.EmailOnlyRequest) (*rs.StatusResponse, error)
+	ResetPassword(context.Context, *rq.ResetPasswordRequest) (*rs.StatusResponse, error)
+	ChangePassword(c context.Context, body *rq.ChangePasswordRequest) (*rs.StatusResponse, error)
 }
 
 type impService struct {
@@ -174,4 +182,172 @@ func (s *impService) GetOwnAccountDetail(c *gin.Context) (*rs.AccountResponse, e
 	}
 
 	return gotUser, nil
+}
+
+func (s *impService) ForgotPassword(c context.Context, body *rq.EmailOnlyRequest) (*rs.StatusResponse, error) {
+	if len(body.Email) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
+	}
+
+	email := strings.ToLower(body.Email)
+
+	if !(util.IsEmailValid(email)) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Email"}
+	}
+
+	account, err := s.repo.Account().ReadOneByEmail(email)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if account == nil {
+		return nil, &errmsg.ErrNotFound{FieldName: "User"}
+	}
+
+	// Generate reset password token and set expiry time
+	token := util.RandString(32)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	// Store the reset password request
+	_, err = s.repo.ResetPassword().CreateResetPassword(account.ID, token, expiresAt)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Send reset password email to the user with the token
+	err = s.sendResetPasswordEmail(email, token)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &rs.StatusResponse{Status: "Reset password email sent successfully"}, nil
+}
+
+func (s *impService) ResetPassword(c context.Context, body *rq.ResetPasswordRequest) (*rs.StatusResponse, error) {
+
+	if len(body.Token) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Token"}
+	}
+	if len(body.NewPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "New Password"}
+	}
+	if len(body.ConfirmPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Confirm Password"}
+	}
+	if body.NewPassword != body.ConfirmPassword {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Confirm Password"}
+	}
+
+	// Retrieve reset password request by token
+	resetPassword, err := s.repo.ResetPassword().GetResetPasswordByToken(body.Token)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	if resetPassword == nil {
+		return nil, &errmsg.ErrNotFound{FieldName: "Reset Password Request"}
+	}
+
+	// Check if the token has expired
+	if time.Now().After(resetPassword.ResetPasswordExpires) {
+		return nil, &errmsg.ErrFieldIsExpired{FieldName: "Reset Password Token"}
+	}
+
+	// Update user's password
+	hashedPassword, err := auth.HashAndSalt(body.NewPassword)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	accountID := resetPassword.AccountID
+	// Update the password for the account with the specified accountID
+	if err := s.repo.Account().UpdatePassword(c, accountID, hashedPassword); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Delete the reset password request from the database
+	if err := s.repo.ResetPassword().DeleteResetPassword(body.Token); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &rs.StatusResponse{Status: "Password reset successful"}, nil
+}
+
+func (s *impService) sendResetPasswordEmail(email, token string) error {
+
+	SMTP_EMAIL := os.Getenv("SMTP_EMAIL")
+	SMTP_SERVER := os.Getenv("SMTP_SERVER")
+	SMTP_PASSWORD := os.Getenv("SMTP_PASSWORD")
+	SMTP_PORT, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if err != nil {
+		return err
+	}
+	RESET_PASSWORD_HOST_URL := os.Getenv("RESET_PASSWORD_HOST_URL")
+
+	// Compose the email
+	m := gomail.NewMessage()
+	m.SetHeader("From", SMTP_EMAIL)
+	m.SetHeader("To", email)
+	m.SetHeader("Subject", "Reset Password Akun SIMA (Sistem Informasi Al-Muddatsiriyah)")
+
+	// Create the reset password link
+	resetLink := fmt.Sprintf(RESET_PASSWORD_HOST_URL+"reset-password?email=%s&token=%s", email, token)
+
+	// Compose the email body
+	body := fmt.Sprintf("Klik link di bawah ini untuk melakukan reset password:\n\n%s\n\nPERHATIAN! Token akan kadaluarsa setelah 24 jam.", resetLink)
+	m.SetBody("text/plain", body)
+
+	// Create a new SMTP client
+	d := gomail.NewDialer(SMTP_SERVER, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD)
+
+	// Send the email
+	if err := d.DialAndSend(m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *impService) ChangePassword(c context.Context, body *rq.ChangePasswordRequest) (*rs.StatusResponse, error) {
+	if len(body.OldPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Old Password"}
+	}
+	if len(body.NewPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "New Password"}
+	}
+	if len(body.ConfirmPassword) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Confirm Password"}
+	}
+	if body.NewPassword != body.ConfirmPassword {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Confirm Password"}
+	}
+
+	if len(body.Email) <= 0 {
+		return nil, &errmsg.ErrIsEmpty{FieldName: "Email"}
+	}
+	email := strings.ToLower(body.Email)
+
+	// Retrieve account details
+	account, err := s.repo.Account().ReadOneByEmail(email)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Check if old password matches
+	if !auth.ComparePassword(account.Password, body.OldPassword) {
+		return nil, &errmsg.ErrFieldIsWrong{FieldName: "Old Password"}
+	}
+
+	// Update password
+	hashedPassword, err := auth.HashAndSalt(body.NewPassword)
+	if err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Update the password for the account
+	if err := s.repo.Account().UpdatePassword(c, account.ID, hashedPassword); err != nil {
+		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	return &rs.StatusResponse{Status: "Password changed successfully"}, nil
 }

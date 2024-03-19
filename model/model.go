@@ -40,4 +40,5 @@ var Entities = []interface{}{
 	&EventDraft{},
 	&Attendance{},
 	&LogData{},
+	&ResetPassword{},
 }

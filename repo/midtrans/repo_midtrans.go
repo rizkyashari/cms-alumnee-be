@@ -283,6 +283,10 @@ func (r *impRepo) GetMidtransCredentials(params *rq.PaginationParams[model.Midtr
 		chain = chain.Where(r.db.Where("school_id = ?", params.Data.SchoolID))
 	}
 
+	if params.Data.Environment != 0 {
+		chain = chain.Where(r.db.Where("environment = ?", params.Data.Environment))
+	}
+
 	maxPage, rowCount := util.GetMaxPageAndRowCount(chain.Find(&credentials), params.Limit)
 
 	validColumnSchoolID := []string{

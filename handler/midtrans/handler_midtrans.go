@@ -3,6 +3,7 @@ package handler_midtrans
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/fadhln/lms-be/constants"
@@ -368,13 +369,17 @@ func (h *impHandler) GetMidtransFrontendCredentials(c *gin.Context) {
 	searchSchoolID := c.DefaultQuery("school_id", "")
 	parsedSearchSchoolID, _ := uuid.Parse(searchSchoolID)
 
+	searchEnvironment := c.DefaultQuery("environment", "")
+	parsedSearchEnvironment, _ := strconv.Atoi(searchEnvironment)
+
 	params := rq.PaginationParams[model.MidtransCredentials]{
 		Limit:     limit,
 		Page:      page,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
 		Data: model.MidtransCredentials{
-			SchoolID: parsedSearchSchoolID,
+			SchoolID:    parsedSearchSchoolID,
+			Environment: parsedSearchEnvironment,
 		},
 	}
 

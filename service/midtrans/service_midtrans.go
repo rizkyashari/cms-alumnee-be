@@ -2,6 +2,7 @@ package service_midtrans
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -132,6 +133,12 @@ func (s *impService) GetMidtransCredentials(c context.Context, params *rq.Pagina
 		return nil, &errmsg.ErrInternal{Err: err}
 	}
 
+	// Obfuscate client_key with hash
+	for i := range datares {
+		datares[i].ClientKey = hashKey(datares[i].ClientKey)
+		datares[i].ServerKey = hashKey(datares[i].ServerKey)
+	}
+
 	res := rs.PaginationResponse[any, rs.MidtransCredentialsResponse]{
 		MaxPage:         maxPage,
 		RowCount:        rowCount,
@@ -191,6 +198,11 @@ func (s *impService) GetMidtransFrontendCredentials(c context.Context, params *r
 	err = copier.Copy(&datares, gotFrontendCredentials)
 	if err != nil {
 		return nil, &errmsg.ErrInternal{Err: err}
+	}
+
+	// Obfuscate client_key with hash
+	for i := range datares {
+		datares[i].ClientKey = hashKey(datares[i].ClientKey)
 	}
 
 	res := rs.PaginationResponse[any, rs.MidtransFrontendResponse]{
@@ -523,6 +535,10 @@ func (s *impService) CreateOneBill(c context.Context, newBill *rq.BillRequest) e
 		return &errmsg.ErrIsEmpty{FieldName: "GrossAmount"}
 	}
 
+	if newBill.Environment == 0 {
+		return &errmsg.ErrIsEmpty{FieldName: "Environment"}
+	}
+
 	if len(newBill.Description) <= 3 {
 		return &errmsg.ErrFieldIsWrong{FieldName: "Description"}
 	}
@@ -561,6 +577,7 @@ func (s *impService) CreateOneBill(c context.Context, newBill *rq.BillRequest) e
 		AccountID:       *parsedAccountID,
 		SchoolID:        *parsedSchoolID,
 		GrossAmount:     newBill.GrossAmount,
+		Environment:     newBill.Environment,
 		RemainingAmount: newBill.GrossAmount,
 		Description:     &newBill.Description,
 		AdminFee:        newBill.AdminFee,
@@ -767,4 +784,9 @@ func (s *impService) GetAllTransactions(c context.Context, params *rq.Pagination
 	}
 
 	return &res, nil
+}
+
+func hashKey(key string) string {
+	hashed := sha256.Sum256([]byte(key))
+	return fmt.Sprintf("%x", hashed)
 }

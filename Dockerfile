@@ -3,7 +3,7 @@ FROM golang:${GOLANG_IMAGE_TAG}
 
 WORKDIR /usr/src/app
 
-RUN go install github.com/cosmtrek/air@latest
+RUN go install github.com/air-verse/air@latest
 
 COPY . .
 RUN go mod tidy

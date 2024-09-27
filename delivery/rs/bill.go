@@ -13,6 +13,7 @@ type BillResponse struct {
 	AccountID       *string   `json:"account_id"`
 	SchoolID        *string   `json:"school_id"`
 	GrossAmount     int64     `json:"gross_amount"`
+	Environment     int64     `json:"environment"`
 	PurchasedAmount int64     `json:"purchased_amount"`
 	RemainingAmount int64     `json:"remaining_amount"`
 	AdminFee        int64     `json:"admin_fee"`

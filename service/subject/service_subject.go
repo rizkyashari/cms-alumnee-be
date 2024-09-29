@@ -383,7 +383,7 @@ func (s *impService) CreateOneWithClassroomID(c context.Context, classroomID str
 	return nil
 }
 
-func (s *impService) validateSubjectComponentPercentage(c context.Context, percentage *int, subjectID string) error {
+func (s *impService) validateSubjectComponentPercentage(c context.Context, percentage *int, subjectID string, subjectCompID *string) error {
 	if percentage == nil {
 		return &errmsg.ErrIsEmpty{FieldName: "Percentage"}
 	}
@@ -410,10 +410,31 @@ func (s *impService) validateSubjectComponentPercentage(c context.Context, perce
 	}
 
 	var totalComponentPercentage int
-	for _, gotComponent := range gotAllComponentFromSubject.Data {
-		totalComponentPercentage = totalComponentPercentage + gotComponent.Percentage
+	var currentComponentPercentage int
+
+	// Konversi subjectCompID menjadi uuid.UUID jika tidak nil
+	var parsedSubjectCompID uuid.UUID
+	if subjectCompID != nil {
+		parsedSubjectCompID, err = uuid.Parse(*subjectCompID)
+		if err != nil {
+			return &errmsg.ErrFieldIsWrong{FieldName: "Subject Component ID"}
+		}
 	}
 
+	// Hitung total persentase semua komponen
+	for _, gotComponent := range gotAllComponentFromSubject.Data {
+		totalComponentPercentage += gotComponent.Percentage
+
+		// Jika sedang mengedit, ambil persentase komponen yang ada untuk memperhitungkan perubahannya
+		if subjectCompID != nil && gotComponent.ID == parsedSubjectCompID {
+			currentComponentPercentage = gotComponent.Percentage
+		}
+	}
+
+	// Kurangi persentase komponen yang sedang diedit dari total
+	totalComponentPercentage -= currentComponentPercentage
+
+	// Cek apakah total persentase baru akan melebihi 100
 	if (totalComponentPercentage + *percentage) > 100 {
 		return &errmsg.ErrMaxAmount{Amount: 100}
 	}
@@ -443,7 +464,7 @@ func (s *impService) CreateOneSubjectComponent(c context.Context, newSubjectComp
 		return err
 	}
 
-	err = s.validateSubjectComponentPercentage(c, newSubjectComp.Percentage, *newSubjectComp.SubjectID)
+	err = s.validateSubjectComponentPercentage(c, newSubjectComp.Percentage, *newSubjectComp.SubjectID, newSubjectComp.ID)
 	if err != nil {
 		return err
 	}
@@ -771,7 +792,6 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 		if len(*body.Name) <= 3 {
 			return &errmsg.ErrFieldIsWrong{FieldName: "Name"}
 		}
-
 		newSubjectComponent.Name = *body.Name
 	}
 
@@ -780,23 +800,25 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 		if err != nil {
 			return err
 		}
-
 		newSubjectComponent.SubjectID = *parsedSubjectID
 	}
 
 	if body.Percentage != nil {
 		if body.SubjectID != nil {
-			err = s.validateSubjectComponentPercentage(c, body.Percentage, *body.SubjectID)
+			// Validasi dengan menggunakan Subject ID yang baru
+			err = s.validateSubjectComponentPercentage(c, body.Percentage, *body.SubjectID, &subjectCompID)
 			if err != nil {
 				return err
 			}
 		} else {
+			// Ambil SubjectComponent untuk mendapatkan Subject ID yang ada
 			existingSubjectComponent, err := s.GetSubjectComponentDetailByID(c, subjectCompID)
 			if err != nil {
 				return err
 			}
 
-			err = s.validateSubjectComponentPercentage(c, body.Percentage, existingSubjectComponent.SubjectID.String())
+			// Validasi dengan Subject ID dari komponen yang ada
+			err = s.validateSubjectComponentPercentage(c, body.Percentage, existingSubjectComponent.SubjectID.String(), &subjectCompID)
 			if err != nil {
 				return err
 			}
@@ -809,7 +831,6 @@ func (s *impService) EditOneSubjectComponent(c context.Context, subjectCompID st
 		if err := s.repo.Subject().UpdateOneComponent(tx, *parsedSubjectComponentID, &newSubjectComponent); err != nil {
 			return err
 		}
-
 		return nil
 	})
 

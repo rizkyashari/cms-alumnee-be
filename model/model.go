@@ -41,4 +41,10 @@ var Entities = []interface{}{
 	&Attendance{},
 	&LogData{},
 	&ResetPassword{},
+	&AlumniProfile{},
+	&NewsArticle{},
+	&AlumniEvent{},
+	&EventRegistration{},
+	&BusinessCareerListing{},
+	&ContactMessage{},
 }

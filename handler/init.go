@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/fadhln/lms-be/database"
+	alumni "github.com/fadhln/lms-be/handler/alumni"
 	"github.com/fadhln/lms-be/repo"
 	"github.com/fadhln/lms-be/service"
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 	repository := repo.SetupRepo(server)
 	service := service.SetupService(repository)
 	handler := SetupHandler(service)
+	alumniHandler := alumni.Init(server.DB)
 
 	h := handler
 
@@ -23,6 +25,13 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		r.Static("/file", "file")
 
 		r.Use(CORSMiddleware())
+		r.GET("/news", alumniHandler.ListNews)
+		r.GET("/news/:slug", alumniHandler.GetNews)
+		r.GET("/alumni-events", alumniHandler.ListEvents)
+		r.GET("/alumni-events/:id", alumniHandler.GetEvent)
+		r.GET("/alumni-directory", alumniHandler.ListAlumni)
+		r.GET("/business-careers", alumniHandler.ListListings)
+		r.POST("/contact", alumniHandler.SubmitContact)
 		r.POST("/login", h.Auth.Login)
 
 		// Register for public is not exist
@@ -81,6 +90,21 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		admin := r.Group("/4dm1n")
 		{
 			admin.Use(h.Auth.CheckAdmin())
+			admin.GET("/alumni-dashboard", alumniHandler.AdminStats)
+			admin.GET("/alumni-profiles", alumniHandler.AdminProfiles)
+			admin.PATCH("/alumni-profiles/:id/status", alumniHandler.ReviewProfile)
+			admin.GET("/business-careers", alumniHandler.AdminListings)
+			admin.PATCH("/business-careers/:id/status", alumniHandler.ReviewListing)
+			admin.GET("/news", alumniHandler.AdminNews)
+			admin.POST("/news", alumniHandler.SaveNews)
+			admin.PATCH("/news/:id", alumniHandler.UpdateNews)
+			admin.DELETE("/news/:id", alumniHandler.DeleteNews)
+			admin.GET("/alumni-events", alumniHandler.AdminEvents)
+			admin.POST("/alumni-events", alumniHandler.SaveEvent)
+			admin.PATCH("/alumni-events/:id", alumniHandler.UpdateEvent)
+			admin.DELETE("/alumni-events/:id", alumniHandler.DeleteEvent)
+			admin.GET("/contact-messages", alumniHandler.AdminContacts)
+			admin.PATCH("/contact-messages/:id/status", alumniHandler.UpdateContactStatus)
 
 			account := admin.Group("/account")
 			{
@@ -204,6 +228,11 @@ func InitRouter(server *database.RepoServer) *gin.Engine {
 		student := r.Group("/s")
 		{
 			student.Use(h.Auth.CheckStudent())
+			student.GET("/alumni-profile", alumniHandler.MyProfile)
+			student.PATCH("/alumni-profile", alumniHandler.SaveMyProfile)
+			student.GET("/alumni-summary", alumniHandler.MySummary)
+			student.POST("/business-careers", alumniHandler.SubmitListing)
+			student.POST("/alumni-events/:id/registrations", alumniHandler.RegisterForEvent)
 
 			student.GET("/detail", h.Student.GetOwnDetail)
 			student.GET("/data", h.Student.GetOwnStudentData)

@@ -20,7 +20,7 @@ services:
 
   db:
     container_name: lms-db
-    image: postgres:alpine
+    image: postgres:16-alpine
     restart: on-failure
     environment:
       - POSTGRES_USER=${DB_USER}

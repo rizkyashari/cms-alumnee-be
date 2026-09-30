@@ -1,8 +1,30 @@
 # Backend Service for LMS Al-Muddatsiriyah
 
+> This backend also provides the AlumniHub API used by `cms-alumnee-fe`. The original LMS API remains available for compatibility.
+
 ## Pendahuluan
 
 Sistem Backend ini ditulis dengan menggunakan bahasa [Go](https://go.dev) dengan bergantung (_dependent_) dengan [PostgreSQL](https://www.postgresql.org) untuk Database dan [Redis](https://redis.io) sebagai cache.
+
+Backend ditargetkan untuk Go `1.27.1` (lihat `go.mod` dan `Dockerfile`). AlumniHub menambah tabel secara aditif; jalankan migrasi backend yang sudah ada (`make migrate`) setelah deployment. ERD dan aturan relasi/status tersedia di [docs/ERD.md](docs/ERD.md).
+
+### API AlumniHub
+
+Semua response mengikuti envelope backend `{ "message": "success", "content": ... }`. Endpoint publik:
+
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| `GET` | `/api/news?q=&category=` | Berita terbit |
+| `GET` | `/api/news/:slug` | Detail berita terbit |
+| `GET` | `/api/alumni-events?q=&category=` | Agenda terbit |
+| `GET` | `/api/alumni-events/:id` | Detail agenda |
+| `GET` | `/api/alumni-directory?q=&batch_year=` | Direktori alumni disetujui |
+| `GET` | `/api/business-careers?q=&category=&listing_type=` | Listing disetujui |
+| `POST` | `/api/contact` | Kirim pesan kontak |
+
+Endpoint alumni membutuhkan bearer token akun siswa yang sudah ada: `GET/PATCH /api/s/alumni-profile`, `GET /api/s/alumni-summary`, `POST /api/s/business-careers`, dan `POST /api/s/alumni-events/:id/registrations`.
+
+Endpoint admin membutuhkan bearer token admin: `GET /api/4dm1n/alumni-dashboard`; kelola berita melalui `/api/4dm1n/news`; agenda melalui `/api/4dm1n/alumni-events`; review alumni melalui `/api/4dm1n/alumni-profiles`; review listing melalui `/api/4dm1n/business-careers`; dan pesan melalui `/api/4dm1n/contact-messages`. Untuk endpoint review gunakan `PATCH /:id/status` dengan body `{ "status": "approved" }` atau `{ "status": "rejected" }`.
 
 ### Petunjuk Instalasi
 

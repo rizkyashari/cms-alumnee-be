@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
+✓ Compiled successfully
+✓ Generating static pages using 9 workers (31/31)
+● /berita/[slug]
+  ├ ● /berita/1
+  ├ ● /berita/2
+  ├ ● /berita/3#!/usr/bin/env bash
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,7 +19,7 @@ pass() {
   printf 'PASS: %s\n' "$*"
 }
 
-for command_name in go git curl; do
+for command_name in go git curl python3; do
   command -v "$command_name" >/dev/null 2>&1 || fail "$command_name is required"
 done
 
@@ -32,10 +37,8 @@ pass "local .env exists, is ignored by Git, and was loaded without executing she
 MYSQL_RUNTIME="${MYSQL_RUNTIME:-podman}"
 MYSQL_HOST="${MYSQL_HOST:-127.0.0.1}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
-HTTP_ADDR="${HTTP_ADDR:-127.0.0.1:3000}"
-[[ "$HTTP_ADDR" == *:* ]] || fail "HTTP_ADDR must be host:port"
-HTTP_PORT="${HTTP_ADDR##*:}"
-[[ "$HTTP_PORT" =~ ^[0-9]+$ ]] || fail "HTTP_ADDR must contain a numeric TCP port"
+HTTP_PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')" ||
+  fail "Could not allocate a temporary local API port"
 HEALTH_BASE_URL="http://127.0.0.1:${HTTP_PORT}"
 
 printf '\n== Go unit tests and static analysis ==\n'
@@ -141,7 +144,8 @@ pass "Goose migration version $applied_migration is applied"
 
 printf '\n== Health endpoints and structured request logs ==\n'
 go build -o "$temp_dir/api" ./cmd/api || fail "Could not build API"
-MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" "$temp_dir/api" >"$temp_dir/api.log" 2>&1 &
+HTTP_ADDR="127.0.0.1:$HTTP_PORT" MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" \
+  "$temp_dir/api" >"$temp_dir/api.log" 2>&1 &
 api_pid=$!
 
 live_response=""

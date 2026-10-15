@@ -1,5 +1,7 @@
 .env
 tmp/
+bin/
+*.test
 file/**/*.csv
 file/**/*.jpg
 file/**/*.webp

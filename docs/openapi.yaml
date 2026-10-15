@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  title: AlumniHub API
+  version: 1.0.0
+  description: Versioned API contract. Domain endpoints are added as modules are implemented.
+servers:
+  - url: /api/v1
+paths:
+  /health/live:
+    get:
+      operationId: healthLive
+      summary: Check whether the API process is running
+      responses:
+        "200":
+          description: Process is live.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    get:
+      operationId: healthReady
+      summary: Check whether the API can reach MySQL
+      responses:
+        "200":
+          description: API and database are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Database is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [ok, ready, not_ready]

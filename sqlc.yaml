@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "mysql"
+    schema: "internal/platform/migrations/migrations"
+    queries: "internal/modules"
+    gen:
+      go:
+        package: "dbgen"
+        out: "internal/platform/database/dbgen"
+        sql_package: "database/sql"
+        emit_json_tags: true
+        emit_interface: true

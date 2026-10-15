@@ -1,0 +1,61 @@
+package config
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestLoadRequiresMySQLCredentials(t *testing.T) {
+	_, err := Load(env(map[string]string{
+		"MYSQL_USER":     "app",
+		"MYSQL_DATABASE": "alumni",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "MYSQL_PASSWORD is required") {
+		t.Fatalf("expected missing password error, got %v", err)
+	}
+}
+
+func TestLoadUsesSafeLocalDefaults(t *testing.T) {
+	cfg, err := Load(env(map[string]string{
+		"MYSQL_USER":     "app",
+		"MYSQL_PASSWORD": "test-password",
+		"MYSQL_DATABASE": "alumni",
+	}))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.HTTPAddr != "127.0.0.1:3000" || cfg.MySQLHost != "127.0.0.1" || cfg.MySQLPort != "3306" {
+		t.Fatalf("unexpected defaults: %+v", cfg)
+	}
+}
+
+func TestLoadRejectsInvalidHTTPAddress(t *testing.T) {
+	_, err := Load(env(map[string]string{
+		"HTTP_ADDR":      ":not-a-port",
+		"MYSQL_USER":     "app",
+		"MYSQL_PASSWORD": "test-password",
+		"MYSQL_DATABASE": "alumni",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "HTTP_ADDR must use a valid TCP port") {
+		t.Fatalf("expected invalid HTTP address error, got %v", err)
+	}
+}
+
+func TestLoadRejectsInvalidMySQLPort(t *testing.T) {
+	_, err := Load(env(map[string]string{
+		"MYSQL_PORT":     "70000",
+		"MYSQL_USER":     "app",
+		"MYSQL_PASSWORD": "test-password",
+		"MYSQL_DATABASE": "alumni",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "MYSQL_PORT must be a valid TCP port") {
+		t.Fatalf("expected invalid MySQL port error, got %v", err)
+	}
+}
+
+func env(values map[string]string) func(string) (string, bool) {
+	return func(key string) (string, bool) {
+		value, ok := values[key]
+		return value, ok
+	}
+}

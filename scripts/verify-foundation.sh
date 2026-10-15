@@ -1,9 +1,4 @@
-✓ Compiled successfully
-✓ Generating static pages using 9 workers (31/31)
-● /berita/[slug]
-  ├ ● /berita/1
-  ├ ● /berita/2
-  ├ ● /berita/3#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -59,7 +54,9 @@ cleanup() {
     podman rm --force "$mysql_container" >/dev/null 2>&1 || true
   fi
   if [[ -n "${temp_dir:-}" && -d "$temp_dir" ]]; then
-    rm -f "$temp_dir/api" "$temp_dir/api.log"
+    rm -f "$temp_dir/api" "$temp_dir/api.log" "$temp_dir/auth.cookies" \
+      "$temp_dir/non_verified.cookies" "$temp_dir/verified.cookies" \
+      "$temp_dir/officer.cookies" "$temp_dir/admin.cookies"
     rmdir "$temp_dir"
   fi
 }
@@ -134,17 +131,22 @@ esac
 
 MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" go run ./cmd/migrate || fail "Database migration failed"
 
-innodb_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('audit_events', 'outbox_events') AND engine = 'InnoDB';")" || fail "Could not verify InnoDB tables"
-[[ "$innodb_tables" == "2" ]] || fail "Expected audit_events and outbox_events to use InnoDB"
-pass "audit_events and outbox_events use InnoDB"
+innodb_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('audit_events', 'outbox_events', 'accounts', 'account_contacts', 'external_identities', 'alumni_profiles', 'roles', 'account_roles', 'sessions') AND engine = 'InnoDB';")" || fail "Could not verify InnoDB tables"
+[[ "$innodb_tables" == "9" ]] || fail "Expected the foundation and auth tables to use InnoDB"
+pass "foundation and auth tables use InnoDB"
 
 applied_migration="$(mysql_query 'SELECT MAX(version_id) FROM goose_db_version WHERE is_applied = 1;')" || fail "Could not verify Goose migration metadata"
-[[ "$applied_migration" == "1" ]] || fail "Expected initial Goose migration version 1; got ${applied_migration:-none}"
+[[ "$applied_migration" == "2" ]] || fail "Expected latest Goose migration version 2; got ${applied_migration:-none}"
 pass "Goose migration version $applied_migration is applied"
 
 printf '\n== Health endpoints and structured request logs ==\n'
 go build -o "$temp_dir/api" ./cmd/api || fail "Could not build API"
+demo_password="verify-only-local-password"
 HTTP_ADDR="127.0.0.1:$HTTP_PORT" MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" \
+  DEMO_AUTH_ENABLED=true DEMO_AUTH_PASSWORD="$demo_password" \
+  PUBLIC_BASE_URL= TURNSTILE_SITE_KEY= TURNSTILE_SECRET_KEY= \
+  GOOGLE_OAUTH_CLIENT_ID= GOOGLE_OAUTH_CLIENT_SECRET= \
+  FACEBOOK_OAUTH_CLIENT_ID= FACEBOOK_OAUTH_CLIENT_SECRET= \
   "$temp_dir/api" >"$temp_dir/api.log" 2>&1 &
 api_pid=$!
 
@@ -164,6 +166,109 @@ pass "GET /api/v1/health/live returns ok"
 ready_response="$(curl --silent --show-error --fail --max-time 3 "$HEALTH_BASE_URL/api/v1/health/ready")" || fail "Readiness endpoint failed; check MySQL credentials and access"
 grep -Fq '"status":"ready"' <<<"$ready_response" || fail "Readiness response was unexpected"
 pass "GET /api/v1/health/ready returns ready"
+
+oauth_config="$(curl --silent --show-error --fail --max-time 3 "$HEALTH_BASE_URL/api/v1/auth/oauth/providers")" ||
+  fail "Could not read public OAuth provider configuration"
+python3 -c '
+import json,sys
+content=json.loads(sys.argv[1])["content"]
+assert content["providers"] == [], content
+assert content["captcha_site_key"] == "", content
+' "$oauth_config" || fail "Unconfigured OAuth providers or CAPTCHA key were exposed"
+pass "public OAuth configuration exposes no disabled provider credentials"
+
+printf '\n== Role login and session authorization ==\n'
+anonymous_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+  --max-time 3 "$HEALTH_BASE_URL/api/v1/auth/me")" || fail "Could not test anonymous auth request"
+[[ "$anonymous_status" == "401" ]] || fail "Anonymous /auth/me returned $anonymous_status, expected 401"
+pass "anonymous session request is rejected"
+anonymous_directory_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+  --max-time 3 "$HEALTH_BASE_URL/api/v1/alumni")" || fail "Could not test anonymous directory request"
+[[ "$anonymous_directory_status" == "401" ]] || fail "Anonymous directory returned $anonymous_directory_status, expected 401"
+pass "anonymous directory access is rejected"
+
+for role_email in \
+  "non_verified:nonverified@demo.local:directory:read_limited" \
+  "verified:verified@demo.local:directory:read_full" \
+  "officer:officer@demo.local:documents:manage" \
+  "admin:admin@demo.local:alumni:verify"; do
+  IFS=: read -r expected_role email expected_capability <<<"$role_email"
+  login_payload="$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv[1],"password":sys.argv[2]}))' "$email" "$demo_password")"
+  cookie_file="$temp_dir/$expected_role.cookies"
+  login_response="$(curl --silent --show-error --fail --max-time 3 \
+    --cookie-jar "$cookie_file" \
+    --header 'Content-Type: application/json' \
+    --data "$login_payload" "$HEALTH_BASE_URL/api/v1/auth/demo-login")" ||
+    fail "Demo login failed for the $expected_role role"
+  python3 -c '
+import json,sys
+response=json.loads(sys.argv[1])
+user=response["content"]["user"]
+expected={
+    "non_verified": {"content:read_public","directory:read_limited","profile:edit_self","business:submit"},
+    "verified": {"content:read_public","directory:read_full","profile:edit_self","business:submit","content:comment","alumni:attest"},
+    "officer": {"content:read_public","documents:manage","alumni:attest"},
+    "admin": {"content:read_public","directory:read_full","profile:edit_self","business:submit","content:comment","documents:manage","alumni:attest","admin:manage","alumni:verify"},
+}
+assert user["role"] == sys.argv[2], (user["role"], sys.argv[2])
+assert set(user["capabilities"]) == expected[sys.argv[2]], (user["capabilities"], expected[sys.argv[2]])
+assert sys.argv[3] in user["capabilities"], (sys.argv[3], user["capabilities"])
+' "$login_response" "$expected_role" "$expected_capability" ||
+    fail "Role capability set mismatch for $expected_role"
+  current_user="$(curl --silent --show-error --fail --max-time 3 \
+    --cookie "$cookie_file" "$HEALTH_BASE_URL/api/v1/auth/me")" ||
+    fail "Session lookup failed for the $expected_role role"
+  python3 -c '
+import json,sys
+response=json.loads(sys.argv[1])["content"]["user"]
+login=json.loads(sys.argv[3])["content"]["user"]
+assert response["role"] == sys.argv[2], (response["role"], sys.argv[2])
+assert response["capabilities"] == login["capabilities"], (response["capabilities"], login["capabilities"])
+' \
+    "$current_user" "$expected_role" "$login_response" || fail "Session role or capabilities mismatch for $expected_role"
+  pass "$expected_role login, session cookie, and exact capability set"
+done
+
+directory_limited="$(curl --silent --show-error --fail --max-time 3 \
+  --cookie "$temp_dir/non_verified.cookies" "$HEALTH_BASE_URL/api/v1/alumni")" ||
+  fail "Non-verified directory request failed"
+python3 -c '
+import json,sys
+items=json.loads(sys.argv[1])["content"]["items"]
+assert items, "expected seeded alumni profiles"
+for item in items:
+    assert set(item) == {"name", "batch_year"}, item
+' "$directory_limited" || fail "Non-verified directory exposed fields beyond name and batch year"
+pass "non-verified directory returns only name and batch year"
+
+directory_full="$(curl --silent --show-error --fail --max-time 3 \
+  --cookie "$temp_dir/verified.cookies" "$HEALTH_BASE_URL/api/v1/alumni")" ||
+  fail "Verified directory request failed"
+python3 -c '
+import json,sys
+items=json.loads(sys.argv[1])["content"]["items"]
+assert items, "expected seeded alumni profiles"
+for item in items:
+    assert {"name", "batch_year", "city", "occupation", "bio"} <= set(item), item
+    assert "email" not in item and "account_id" not in item and "phone" not in item, item
+' "$directory_full" || fail "Verified directory fields or phone privacy were incorrect"
+pass "verified directory returns full profile fields and hides private phone numbers"
+
+officer_directory_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+  --cookie "$temp_dir/officer.cookies" --max-time 3 "$HEALTH_BASE_URL/api/v1/alumni")" ||
+  fail "Could not test officer directory restriction"
+[[ "$officer_directory_status" == "403" ]] || fail "Officer directory returned $officer_directory_status, expected 403"
+pass "officer without a directory capability is denied"
+
+curl --silent --show-error --fail --max-time 3 \
+  --request POST --header 'Origin: http://localhost:3001' --cookie "$temp_dir/admin.cookies" \
+  "$HEALTH_BASE_URL/api/v1/auth/logout" >/dev/null ||
+  fail "Session logout failed"
+revoked_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+  --cookie "$temp_dir/admin.cookies" --max-time 3 "$HEALTH_BASE_URL/api/v1/auth/me")" ||
+  fail "Could not verify revoked session"
+[[ "$revoked_status" == "401" ]] || fail "Revoked session returned $revoked_status, expected 401"
+pass "logout revokes the server-side session"
 
 marker="verify-query-secret-${$}-$(date +%s)"
 curl --silent --show-error --fail --max-time 3 \

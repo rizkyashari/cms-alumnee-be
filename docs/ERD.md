@@ -1,11 +1,16 @@
 # AlumniHub ERD
 
-The alumni domain is additive to the existing LMS schema. `accounts` remains
-the authentication identity; AlumniHub profile and authorization data are
-modeled separately. The existing `email`, `name`, and `account_type` columns
-remain for LMS compatibility. `accounts.email` is nullable in the target model
-so phone-only registrations are supported; it is a legacy mirror, not a second
-source of truth. Verified email addresses and phone numbers in
+The alumni domain is additive at the model level. In this Go API repository,
+the versioned migration creates the `accounts` identity table with the LMS
+compatibility columns shown below; profile and authorization data are modeled
+separately. If this API is deployed into a physical database that already has
+an LMS `accounts` table, reconcile its column and ID types with this model
+before applying migration `000002`. The existing `email`, `name`, and
+`account_type` columns remain for LMS compatibility. `accounts.email` is
+nullable in the target model
+so phone-only registration and OAuth accounts without a verified email are
+supported; it is a legacy mirror, not a second source of truth. Verified email
+addresses and phone numbers in
 `account_contacts` are the canonical AlumniHub login contacts.
 
 ```mermaid
@@ -129,8 +134,9 @@ erDiagram
 ## Account, contacts, and sessions
 
 - `accounts.status` is `active|disabled`. An account is created or activated
-  only after at least one login contact has been verified. Public visitors are
-  anonymous and do not have an account or an assigned role.
+  only after an email/phone login contact is verified or an external OAuth
+  identity is authenticated. Public visitors are anonymous and do not have an
+  account or an assigned role.
 - Existing `accounts.email`, `accounts.name`, and `accounts.account_type`
   columns are retained for LMS compatibility. When an email contact exists,
   the legacy email may mirror its primary verified value; phone-only accounts
@@ -147,9 +153,10 @@ erDiagram
   numbers.
 - `external_identities` supports Google and Facebook login. The provider
   subject is unique within a provider; provider tokens are not stored as
-  session credentials. Linking an external identity does not imply that an
-  email or phone number is verified unless the provider's verified claim is
-  explicitly validated.
+  session credentials. The authenticated provider subject is a login
+  credential. An email or phone number is considered verified only when the
+  provider's verified claim is explicitly validated; otherwise it is not
+  stored as a verified login contact.
 - A `sessions` row stores only a cryptographic hash of a high-entropy opaque
   session token, never the raw token. The browser receives the token only in a
   `Secure`, `HttpOnly`, same-site cookie. Expired or revoked sessions are

@@ -34,7 +34,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /auth/demo-login:
+    post:
+      operationId: authDemoLogin
+      summary: Create a loopback-only local test session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoLoginRequest"
+      responses:
+        "200":
+          description: Session created; token is issued only as an HttpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid credentials.
+        "404":
+          description: Local demo authentication is disabled.
+        "429":
+          description: Login rate limit exceeded.
+  /auth/me:
+    get:
+      operationId: authMe
+      summary: Return the authenticated account and effective server-side role
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Current session principal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Missing, expired, or revoked session.
+  /auth/logout:
+    post:
+      operationId: authLogout
+      summary: Revoke the current session
+      responses:
+        "200":
+          description: Session revoked and cookie cleared.
+        "403":
+          description: Request origin rejected.
+  /auth/oauth/providers:
+    get:
+      operationId: authOAuthProviders
+      summary: List OAuth providers configured with server-verified CAPTCHA
+      responses:
+        "200":
+          description: Public login configuration. Provider secrets are never included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthProvidersResponse"
+  /alumni:
+    get:
+      operationId: listAlumniDirectory
+      summary: List alumni using the caller's server-derived directory access level
+      description: Non-verified members receive only name and batch year. Verified members and admins receive the permitted profile fields; phone is returned only when its verified contact is explicitly visible.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Role-filtered directory entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryResponse"
+        "401":
+          description: Anonymous, expired, or revoked session.
+        "403":
+          description: Authenticated role is not allowed to access the directory.
+  /auth/oauth/{provider}/start:
+    post:
+      operationId: authOAuthStart
+      summary: Verify CAPTCHA and create a state-bound provider authorization URL
+      description: Google login also creates a per-request OIDC nonce, stored in an HttpOnly cookie and checked against the cryptographically verified ID token at callback.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google, facebook]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthStartRequest"
+      responses:
+        "200":
+          description: OAuth authorization URL. A short-lived HttpOnly state cookie is also set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthStartResponse"
+        "401":
+          description: CAPTCHA verification failed.
+        "404":
+          description: Provider is not configured.
+        "429":
+          description: Login rate limit exceeded.
+  /auth/oauth/{provider}/callback:
+    get:
+      operationId: authOAuthCallback
+      summary: Validate OAuth state and Google OIDC nonce, exchange provider code, and create a session
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google, facebook]
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "303":
+          description: On success, sets the session cookie and redirects to the frontend. On failure/cancellation, redirects to login with a safe error code.
+        "404":
+          description: Provider is not configured.
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: alumnihub_session
   schemas:
     HealthResponse:
       type: object
@@ -49,3 +191,120 @@ components:
             status:
               type: string
               enum: [ok, ready, not_ready]
+    DemoLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+    OAuthStartRequest:
+      type: object
+      required: [captcha_token]
+      properties:
+        captcha_token:
+          type: string
+    OAuthStartResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          type: object
+          required: [authorization_url]
+          properties:
+            authorization_url:
+              type: string
+              format: uri
+    OAuthProvidersResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          type: object
+          required: [providers, captcha_site_key]
+          properties:
+            providers:
+              type: array
+              items:
+                type: string
+                enum: [google, facebook]
+            captcha_site_key:
+              type: string
+    SessionResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          type: object
+          required: [user]
+          properties:
+            user:
+              $ref: "#/components/schemas/Principal"
+            expires_at:
+              type: string
+              format: date-time
+    Principal:
+      type: object
+      required: [account_id, email, name, role, capabilities]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [non_verified, verified, officer, admin]
+        capabilities:
+          type: array
+          items:
+            type: string
+    DirectoryResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                oneOf:
+                  - type: object
+                    required: [name, batch_year]
+                    additionalProperties: false
+                    properties:
+                      name:
+                        type: string
+                      batch_year:
+                        type: integer
+                  - type: object
+                    required: [name, batch_year, city, occupation, bio]
+                    additionalProperties: false
+                    properties:
+                      name:
+                        type: string
+                      batch_year:
+                        type: integer
+                      city:
+                        type: string
+                      occupation:
+                        type: string
+                      bio:
+                        type: string
+                      phone:
+                        type: string

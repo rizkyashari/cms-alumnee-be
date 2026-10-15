@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rizkyashari/cms-alumnee-be/internal/modules/auth"
 	"github.com/rizkyashari/cms-alumnee-be/internal/platform/config"
 	platformdb "github.com/rizkyashari/cms-alumnee-be/internal/platform/database"
 	"github.com/rizkyashari/cms-alumnee-be/internal/platform/httpapi"
@@ -35,9 +36,20 @@ func main() {
 	}
 	defer db.Close()
 
+	authService := auth.NewService(db, cfg.DemoAuthEnabled, cfg.DemoAuthPassword)
+	authService.ConfigureIntegrations(auth.Integrations{
+		PublicBaseURL:    cfg.PublicBaseURL,
+		TurnstileSiteKey: cfg.TurnstileSiteKey,
+		TurnstileSecret:  cfg.TurnstileSecret,
+		GoogleClientID:   cfg.GoogleClientID,
+		GoogleSecret:     cfg.GoogleSecret,
+		FacebookClientID: cfg.FacebookClientID,
+		FacebookSecret:   cfg.FacebookSecret,
+	})
+
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewRouter(logger, db),
+		Handler:           httpapi.NewRouterWithAuth(logger, db, auth.NewHandler(authService, logger)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

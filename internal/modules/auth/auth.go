@@ -71,6 +71,8 @@ type Service struct {
 	cookieSecure         bool
 	integrations         Integrations
 	regencyCodes         map[string]struct{}
+	regionBaseURL        string
+	regions              regionCache
 	now                  func() time.Time
 }
 

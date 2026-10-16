@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -39,10 +40,26 @@ func (s *Service) SetRegencyCodes(codes map[string]struct{}) {
 	s.regencyCodes = codes
 }
 
-func (s *Service) regencyCodeKnown(profile registrationProfile) bool {
-	if profile.countryCode != "ID" || s.regencyCodes == nil {
+// regencyCodeKnown checks a domestic city code against the master list: the
+// file from REGENCY_MASTER_PATH when configured, otherwise the cached region
+// provider data. If neither is available it falls back to the format check
+// already done by validateRegistrationProfile rather than blocking sign-ups.
+func (s *Service) regencyCodeKnown(ctx context.Context, profile registrationProfile) bool {
+	if profile.countryCode != "ID" {
 		return true
 	}
-	_, ok := s.regencyCodes[profile.cityCode]
-	return ok
+	if s.regencyCodes != nil {
+		_, ok := s.regencyCodes[profile.cityCode]
+		return ok
+	}
+	items, err := s.regencies(ctx, profile.cityCode[:2])
+	if err != nil {
+		return true
+	}
+	for _, item := range items {
+		if item.ID == profile.cityCode {
+			return true
+		}
+	}
+	return false
 }

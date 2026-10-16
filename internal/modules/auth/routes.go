@@ -39,6 +39,7 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 func (h *Handler) RegisterRoutes(router chi.Router) {
 	registerEmailOTPRoutes(h, router)
 	h.registerVerificationRoutes(router)
+	h.registerRegionRoutes(router)
 	router.With(h.RequireCapability(CapabilityAdminManage)).Get("/api/v1/admin/roles", h.managedRoles)
 	router.With(h.RequireCapability(CapabilityAdminManage)).Post("/api/v1/admin/roles/{operation}", h.changeManagedRole)
 	router.Post("/api/v1/auth/demo-login", h.demoLogin)

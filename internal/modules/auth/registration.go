@@ -697,7 +697,7 @@ func (h *Handler) registerEmailMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "profile data or photo is invalid")
 		return
 	}
-	if !h.service.regencyCodeKnown(profile) {
+	if !h.service.regencyCodeKnown(r.Context(), profile) {
 		writeError(w, http.StatusBadRequest, "profile data or photo is invalid")
 		return
 	}
@@ -731,7 +731,7 @@ func (h *Handler) completeOAuthProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "profile data or photo is invalid")
 		return
 	}
-	if !h.service.regencyCodeKnown(profile) {
+	if !h.service.regencyCodeKnown(r.Context(), profile) {
 		writeError(w, http.StatusBadRequest, "profile data or photo is invalid")
 		return
 	}

@@ -56,7 +56,9 @@ cleanup() {
   if [[ -n "${temp_dir:-}" && -d "$temp_dir" ]]; then
     rm -f "$temp_dir/api" "$temp_dir/api.log" "$temp_dir/auth.cookies" \
       "$temp_dir/non_verified.cookies" "$temp_dir/verified.cookies" \
-      "$temp_dir/officer.cookies" "$temp_dir/admin.cookies"
+      "$temp_dir/officer.cookies" "$temp_dir/admin.cookies" \
+      "$temp_dir/staging-non_verified.cookies" "$temp_dir/staging-verified.cookies" \
+      "$temp_dir/staging-officer.cookies" "$temp_dir/staging-admin.cookies"
     rmdir "$temp_dir"
   fi
 }
@@ -131,12 +133,12 @@ esac
 
 MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" go run ./cmd/migrate || fail "Database migration failed"
 
-innodb_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('audit_events', 'outbox_events', 'accounts', 'account_contacts', 'external_identities', 'alumni_profiles', 'roles', 'account_roles', 'sessions') AND engine = 'InnoDB';")" || fail "Could not verify InnoDB tables"
-[[ "$innodb_tables" == "9" ]] || fail "Expected the foundation and auth tables to use InnoDB"
+innodb_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('audit_events', 'outbox_events', 'accounts', 'account_contacts', 'external_identities', 'alumni_profiles', 'roles', 'account_roles', 'sessions', 'password_credentials') AND engine = 'InnoDB';")" || fail "Could not verify InnoDB tables"
+[[ "$innodb_tables" == "10" ]] || fail "Expected the foundation and auth tables to use InnoDB"
 pass "foundation and auth tables use InnoDB"
 
 applied_migration="$(mysql_query 'SELECT MAX(version_id) FROM goose_db_version WHERE is_applied = 1;')" || fail "Could not verify Goose migration metadata"
-[[ "$applied_migration" == "2" ]] || fail "Expected latest Goose migration version 2; got ${applied_migration:-none}"
+[[ "$applied_migration" == "3" ]] || fail "Expected latest Goose migration version 3; got ${applied_migration:-none}"
 pass "Goose migration version $applied_migration is applied"
 
 printf '\n== Health endpoints and structured request logs ==\n'
@@ -144,7 +146,11 @@ go build -o "$temp_dir/api" ./cmd/api || fail "Could not build API"
 demo_password="verify-only-local-password"
 HTTP_ADDR="127.0.0.1:$HTTP_PORT" MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" \
   DEMO_AUTH_ENABLED=true DEMO_AUTH_PASSWORD="$demo_password" \
-  PUBLIC_BASE_URL= TURNSTILE_SITE_KEY= TURNSTILE_SECRET_KEY= \
+  STAGING_AUTH_NON_VERIFIED_USERNAME=verify-nonverified STAGING_AUTH_NON_VERIFIED_PASSWORD=verify-nonverified-password \
+  STAGING_AUTH_VERIFIED_USERNAME=verify-verified STAGING_AUTH_VERIFIED_PASSWORD=verify-verified-password \
+  STAGING_AUTH_OFFICER_USERNAME=verify-officer STAGING_AUTH_OFFICER_PASSWORD=verify-officer-password \
+  STAGING_AUTH_ADMIN_USERNAME=verify-admin STAGING_AUTH_ADMIN_PASSWORD=verify-admin-password \
+  PUBLIC_BASE_URL=http://localhost:3001 TURNSTILE_SITE_KEY= TURNSTILE_SECRET_KEY= \
   GOOGLE_OAUTH_CLIENT_ID= GOOGLE_OAUTH_CLIENT_SECRET= \
   FACEBOOK_OAUTH_CLIENT_ID= FACEBOOK_OAUTH_CLIENT_SECRET= \
   "$temp_dir/api" >"$temp_dir/api.log" 2>&1 &
@@ -174,8 +180,9 @@ import json,sys
 content=json.loads(sys.argv[1])["content"]
 assert content["providers"] == [], content
 assert content["captcha_site_key"] == "", content
+assert content["password_login_enabled"] is True, content
 ' "$oauth_config" || fail "Unconfigured OAuth providers or CAPTCHA key were exposed"
-pass "public OAuth configuration exposes no disabled provider credentials"
+pass "public auth configuration exposes no disabled provider credentials"
 
 printf '\n== Role login and session authorization ==\n'
 anonymous_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
@@ -228,6 +235,73 @@ assert response["capabilities"] == login["capabilities"], (response["capabilitie
     "$current_user" "$expected_role" "$login_response" || fail "Session role or capabilities mismatch for $expected_role"
   pass "$expected_role login, session cookie, and exact capability set"
 done
+
+kill "$api_pid" 2>/dev/null || true
+wait "$api_pid" 2>/dev/null || true
+api_pid=""
+HTTP_ADDR="127.0.0.1:$HTTP_PORT" MYSQL_HOST="$MYSQL_HOST" MYSQL_PORT="$MYSQL_PORT" \
+  DEMO_AUTH_ENABLED=true DEMO_AUTH_PASSWORD="$demo_password" \
+  STAGING_AUTH_NON_VERIFIED_USERNAME=verify-nonverified STAGING_AUTH_NON_VERIFIED_PASSWORD=verify-nonverified-password \
+  STAGING_AUTH_VERIFIED_USERNAME=verify-verified STAGING_AUTH_VERIFIED_PASSWORD=verify-verified-password \
+  STAGING_AUTH_OFFICER_USERNAME=verify-officer STAGING_AUTH_OFFICER_PASSWORD=verify-officer-password \
+  STAGING_AUTH_ADMIN_USERNAME=verify-admin STAGING_AUTH_ADMIN_PASSWORD=verify-admin-password \
+  PUBLIC_BASE_URL=http://localhost:3001 TURNSTILE_SITE_KEY= TURNSTILE_SECRET_KEY= \
+  GOOGLE_OAUTH_CLIENT_ID= GOOGLE_OAUTH_CLIENT_SECRET= \
+  FACEBOOK_OAUTH_CLIENT_ID= FACEBOOK_OAUTH_CLIENT_SECRET= \
+  "$temp_dir/api" >>"$temp_dir/api.log" 2>&1 &
+api_pid=$!
+staging_api_ready=0
+for _ in $(seq 1 30); do
+  if curl --silent --show-error --max-time 2 "$HEALTH_BASE_URL/api/v1/health/live" >/dev/null 2>&1; then
+    staging_api_ready=1
+    break
+  fi
+  if ! kill -0 "$api_pid" 2>/dev/null; then
+    fail "API process exited before staging login checks"
+  fi
+  sleep 1
+done
+[[ "$staging_api_ready" == "1" ]] || fail "API did not restart for staging login checks"
+
+for role_login in \
+  "non_verified:verify-nonverified:verify-nonverified-password:directory:read_limited" \
+  "verified:verify-verified:verify-verified-password:directory:read_full" \
+  "officer:verify-officer:verify-officer-password:documents:manage" \
+  "admin:verify-admin:verify-admin-password:alumni:verify"; do
+  IFS=: read -r expected_role username password expected_capability <<<"$role_login"
+  login_payload="$(python3 -c 'import json,sys; print(json.dumps({"username":sys.argv[1],"password":sys.argv[2]}))' "$username" "$password")"
+  cookie_file="$temp_dir/staging-$expected_role.cookies"
+  login_response="$(curl --silent --show-error --fail --max-time 3 \
+    --cookie-jar "$cookie_file" \
+    --header 'Content-Type: application/json' \
+    --header 'Origin: http://localhost:3001' \
+    --data "$login_payload" "$HEALTH_BASE_URL/api/v1/auth/password-login")" ||
+    fail "Staging password login failed for the $expected_role role"
+  python3 -c '
+import json,sys
+user=json.loads(sys.argv[1])["content"]["user"]
+assert user["role"] == sys.argv[2], (user["role"], sys.argv[2])
+assert sys.argv[3] in user["capabilities"], (sys.argv[3], user["capabilities"])
+' "$login_response" "$expected_role" "$expected_capability" ||
+    fail "Staging account role or capability mismatch for $expected_role"
+  current_user="$(curl --silent --show-error --fail --max-time 3 \
+    --cookie "$cookie_file" "$HEALTH_BASE_URL/api/v1/auth/me")" ||
+    fail "Staging session lookup failed for the $expected_role role"
+  python3 -c '
+import json,sys
+user=json.loads(sys.argv[1])["content"]["user"]
+assert user["role"] == sys.argv[2], (user["role"], sys.argv[2])
+' "$current_user" "$expected_role" || fail "Staging session role mismatch for $expected_role"
+  pass "staging username/password login and server-assigned $expected_role role"
+done
+
+bad_login_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+  --max-time 3 --header 'Content-Type: application/json' \
+  --header 'Origin: http://localhost:3001' \
+  --data '{"username":"verify-admin","password":"incorrect-staging-password"}' \
+  "$HEALTH_BASE_URL/api/v1/auth/password-login")" || fail "Could not test invalid staging credentials"
+[[ "$bad_login_status" == "401" ]] || fail "Invalid staging credentials returned $bad_login_status, expected 401"
+pass "invalid staging credentials are rejected"
 
 directory_limited="$(curl --silent --show-error --fail --max-time 3 \
   --cookie "$temp_dir/non_verified.cookies" "$HEALTH_BASE_URL/api/v1/alumni")" ||

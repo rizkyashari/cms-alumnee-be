@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ func TestCapabilitiesForEffectiveRoles(t *testing.T) {
 		want []Capability
 	}{
 		{RolePublic, []Capability{CapabilityPublicContent}},
+		{RoleOnboarding, []Capability{CapabilityPublicContent}},
 		{RoleNonVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit}},
 		{RoleVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityAttest}},
 		{RoleOfficer, []Capability{CapabilityPublicContent, CapabilityDocumentManage, CapabilityAttest}},
@@ -84,6 +86,7 @@ func TestEffectiveRoleUsesPrivilegedRoleAndVerificationStatus(t *testing.T) {
 		want   Role
 	}{
 		{"", "", RolePublic},
+		{"member", "", RoleOnboarding},
 		{"member", "non_verified", RoleNonVerified},
 		{"member", "verified", RoleVerified},
 		{"member,officer", "verified", RoleOfficer},
@@ -365,6 +368,37 @@ func TestDemoLoginRejectsNonLoopbackHostAndOrigin(t *testing.T) {
 				t.Fatalf("demo login status = %d, want %d", recorder.Code, http.StatusNotFound)
 			}
 		})
+	}
+}
+
+func TestPasswordLoginIsDisabledByDefault(t *testing.T) {
+	handler := NewHandler(NewService(nil, false, ""), nil)
+	router := chi.NewRouter()
+	handler.RegisterRoutes(router)
+	request := httptest.NewRequest(http.MethodPost, "https://alumni.example/api/v1/auth/password-login", strings.NewReader(`{"username":"tester","password":"test-password"}`))
+	request.Header.Set("Origin", "https://alumni.example")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("password login status = %d, want %d", recorder.Code, http.StatusNotFound)
+	}
+}
+
+func TestPasswordLoginRejectsCrossOriginRequest(t *testing.T) {
+	service := NewService(nil, false, "")
+	service.passwordLoginEnabled = true
+	service.ConfigureIntegrations(Integrations{PublicBaseURL: "https://alumni.example"})
+	handler := NewHandler(service, nil)
+	router := chi.NewRouter()
+	handler.RegisterRoutes(router)
+	request := httptest.NewRequest(http.MethodPost, "https://alumni.example/api/v1/auth/password-login", strings.NewReader(`{"username":"tester","password":"test-password"}`))
+	request.Header.Set("Origin", "https://attacker.example")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin password login status = %d, want %d", recorder.Code, http.StatusForbidden)
 	}
 }
 

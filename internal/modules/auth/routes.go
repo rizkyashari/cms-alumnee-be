@@ -20,17 +20,29 @@ import (
 type principalContextKey struct{}
 
 type Handler struct {
-	service *Service
-	limiter *loginLimiter
-	logger  *slog.Logger
+	service         *Service
+	limiter         *loginLimiter
+	otpIPLimiter    *loginLimiter
+	otpEmailLimiter *loginLimiter
+	logger          *slog.Logger
 }
 
 func NewHandler(service *Service, logger *slog.Logger) *Handler {
-	return &Handler{service: service, limiter: newLoginLimiter(5, time.Minute), logger: logger}
+	return &Handler{
+		service: service, limiter: newLoginLimiter(5, time.Minute),
+		otpIPLimiter:    newLoginLimiter(10, time.Hour),
+		otpEmailLimiter: newLoginLimiter(3, 15*time.Minute),
+		logger:          logger,
+	}
 }
 
 func (h *Handler) RegisterRoutes(router chi.Router) {
+	registerEmailOTPRoutes(h, router)
+	h.registerVerificationRoutes(router)
+	router.With(h.RequireCapability(CapabilityAdminManage)).Get("/api/v1/admin/roles", h.managedRoles)
+	router.With(h.RequireCapability(CapabilityAdminManage)).Post("/api/v1/admin/roles/{operation}", h.changeManagedRole)
 	router.Post("/api/v1/auth/demo-login", h.demoLogin)
+	router.Post("/api/v1/auth/password-login", h.passwordLogin)
 	h.registerOAuthRoutes(router)
 	router.With(h.Authenticate).Get("/api/v1/auth/me", h.me)
 	router.With(h.RequireAnyCapability(CapabilityDirectoryLite, CapabilityDirectoryFull)).Get("/api/v1/alumni", h.directory)
@@ -253,6 +265,48 @@ func (h *Handler) demoLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) passwordLogin(w http.ResponseWriter, r *http.Request) {
+	if !h.service.passwordLoginEnabled {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	if !h.service.sameOriginRequest(r) {
+		writeError(w, http.StatusForbidden, "request origin is not allowed")
+		return
+	}
+	if !h.limiter.Allow(clientIP(r)) {
+		writeError(w, http.StatusTooManyRequests, "too many login attempts")
+		return
+	}
+	var input struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	principal, token, expiresAt, err := h.service.PasswordLogin(r.Context(), input.Username, input.Password)
+	if err != nil {
+		if errors.Is(err, ErrPasswordAuthDisabled) {
+			writeError(w, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, ErrInvalidCredentials) {
+			writeError(w, http.StatusUnauthorized, "invalid username or password")
+			return
+		}
+		h.reportFailure("password_login", err)
+		writeError(w, http.StatusInternalServerError, "login failed")
+		return
+	}
+	h.service.SetSessionCookie(w, token, expiresAt)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "login successful",
+		"content": map[string]any{"user": principal, "expires_at": expiresAt},
+	})
+}
+
 func isLoopbackRequest(r *http.Request) bool {
 	if !isLoopbackHost(r.Host) {
 		return false
@@ -287,6 +341,14 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
+	completion, err := h.service.profileCompletion(r.Context(), principalIDBytes(principal.AccountID))
+	if err != nil {
+		h.reportFailure("profile_completion", err)
+		writeError(w, http.StatusInternalServerError, "could not load profile completion")
+		return
+	}
+	principal.ProfileCompletion = completion
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"message": "ok", "content": map[string]any{"user": principal}})
 }
 

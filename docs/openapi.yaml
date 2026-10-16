@@ -61,6 +61,33 @@ paths:
           description: Local demo authentication is disabled.
         "429":
           description: Login rate limit exceeded.
+  /auth/password-login:
+    post:
+      operationId: authPasswordLogin
+      summary: Sign in to a configured staging role account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordLoginRequest"
+      responses:
+        "200":
+          description: Session created; token is issued only as an HttpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid username or password.
+        "404":
+          description: Staging password login is not configured.
+        "429":
+          description: Login rate limit exceeded.
   /auth/me:
     get:
       operationId: authMe
@@ -76,6 +103,308 @@ paths:
                 $ref: "#/components/schemas/SessionResponse"
         "401":
           description: Missing, expired, or revoked session.
+  /auth/email-otp/start:
+    post:
+      operationId: authEmailOTPStart
+      summary: Send a short-lived email OTP for registration or passwordless login
+      description: Responses do not reveal whether an account exists. Resend is rate limited. Requires configured Resend credentials and an allowed same-origin request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailOTPStartRequest"
+      responses:
+        "202":
+          description: A code was sent if the address can be used.
+        "400":
+          description: Invalid email address.
+        "403":
+          description: Request origin rejected.
+        "429":
+          description: OTP rate limit exceeded.
+        "503":
+          description: Email delivery is unavailable.
+  /auth/email-otp/verify:
+    post:
+      operationId: authEmailOTPVerify
+      summary: Verify an email OTP and create a session or short-lived registration token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailOTPVerifyRequest"
+      responses:
+        "200":
+          description: Existing accounts receive an HttpOnly session cookie; new registrations receive a short-lived opaque registration token.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailOTPVerifyResponse"
+        "400":
+          description: OTP is invalid, expired, or has exhausted its attempts.
+        "403":
+          description: Request origin rejected.
+        "429":
+          description: OTP rate limit exceeded.
+  /auth/register:
+    post:
+      operationId: authRegisterMember
+      summary: Create a non-verified alumni account after email verification
+      description: Accepts JPEG or PNG up to 2 MiB. The API sanitizes the decoded image and stores it in MySQL. Role and verification status are assigned server-side.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/RegistrationProfileRequest"
+      responses:
+        "201":
+          description: Member account and profile created; initial profile completion is returned and an HttpOnly session is set.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Registration token, profile, city, or photo is invalid.
+        "403":
+          description: Request origin rejected.
+  /auth/profile/complete:
+    post:
+      operationId: authCompleteOAuthProfile
+      summary: Complete required alumni profile for a new OAuth account
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/RegistrationProfileRequest"
+      responses:
+        "200":
+          description: Alumni profile and MySQL photo stored with non_verified status.
+        "401":
+          description: Missing, expired, or revoked session.
+        "409":
+          description: Profile onboarding is not required or already complete.
+  /admin/roles:
+    get:
+      operationId: listManagedRoles
+      summary: List active Admin and Pengurus accounts
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Staff accounts visible to Admins.
+        "401":
+          description: Missing session.
+        "403":
+          description: Admin capability required.
+  /admin/roles/{operation}:
+    post:
+      operationId: changeManagedRole
+      summary: Grant or revoke an Admin/Pengurus role for an existing verified-email account
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: operation
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [grant, revoke]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagedRoleChangeRequest"
+      responses:
+        "200":
+          description: Role changed and audit event recorded.
+        "400":
+          description: Invalid email or role.
+        "401":
+          description: Missing session.
+        "403":
+          description: Admin capability or same-origin request required.
+        "404":
+          description: Account or requested role assignment not found.
+        "409":
+          description: The last active Admin cannot be revoked.
+  /auth/profile/photo:
+    get:
+      operationId: getOwnProfilePhoto
+      summary: The authenticated member's own profile photo (JPEG/PNG)
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Image bytes with nosniff and a sandboxing CSP.
+        "401":
+          description: Missing session.
+        "404":
+          description: No photo stored.
+  /verification/me:
+    get:
+      operationId: getOwnVerification
+      summary: Verification status and attestation progress for the caller's profile
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: status is none, pending, approved or rejected.
+        "401":
+          description: Missing session.
+        "409":
+          description: Alumni profile not completed yet.
+  /verification/request:
+    post:
+      operationId: requestVerification
+      summary: Open or reopen (after rejection) the caller's verification request
+      security:
+        - sessionCookie: []
+      responses:
+        "202":
+          description: Request recorded as pending.
+        "403":
+          description: Request origin rejected.
+        "409":
+          description: Already pending, already verified, or profile incomplete.
+  /verification/candidates:
+    get:
+      operationId: listVerificationCandidates
+      summary: Pending requests the caller may vouch for (own batch for verified members; all for Pengurus/Admin)
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Pending requests with attestation counts and per-caller flags.
+        "401":
+          description: Missing session.
+        "403":
+          description: alumni:attest capability required.
+  /verification/{profileId}/attest:
+    post:
+      operationId: attestAlumnus
+      summary: Vouch that the candidate is an alumnus of the caller's batch
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Attestation recorded.
+        "403":
+          description: Caller is not a verified same-batch member, or is the candidate, or origin rejected.
+        "404":
+          description: No pending request for that profile.
+        "409":
+          description: Caller already vouched for this alumnus.
+  /verification/{profileId}/bootstrap:
+    post:
+      operationId: confirmFirstAlumnus
+      summary: One-time confirmation of the first verified alumnus by Pengurus/Admin
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationDecisionRequest"
+      responses:
+        "200":
+          description: Alumnus verified; audit event recorded.
+        "403":
+          description: Pengurus/Admin required, or the caller is the candidate.
+        "404":
+          description: No pending request for that profile.
+        "409":
+          description: An alumnus is already verified; the exception is closed.
+  /verification/{profileId}/photo:
+    get:
+      operationId: getReviewPhoto
+      summary: Photo of a profile with a pending request (Pengurus/Admin, or verified same-batch members)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Image bytes.
+        "403":
+          description: alumni:attest capability required.
+        "404":
+          description: No pending request, photo, or not permitted for this batch.
+  /admin/verifications:
+    get:
+      operationId: listAdminVerifications
+      summary: Pending verification requests with attesters (Admin)
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Pending requests.
+        "403":
+          description: alumni:verify capability required.
+  /admin/verifications/{profileId}/{decision}:
+    post:
+      operationId: decideVerification
+      summary: Approve (needs five valid attestations) or reject a pending request
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: decision
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [approve, reject]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationDecisionRequest"
+      responses:
+        "200":
+          description: Decision recorded and audited.
+        "400":
+          description: Note longer than 500 characters.
+        "403":
+          description: alumni:verify capability required, or an Admin deciding their own request.
+        "404":
+          description: No pending request for that profile.
+        "409":
+          description: Fewer than five valid attestations.
   /auth/logout:
     post:
       operationId: authLogout
@@ -191,6 +520,12 @@ components:
             status:
               type: string
               enum: [ok, ready, not_ready]
+    VerificationDecisionRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 500
     DemoLoginRequest:
       type: object
       required: [email, password]
@@ -201,6 +536,93 @@ components:
         password:
           type: string
           minLength: 1
+    PasswordLoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+        password:
+          type: string
+          minLength: 1
+    EmailOTPStartRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    EmailOTPVerifyRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+    EmailOTPVerifyResponse:
+      type: object
+      required: [message, content]
+      properties:
+        message:
+          type: string
+        content:
+          oneOf:
+            - type: object
+              required: [registration_token, email]
+              properties:
+                registration_token:
+                  type: string
+                email:
+                  type: string
+                  format: email
+            - type: object
+              required: [user, expires_at]
+              properties:
+                user:
+                  $ref: "#/components/schemas/Principal"
+                expires_at:
+                  type: string
+                  format: date-time
+    RegistrationProfileRequest:
+      type: object
+      required: [full_name, batch_year, country_code, city, photo]
+      properties:
+        registration_token:
+          type: string
+        full_name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        batch_year:
+          type: integer
+          minimum: 1950
+        country_code:
+          type: string
+          pattern: "^[A-Z]{2}$"
+        city_code:
+          type: string
+          description: Required for Indonesia; api-wilayah-indonesia v2 kabupaten/kota ID.
+        city:
+          type: string
+          maxLength: 120
+        photo:
+          type: string
+          format: binary
+    ManagedRoleChangeRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [officer, admin]
     OAuthStartRequest:
       type: object
       required: [captcha_token]
@@ -228,7 +650,7 @@ components:
           type: string
         content:
           type: object
-          required: [providers, captcha_site_key]
+          required: [providers, captcha_site_key, password_login_enabled]
           properties:
             providers:
               type: array
@@ -237,6 +659,8 @@ components:
                 enum: [google, facebook]
             captcha_site_key:
               type: string
+            password_login_enabled:
+              type: boolean
     SessionResponse:
       type: object
       required: [message, content]
@@ -254,7 +678,7 @@ components:
               format: date-time
     Principal:
       type: object
-      required: [account_id, email, name, role, capabilities]
+      required: [account_id, email, name, role, capabilities, profile_complete, profile_completion]
       properties:
         account_id:
           type: string
@@ -265,11 +689,17 @@ components:
           type: string
         role:
           type: string
-          enum: [non_verified, verified, officer, admin]
+          enum: [onboarding, non_verified, verified, officer, admin]
         capabilities:
           type: array
           items:
             type: string
+        profile_complete:
+          type: boolean
+        profile_completion:
+          type: integer
+          minimum: 0
+          maximum: 100
     DirectoryResponse:
       type: object
       required: [message, content]

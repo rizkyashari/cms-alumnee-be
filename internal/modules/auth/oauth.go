@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"strings"
 	"time"
@@ -127,8 +128,9 @@ func (h *Handler) oauthProviders(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message": "ok",
 		"content": map[string]any{
-			"providers":        providers,
-			"captcha_site_key": captchaSiteKey,
+			"providers":              providers,
+			"captcha_site_key":       captchaSiteKey,
+			"password_login_enabled": h.service.passwordLoginEnabled,
 		},
 	})
 }
@@ -256,14 +258,18 @@ func (h *Handler) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		h.redirectOAuthError(w, "oauth_provider_failed")
 		return
 	}
-	_, token, expiresAt, err := h.service.loginOAuthUser(ctx, providerName, user)
+	principal, token, expiresAt, err := h.service.loginOAuthUser(ctx, providerName, user)
 	if err != nil {
 		h.reportFailure("oauth_session", err)
 		h.redirectOAuthError(w, "oauth_session_failed")
 		return
 	}
 	h.service.SetSessionCookie(w, token, expiresAt)
-	http.Redirect(w, r, strings.TrimRight(h.service.integrations.PublicBaseURL, "/")+"/", http.StatusSeeOther)
+	destination := "/"
+	if principal.Role == RoleOnboarding {
+		destination = "/registrasi/selesaikan/"
+	}
+	http.Redirect(w, r, strings.TrimRight(h.service.integrations.PublicBaseURL, "/")+destination, http.StatusSeeOther)
 }
 
 func (h *Handler) redirectOAuthError(w http.ResponseWriter, code string) {
@@ -410,17 +416,28 @@ func (s *Service) loginOAuthUser(ctx context.Context, provider string, user prov
 		if _, err := tx.ExecContext(ctx, `INSERT INTO account_roles (account_id, role_code) VALUES (?, 'member')`, accountID); err != nil {
 			return Principal{}, "", time.Time{}, fmt.Errorf("assign member role: %w", err)
 		}
-		if user.email != "" && user.emailVerified {
-			contactID, err := randomID()
-			if err != nil {
-				return Principal{}, "", time.Time{}, fmt.Errorf("generate contact ID: %w", err)
+		email := strings.ToLower(strings.TrimSpace(user.email))
+		if parsed, parseErr := mail.ParseAddress(email); email != "" && parseErr == nil && parsed.Address == email && len(email) <= 254 {
+			var contactExists bool
+			if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM account_contacts WHERE value = ?)`, email).Scan(&contactExists); err != nil {
+				return Principal{}, "", time.Time{}, fmt.Errorf("check oauth email ownership: %w", err)
 			}
-			if _, err := tx.ExecContext(ctx, `
-				INSERT INTO account_contacts (id, account_id, contact_type, value, is_primary, verified_at)
-				VALUES (?, ?, 'email', ?, TRUE, UTC_TIMESTAMP(6))`,
-				contactID, accountID, strings.ToLower(strings.TrimSpace(user.email)),
-			); err != nil {
-				return Principal{}, "", time.Time{}, fmt.Errorf("store verified oauth email: %w", err)
+			if !contactExists {
+				contactID, err := randomID()
+				if err != nil {
+					return Principal{}, "", time.Time{}, fmt.Errorf("generate contact ID: %w", err)
+				}
+				var verifiedAt any
+				if user.emailVerified {
+					verifiedAt = time.Now().UTC()
+				}
+				if _, err := tx.ExecContext(ctx, `
+					INSERT INTO account_contacts (id, account_id, contact_type, value, is_primary, verified_at)
+					VALUES (?, ?, 'email', ?, TRUE, ?)`,
+					contactID, accountID, email, verifiedAt,
+				); err != nil {
+					return Principal{}, "", time.Time{}, fmt.Errorf("store oauth email contact: %w", err)
+				}
 			}
 		}
 		name = user.name
@@ -464,7 +481,7 @@ func (s *Service) loginOAuthUser(ctx context.Context, provider string, user prov
 	role := effectiveRole(roles.String, verificationStatus.String)
 	return Principal{
 		AccountID: formatID(accountID), Email: email, Name: name,
-		Role: role, Capabilities: CapabilitiesFor(role),
+		Role: role, Capabilities: CapabilitiesFor(role), ProfileComplete: verificationStatus.Valid,
 	}, token, expiresAt, nil
 }
 

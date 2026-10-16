@@ -8,9 +8,26 @@ Go modular monolith for AlumniHub. The production topology is one Go API process
 - Versioned API prefix: `/api/v1`; the initial implemented endpoints are:
   - `GET /api/v1/health/live` — process liveness; does not require MySQL.
   - `GET /api/v1/health/ready` — readiness; checks MySQL and does not expose internal errors.
-- Authentication: `POST /api/v1/auth/demo-login`, `GET /api/v1/auth/me`,
+- Authentication: `POST /api/v1/auth/demo-login` (loopback-only local testing),
+  `POST /api/v1/auth/password-login` (optional four-account staging login),
+  `POST /api/v1/auth/email-otp/start`, `POST /api/v1/auth/email-otp/verify`,
+  and `POST /api/v1/auth/register` for passwordless email registration/login,
+  `GET /api/v1/auth/me`,
   `POST /api/v1/auth/logout`, and OAuth authorization-code routes for Google
   and Facebook.
+- `POST /api/v1/auth/profile/complete` completes a new OAuth member profile.
+- `GET /api/v1/admin/roles` and `POST /api/v1/admin/roles/{grant|revoke}` let
+  Admins grant/revoke Admin and Pengurus roles for existing accounts with a
+  verified email.
+- Verification workflow: `GET /api/v1/verification/me`,
+  `POST /api/v1/verification/request`, `GET /api/v1/verification/candidates`,
+  `POST /api/v1/verification/{profileId}/attest` (verified same-batch members),
+  `POST /api/v1/verification/{profileId}/bootstrap` (one-time first-member
+  exception for Pengurus/Admin), and Admin `GET /api/v1/admin/verifications`
+  plus `POST /api/v1/admin/verifications/{profileId}/{approve|reject}`.
+  Approval requires five valid same-batch attestations.
+- Profile photos: `GET /api/v1/auth/profile/photo` (own) and
+  `GET /api/v1/verification/{profileId}/photo` (reviewers of a pending request).
 - `GET /api/v1/alumni` — authenticated directory with server-side
   non-verified/verified/admin response projection.
 - JSON responses retain the `{ "message": ..., "content": ... }` envelope.
@@ -19,13 +36,21 @@ Go modular monolith for AlumniHub. The production topology is one Go API process
   OAuth callback codes, state, and session credentials are not logged.
 - `docs/openapi.yaml` is the initial API contract. Add domain routes and schemas there as modules are implemented.
 
+Target registration, OTP-channel tradeoffs, Kabupaten/Kota handling, photo
+storage options, and the Admin bootstrap/management model are documented in
+[Authentication, registration, and member lifecycle](docs/auth-registration.md).
+That document distinguishes the confirmed first-member verification exception
+from features that still need implementation.
+
 Most content remains mock data. The local demo login uses backend-issued,
 revocable `HttpOnly` sessions and server-side role capabilities; it is not a
-production credential system. OAuth login can be enabled with Google/Facebook
-credentials and server-verified Cloudflare Turnstile CAPTCHA. OTP registration,
-password recovery, profile mutation, comments, listings, documents, verification
-workflows, and most domain persistence are not implemented and must not be
-treated as production-ready.
+production credential system. Email OTP uses a configured Resend sender and
+the member profile photo is stored as sanitized JPEG/PNG bytes in MySQL. The
+first Admin bootstrap is restricted to the name/email configured by the
+operator and completes only after that mailbox verifies an OTP. OAuth login
+can be enabled with Google/Facebook credentials and server-verified Cloudflare
+Turnstile CAPTCHA. Password recovery, profile editing after registration,
+comments, listings, documents, and phone (SMS/WhatsApp) OTP are not implemented and must not be treated as production-ready.
 
 Authentication middleware resolves the active account, role assignments, and
 member verification status from the server-side session on every protected
@@ -44,9 +69,10 @@ verified primary phone contact has directory visibility enabled. Unit tests
 exercise every role/capability authorization pair, including anonymous,
 forged-capability, and unknown-role denials; `make verify` checks the exact
 capability sets on database-backed demo sessions and directory denials.
-Business routes for profile mutation, listing submission, comments, documents,
-attestations, and verification are not implemented yet, so those capabilities
-do not make those features available.
+Profile-onboarding routes and Admin/Pengurus role management are implemented.
+Business routes for profile editing after onboarding, listing submission,
+comments, and documents are not implemented yet, so those capabilities do not
+make those features available.
 
 ## Local development
 
@@ -96,8 +122,24 @@ accounts use the same configured password:
 | Admin | `admin@demo.local` |
 
 Public access is anonymous. Demo accounts are created on first use; the
-verified account is seeded as verified only to test its capabilities and does
-not simulate five attestations or admin approval.
+verified demo/staging account is seeded as verified only to test its
+capabilities and does not simulate five attestations or admin approval.
+
+The optional staging username/password login provisions four separate test
+accounts (non-verified member, verified member, officer, admin) from
+`STAGING_AUTH_{NON_VERIFIED,VERIFIED,OFFICER,ADMIN}_{USERNAME,PASSWORD}`.
+Configure all eight variables together; usernames must be unique, and each
+password must have at least 12 characters. Passwords are bcrypt-hashed in the
+database. On API startup, configured accounts are provisioned with
+server-assigned roles, and staging credentials no longer present in `.env` are
+disabled with their existing sessions revoked; changing a configured password
+or role also revokes that account's existing sessions. This is for controlled
+staging access, not public self-registration or production account management.
+Keep both `DEMO_AUTH_ENABLED` and `NEXT_PUBLIC_DEMO_AUTH_ENABLED` set to
+`false` on a public staging server.
+Apply migrations before starting the updated API. Keep `.env` private and share
+the four credentials with testers out of band; the login UI does not display
+example credentials.
 
 The frontend login uses these backend endpoints and does not store roles in
 `localStorage`. Provider availability and the public Turnstile site key are
@@ -108,9 +150,49 @@ Turnstile secret only in backend `.env`.
 `PUBLIC_BASE_URL` must match provider callback URLs:
 `{PUBLIC_BASE_URL}/api/v1/auth/oauth/{provider}/callback`.
 
-The OAuth flow does not yet implement OTP registration, contact recovery, or
-account linking across providers. Facebook email is not treated as verified
-unless a verified claim is available.
+OAuth account linking across providers is not implemented. Facebook email is
+not treated as verified unless a verified claim is available; a new OAuth
+account must complete the alumni profile before receiving member capabilities.
+
+### Email OTP and first Admin setup
+
+Configure a Resend account and verify the sender address/domain. Add
+`RESEND_API_KEY` and `RESEND_FROM_EMAIL` to the private backend `.env`. Set
+`PUBLIC_BASE_URL` to the frontend's exact origin (for example, the localhost
+frontend origin during local development); same-origin checks protect OTP and
+role-changing requests. Set `BOOTSTRAP_ADMIN_NAME` and
+`BOOTSTRAP_ADMIN_EMAIL` to the project-owner-supplied first Admin identity.
+These bootstrap variables must be configured together with the email sender.
+Do not paste API keys into source files, chat, or `.env.example`.
+
+Apply database migrations with `make migrate`, start the API, then open
+`/registrasi` and submit the configured Admin email address. The first Admin
+account is created only after entering the emailed OTP. This initial account
+does not receive a member profile. Once signed in, the Admin can add other
+Admin/Pengurus accounts in **Panel Admin → Pengaturan**; each target must first
+register and verify their own email. The API prevents removal of the last
+active Admin. No developer/DB operation is needed for routine staff additions.
+
+New alumni register at `/registrasi`. Email OTP is currently the only
+configured self-service verification channel; the API rejects delivery if
+Resend is not configured. Registration creates a Non-verified profile, stores
+sanitized photos in MySQL, and reports 90% completeness. The remaining 10%
+requires a second verified contact; phone OTP is not available until a
+provider is selected.
+
+Domisili codes are format-checked by default. To also check them against the
+kabupaten/kota master list, run `python3 scripts/fetch_regencies.py
+data/regencies.json` on a machine with internet access and set
+`REGENCY_MASTER_PATH=data/regencies.json`; the API then rejects unknown codes
+and fails to start if the file is invalid.
+
+The first verified alumnus is confirmed by a Pengurus/Admin through the
+one-time bootstrap endpoint (only while no alumnus is verified; seeded
+staging/demo verified accounts count). All later alumni follow the
+five-attestation plus Admin-approval path. Run the DB-backed workflow tests
+against a disposable MySQL with
+`TEST_MYSQL_DSN='user:pass@tcp(127.0.0.1:3399)/db?parseTime=true' go test ./internal/modules/auth/`
+(they delete all accounts; never use a shared database).
 
 To enable social login, configure the Google OAuth web client and/or Facebook
 Login callback allowlist to exactly
@@ -151,7 +233,11 @@ make migrate
 Migrations use Goose and live in `internal/platform/migrations/migrations/`.
 Do not edit migrations that have been applied. Migration `000001` creates the
 audit-event/outbox foundations; `000002` creates account, contact, role, alumni
-profile, external identity, and session tables. The current migration assumes
+profile, external identity, and session tables; `000003` adds optional
+username/password credentials for the four configured staging accounts;
+`000004` adds email OTP, registration tokens, profile photos and domisili
+codes; `000005` adds verification requests and attestations. The
+current migration assumes
 this API database does not already contain an `accounts` table. Reconcile the
 legacy column and ID types before applying it to a shared LMS database. The
 outbox processing loop and business-domain persistence are not implemented yet.

@@ -37,15 +37,55 @@ func main() {
 	defer db.Close()
 
 	authService := auth.NewService(db, cfg.DemoAuthEnabled, cfg.DemoAuthPassword)
+	var stagingAccounts []auth.StagingAccount
+	if cfg.StagingNonVerifiedUsername != "" {
+		stagingAccounts = []auth.StagingAccount{
+			{
+				Username: cfg.StagingNonVerifiedUsername, Password: cfg.StagingNonVerifiedPassword,
+				Role: auth.RoleNonVerified, Name: "Alumni Belum Terverifikasi",
+				VerificationStatus: "non_verified", BatchYear: 2012,
+			},
+			{
+				Username: cfg.StagingVerifiedUsername, Password: cfg.StagingVerifiedPassword,
+				Role: auth.RoleVerified, Name: "Alumni Terverifikasi",
+				VerificationStatus: "verified", BatchYear: 2010,
+			},
+			{
+				Username: cfg.StagingOfficerUsername, Password: cfg.StagingOfficerPassword,
+				Role: auth.RoleOfficer, Name: "Pengurus Uji",
+			},
+			{
+				Username: cfg.StagingAdminUsername, Password: cfg.StagingAdminPassword,
+				Role: auth.RoleAdmin, Name: "Admin Uji",
+			},
+		}
+	}
+	if err := authService.ProvisionStagingAccounts(ctx, stagingAccounts); err != nil {
+		logger.Error("could not provision staging accounts", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	authService.ConfigureIntegrations(auth.Integrations{
-		PublicBaseURL:    cfg.PublicBaseURL,
-		TurnstileSiteKey: cfg.TurnstileSiteKey,
-		TurnstileSecret:  cfg.TurnstileSecret,
-		GoogleClientID:   cfg.GoogleClientID,
-		GoogleSecret:     cfg.GoogleSecret,
-		FacebookClientID: cfg.FacebookClientID,
-		FacebookSecret:   cfg.FacebookSecret,
+		PublicBaseURL:       cfg.PublicBaseURL,
+		TurnstileSiteKey:    cfg.TurnstileSiteKey,
+		TurnstileSecret:     cfg.TurnstileSecret,
+		GoogleClientID:      cfg.GoogleClientID,
+		GoogleSecret:        cfg.GoogleSecret,
+		FacebookClientID:    cfg.FacebookClientID,
+		FacebookSecret:      cfg.FacebookSecret,
+		ResendAPIKey:        cfg.ResendAPIKey,
+		ResendFromEmail:     cfg.ResendFromEmail,
+		BootstrapAdminEmail: cfg.BootstrapAdminEmail,
+		BootstrapAdminName:  cfg.BootstrapAdminName,
 	})
+
+	if cfg.RegencyMasterPath != "" {
+		regencyCodes, err := auth.LoadRegencyCodes(cfg.RegencyMasterPath)
+		if err != nil {
+			logger.Error("could not load regency master data", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		authService.SetRegencyCodes(regencyCodes)
+	}
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,

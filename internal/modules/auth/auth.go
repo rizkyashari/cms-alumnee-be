@@ -125,7 +125,7 @@ func CapabilitiesFor(role Role) []Capability {
 	case RoleOnboarding:
 		return capabilities
 	case RoleNonVerified:
-		return append(capabilities, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit)
+		return append(capabilities, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityAttest)
 	case RoleVerified:
 		return append(capabilities, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityAttest)
 	case RoleOfficer:

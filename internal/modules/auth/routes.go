@@ -36,6 +36,15 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 	}
 }
 
+// SetLoginRateLimit changes how many password/demo login attempts one client
+// IP may make per minute (default 5). Behind a shared proxy every visitor can
+// share one IP, so staging with many testers may need a higher value.
+func (h *Handler) SetLoginRateLimit(perMinute int) {
+	if perMinute > 0 {
+		h.limiter = newLoginLimiter(perMinute, time.Minute)
+	}
+}
+
 func (h *Handler) RegisterRoutes(router chi.Router) {
 	registerEmailOTPRoutes(h, router)
 	h.registerVerificationRoutes(router)

@@ -38,6 +38,25 @@ type Config struct {
 	BootstrapAdminEmail        string
 	BootstrapAdminName         string
 	RegencyMasterPath          string
+	ScenarioPassword           string
+	ScenarioReset              bool
+	LoginRateLimitPerMinute    int
+	// ScenarioUsernames follows the order of the scenario cast: Admin, two
+	// Pengurus, then seven Non-verified members.
+	ScenarioUsernames []string
+}
+
+var scenarioUsernameKeys = []struct{ key, fallback string }{
+	{"STAGING_SCENARIO_ADMIN_USERNAME", "admin.uji"},
+	{"STAGING_SCENARIO_OFFICER_1_USERNAME", "pengurus.satu"},
+	{"STAGING_SCENARIO_OFFICER_2_USERNAME", "pengurus.dua"},
+	{"STAGING_SCENARIO_MEMBER_1_USERNAME", "alumni.satu"},
+	{"STAGING_SCENARIO_MEMBER_2_USERNAME", "alumni.dua"},
+	{"STAGING_SCENARIO_MEMBER_3_USERNAME", "alumni.tiga"},
+	{"STAGING_SCENARIO_MEMBER_4_USERNAME", "alumni.empat"},
+	{"STAGING_SCENARIO_MEMBER_5_USERNAME", "alumni.lima"},
+	{"STAGING_SCENARIO_MEMBER_6_USERNAME", "alumni.enam"},
+	{"STAGING_SCENARIO_MEMBER_7_USERNAME", "alumni.tujuh"},
 }
 
 func Load(lookup func(string) (string, bool)) (Config, error) {
@@ -70,6 +89,17 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		BootstrapAdminEmail:        strings.ToLower(strings.TrimSpace(value(lookup, "BOOTSTRAP_ADMIN_EMAIL"))),
 		BootstrapAdminName:         strings.TrimSpace(value(lookup, "BOOTSTRAP_ADMIN_NAME")),
 		RegencyMasterPath:          strings.TrimSpace(value(lookup, "REGENCY_MASTER_PATH")),
+		ScenarioPassword:           value(lookup, "STAGING_SCENARIO_PASSWORD"),
+		ScenarioReset:              value(lookup, "STAGING_SCENARIO_RESET") == "true",
+	}
+
+	cfg.LoginRateLimitPerMinute = 5
+	if raw := value(lookup, "LOGIN_RATE_LIMIT_PER_MINUTE"); raw != "" {
+		limit, err := strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > 600 {
+			return Config{}, fmt.Errorf("LOGIN_RATE_LIMIT_PER_MINUTE must be between 1 and 600")
+		}
+		cfg.LoginRateLimitPerMinute = limit
 	}
 
 	_, portText, err := net.SplitHostPort(cfg.HTTPAddr)
@@ -141,6 +171,21 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	}
 	if configuredStagingCredentials != 0 && configuredStagingCredentials != len(stagingCredentials) {
 		return Config{}, fmt.Errorf("all four staging auth username/password pairs must be configured together")
+	}
+	seenScenario := make(map[string]struct{}, len(scenarioUsernameKeys))
+	for _, entry := range scenarioUsernameKeys {
+		username := strings.ToLower(strings.TrimSpace(valueOrDefault(lookup, entry.key, entry.fallback)))
+		if !validStagingUsername(username) {
+			return Config{}, fmt.Errorf("%s must be 3-64 ASCII letters, digits, dots, underscores, or hyphens", entry.key)
+		}
+		if _, duplicate := seenScenario[username]; duplicate {
+			return Config{}, fmt.Errorf("scenario account usernames must be unique")
+		}
+		seenScenario[username] = struct{}{}
+		cfg.ScenarioUsernames = append(cfg.ScenarioUsernames, username)
+	}
+	if cfg.ScenarioPassword != "" && len(cfg.ScenarioPassword) < 12 {
+		return Config{}, fmt.Errorf("STAGING_SCENARIO_PASSWORD must contain at least 12 characters")
 	}
 	if (cfg.TurnstileSiteKey == "") != (cfg.TurnstileSecret == "") {
 		return Config{}, fmt.Errorf("TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY must be configured together")

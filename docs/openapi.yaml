@@ -284,7 +284,7 @@ paths:
   /verification/candidates:
     get:
       operationId: listVerificationCandidates
-      summary: Pending requests the caller may vouch for (own batch for verified members; all for Pengurus/Admin)
+      summary: Pending requests the caller may vouch for (own batch for members; all for Pengurus/Admin)
       security:
         - sessionCookie: []
       responses:
@@ -310,7 +310,7 @@ paths:
         "201":
           description: Attestation recorded.
         "403":
-          description: Caller is not a verified same-batch member, or is the candidate, or origin rejected.
+          description: Caller has no alumni profile, is in another batch, is the candidate, or origin rejected.
         "404":
           description: No pending request for that profile.
         "409":
@@ -344,7 +344,7 @@ paths:
   /verification/{profileId}/photo:
     get:
       operationId: getReviewPhoto
-      summary: Photo of a profile with a pending request (Pengurus/Admin, or verified same-batch members)
+      summary: Photo of a profile with a pending request (Pengurus/Admin, or members of the same batch)
       security:
         - sessionCookie: []
       parameters:
@@ -369,6 +369,17 @@ paths:
       responses:
         "200":
           description: Pending requests.
+        "403":
+          description: alumni:verify capability required.
+  /admin/verifications/audit:
+    get:
+      operationId: listVerificationAudit
+      summary: Latest verification audit events (request, attest, approve, reject, bootstrap)
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Up to 100 entries with actor, action, subject and time.
         "403":
           description: alumni:verify capability required.
   /admin/verifications/{profileId}/{decision}:

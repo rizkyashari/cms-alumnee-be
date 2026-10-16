@@ -211,3 +211,59 @@ func env(values map[string]string) func(string) (string, bool) {
 		return value, ok
 	}
 }
+
+func TestLoginRateLimitDefaultsAndValidation(t *testing.T) {
+	base := map[string]string{"MYSQL_USER": "u", "MYSQL_PASSWORD": "p", "MYSQL_DATABASE": "d"}
+	lookup := func(extra map[string]string) func(string) (string, bool) {
+		return func(key string) (string, bool) {
+			if value, ok := extra[key]; ok {
+				return value, true
+			}
+			value, ok := base[key]
+			return value, ok
+		}
+	}
+	cfg, err := Load(lookup(nil))
+	if err != nil || cfg.LoginRateLimitPerMinute != 5 {
+		t.Fatalf("default = %d, %v; want 5", cfg.LoginRateLimitPerMinute, err)
+	}
+	cfg, err = Load(lookup(map[string]string{"LOGIN_RATE_LIMIT_PER_MINUTE": "60"}))
+	if err != nil || cfg.LoginRateLimitPerMinute != 60 {
+		t.Fatalf("configured = %d, %v; want 60", cfg.LoginRateLimitPerMinute, err)
+	}
+	for _, bad := range []string{"0", "-1", "abc", "5000"} {
+		if _, err := Load(lookup(map[string]string{"LOGIN_RATE_LIMIT_PER_MINUTE": bad})); err == nil {
+			t.Errorf("LOGIN_RATE_LIMIT_PER_MINUTE=%q accepted", bad)
+		}
+	}
+	if _, err := Load(lookup(map[string]string{"STAGING_SCENARIO_PASSWORD": "short"})); err == nil {
+		t.Error("short STAGING_SCENARIO_PASSWORD accepted")
+	}
+}
+
+func TestScenarioUsernamesDefaultOverrideAndValidate(t *testing.T) {
+	base := map[string]string{"MYSQL_USER": "u", "MYSQL_PASSWORD": "p", "MYSQL_DATABASE": "d"}
+	load := func(extra map[string]string) (Config, error) {
+		return Load(func(key string) (string, bool) {
+			if value, ok := extra[key]; ok {
+				return value, true
+			}
+			value, ok := base[key]
+			return value, ok
+		})
+	}
+	cfg, err := load(nil)
+	if err != nil || len(cfg.ScenarioUsernames) != 10 || cfg.ScenarioUsernames[0] != "admin.uji" || cfg.ScenarioUsernames[9] != "alumni.tujuh" {
+		t.Fatalf("defaults = %v, %v", cfg.ScenarioUsernames, err)
+	}
+	cfg, err = load(map[string]string{"STAGING_SCENARIO_ADMIN_USERNAME": " Admin.Demo "})
+	if err != nil || cfg.ScenarioUsernames[0] != "admin.demo" {
+		t.Fatalf("override = %v, %v", cfg.ScenarioUsernames, err)
+	}
+	if _, err := load(map[string]string{"STAGING_SCENARIO_ADMIN_USERNAME": "alumni.satu"}); err == nil {
+		t.Error("duplicate scenario username accepted")
+	}
+	if _, err := load(map[string]string{"STAGING_SCENARIO_MEMBER_1_USERNAME": "bad name"}); err == nil {
+		t.Error("invalid scenario username accepted")
+	}
+}

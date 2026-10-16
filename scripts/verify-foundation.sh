@@ -212,7 +212,7 @@ import json,sys
 response=json.loads(sys.argv[1])
 user=response["content"]["user"]
 expected={
-    "non_verified": {"content:read_public","directory:read_limited","profile:edit_self","business:submit"},
+    "non_verified": {"content:read_public","directory:read_limited","profile:edit_self","business:submit","alumni:attest"},
     "verified": {"content:read_public","directory:read_full","profile:edit_self","business:submit","content:comment","alumni:attest"},
     "officer": {"content:read_public","documents:manage","alumni:attest"},
     "admin": {"content:read_public","directory:read_full","profile:edit_self","business:submit","content:comment","documents:manage","alumni:attest","admin:manage","alumni:verify"},

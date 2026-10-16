@@ -93,7 +93,7 @@ Since the first release enables email OTP only, the current member flow reports
 | Public visitor | No account; can view public content | No account required |
 | Onboarding | Authenticated OAuth identity with no alumni profile | Server allows only profile completion |
 | Non-verified member | Completes email OTP and required alumni profile, or completes OAuth onboarding | Self-registration; server assigns `member` and `non_verified` |
-| Verified member | Completes the alumni verification workflow | At least five eligible peer attestations and final Admin approval |
+| Verified member | Completes the alumni verification workflow | At least five attestations from same-batch classmates and final Admin approval |
 | Pengurus (officer) | An existing, trusted person is assigned the `officer` role | Admin grants/revokes; the person is verified by Admin |
 | Admin | Privileged operational account; never a public signup option | Initial bootstrap is provisioned out of band; subsequent grants require an existing Admin |
 
@@ -141,7 +141,7 @@ production bootstrap accounts or treated as actual community members.
   choose `role`, `verification_status`, `granted_by`, or capabilities.
 - A verified contact is unique across accounts. Contact ownership and profile
   changes are checked server-side.
-- Peer attestations require an eligible verified member, cannot count twice
+- Peer attestations require a same-batch member with an alumni profile (verified or not), cannot count twice
   for the same target, and must be auditable. The target cannot attest to
   themselves. Admin performs the final decision.
 - Officer/Admin access is granted by a server-side role assignment, never by
@@ -158,16 +158,18 @@ production bootstrap accounts or treated as actual community members.
 ## Verification workflow (implemented)
 
 1. A Non-verified member submits a verification request from their profile.
-2. Verified members of the **same batch** see the request and may attest once
-   each; self-attestation, duplicates, other batches and non-verified members
-   are rejected server-side. Only attestations whose attester is still active
-   and verified count.
+2. Members of the **same batch** (verified or not) see the request and may
+   attest once each; self-attestation, duplicates, other batches and accounts
+   without an alumni profile are rejected server-side. Only attestations whose
+   attester is still active count, and the Admin sees whether each attester is
+   verified before deciding.
 3. After five valid attestations an Admin approves (or rejects with a note; the
    member may reapply). The Admin cannot approve their own request.
 4. Bootstrap exception: while no alumnus is verified, a Pengurus/Admin may
    confirm one pending member without attestations. It is serialized and can be
    used once; the decision is recorded with `decision_kind = bootstrap`.
-5. Every step is written to `audit_events`.
+5. Every step is written to `audit_events`; Admin reads it at
+   `GET /api/v1/admin/verifications/audit` (shown under Approval alumni).
 
 ## Integration recommendations and decisions
 

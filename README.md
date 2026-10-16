@@ -21,11 +21,13 @@ Go modular monolith for AlumniHub. The production topology is one Go API process
   verified email.
 - Verification workflow: `GET /api/v1/verification/me`,
   `POST /api/v1/verification/request`, `GET /api/v1/verification/candidates`,
-  `POST /api/v1/verification/{profileId}/attest` (verified same-batch members),
+  `POST /api/v1/verification/{profileId}/attest` (any same-batch member with a profile),
   `POST /api/v1/verification/{profileId}/bootstrap` (one-time first-member
-  exception for Pengurus/Admin), and Admin `GET /api/v1/admin/verifications`
-  plus `POST /api/v1/admin/verifications/{profileId}/{approve|reject}`.
+  exception for Pengurus/Admin), and Admin `GET /api/v1/admin/verifications`,
+  `GET /api/v1/admin/verifications/audit`, plus `POST /api/v1/admin/verifications/{profileId}/{approve|reject}`.
   Approval requires five valid same-batch attestations.
+  Step-by-step staging walkthrough with ready-made accounts:
+  [`docs/staging-walkthrough.md`](docs/staging-walkthrough.md).
 - Profile photos: `GET /api/v1/auth/profile/photo` (own) and
   `GET /api/v1/verification/{profileId}/photo` (reviewers of a pending request).
 - `GET /api/v1/alumni` — authenticated directory with server-side

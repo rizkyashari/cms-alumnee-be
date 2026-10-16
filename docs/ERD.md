@@ -245,9 +245,10 @@ administering account.
   `pending|approved|rejected`; `decision_kind` is `peer` or `bootstrap`.
   A rejected request can be reopened by the member (back to `pending`).
 - `alumni_attestations` is unique on `(profile_id, attester_id)`. The API only
-  accepts an attestation from a *verified* member of the *same batch* who is
-  not the candidate, on a `pending` request. At decision time only
-  attestations whose attester is still active, verified and same-batch count.
+  accepts an attestation from a member of the *same batch* (verified or not)
+  who has an alumni profile and is not the candidate, on a `pending` request.
+  At decision time only attestations whose attester is still active and
+  same-batch count; the Admin sees whether each attester is verified.
 - An Admin may approve only with at least five valid attestations. The
   one-time first-member exception (`decision_kind = 'bootstrap'`) lets a
   Pengurus or Admin confirm a pending member while no alumnus is verified; it

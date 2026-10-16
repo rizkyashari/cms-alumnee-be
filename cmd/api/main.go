@@ -64,6 +64,10 @@ func main() {
 		logger.Error("could not provision staging accounts", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	if err := authService.ProvisionScenarioAccounts(ctx, cfg.ScenarioPassword, cfg.ScenarioUsernames, cfg.ScenarioReset); err != nil {
+		logger.Error("could not provision scenario accounts", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	authService.ConfigureIntegrations(auth.Integrations{
 		PublicBaseURL:       cfg.PublicBaseURL,
 		TurnstileSiteKey:    cfg.TurnstileSiteKey,
@@ -87,9 +91,12 @@ func main() {
 		authService.SetRegencyCodes(regencyCodes)
 	}
 
+	authHandler := auth.NewHandler(authService, logger)
+	authHandler.SetLoginRateLimit(cfg.LoginRateLimitPerMinute)
+
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewRouterWithAuth(logger, db, auth.NewHandler(authService, logger)),
+		Handler:           httpapi.NewRouterWithAuth(logger, db, authHandler),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

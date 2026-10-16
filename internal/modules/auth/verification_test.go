@@ -41,7 +41,7 @@ func TestVerificationCapabilitiesMatchPolicy(t *testing.T) {
 		attest     bool
 		verifyFlow bool
 	}{
-		{RoleNonVerified, false, false},
+		{RoleNonVerified, true, false},
 		{RoleVerified, true, false},
 		{RoleOfficer, true, false},
 		{RoleAdmin, true, true},

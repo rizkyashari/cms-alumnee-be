@@ -18,7 +18,7 @@ func TestCapabilitiesForEffectiveRoles(t *testing.T) {
 	}{
 		{RolePublic, []Capability{CapabilityPublicContent}},
 		{RoleOnboarding, []Capability{CapabilityPublicContent}},
-		{RoleNonVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit}},
+		{RoleNonVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityAttest}},
 		{RoleVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityAttest}},
 		{RoleOfficer, []Capability{CapabilityPublicContent, CapabilityDocumentManage, CapabilityAttest}},
 		{RoleAdmin, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityDocumentManage, CapabilityAttest, CapabilityAdminManage, CapabilityVerifyAlumni}},
@@ -59,7 +59,7 @@ func TestRoleCapabilityMatrix(t *testing.T) {
 			RolePublic: false, RoleNonVerified: false, RoleVerified: false, RoleOfficer: true, RoleAdmin: true,
 		},
 		CapabilityAttest: {
-			RolePublic: false, RoleNonVerified: false, RoleVerified: true, RoleOfficer: true, RoleAdmin: true,
+			RolePublic: false, RoleNonVerified: true, RoleVerified: true, RoleOfficer: true, RoleAdmin: true,
 		},
 		CapabilityAdminManage: {
 			RolePublic: false, RoleNonVerified: false, RoleVerified: false, RoleOfficer: false, RoleAdmin: true,

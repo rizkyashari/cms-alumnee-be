@@ -45,7 +45,7 @@ func (h *Handler) ownPhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // reviewPhoto returns the photo of a profile with a pending verification
-// request. It is limited to Pengurus/Admin and verified members of the same
+// request. It is limited to Pengurus/Admin and members of the same
 // batch, who need the photo to recognise the person they are vouching for.
 func (h *Handler) reviewPhoto(w http.ResponseWriter, r *http.Request) {
 	principal, ok := PrincipalFromContext(r.Context())
@@ -66,7 +66,7 @@ func (h *Handler) reviewPhoto(w http.ResponseWriter, r *http.Request) {
 		JOIN alumni_profile_photos p ON p.account_id = ap.account_id
 		JOIN verification_requests vr ON vr.profile_id = ap.id AND vr.status = 'pending'
 		WHERE ap.id = ?
-			AND (? <> 'verified' OR ap.batch_year = (
+			AND (? NOT IN ('verified', 'non_verified') OR ap.batch_year = (
 				SELECT me.batch_year FROM alumni_profiles me WHERE me.account_id = ?))`,
 		profileID, string(principal.Role), principalIDBytes(principal.AccountID)).Scan(&mimeType, &data)
 	if errors.Is(err, sql.ErrNoRows) {

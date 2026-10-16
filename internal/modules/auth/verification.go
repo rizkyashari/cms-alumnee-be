@@ -14,19 +14,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// requiredAttestations is the number of eligible same-batch attestations a
-// verification request needs before an Admin may approve it.
+// requiredAttestations is the number of valid same-batch attestations a
+// verification request needs before an Admin may approve it. Any active member
+// of the same batch with an alumni profile (verified or not) is a classmate and
+// may attest; the Admin's final decision is the safeguard against collusion.
+
 const requiredAttestations = 5
 
 const maxDecisionNoteRunes = 500
 
 // validAttestationCount counts attestations that are still valid at decision
-// time: the attester's account is active, their profile is still verified, and
-// they belong to the same batch as the candidate.
+// time: the attester's account is active and they still belong to the same
+// batch as the candidate.
 const validAttestationCount = `
 	SELECT COUNT(*) FROM alumni_attestations at
 	JOIN accounts aa ON aa.id = at.attester_id AND aa.status = 'active'
-	JOIN alumni_profiles atp ON atp.account_id = at.attester_id AND atp.verification_status = 'verified'
+	JOIN alumni_profiles atp ON atp.account_id = at.attester_id
 	JOIN alumni_profiles tp ON tp.id = at.profile_id AND tp.batch_year = atp.batch_year
 	WHERE at.profile_id = %s`
 
@@ -52,41 +55,43 @@ type verificationStatus struct {
 }
 
 type verificationCandidate struct {
-	ProfileID        string   `json:"profile_id"`
-	Name             string   `json:"name"`
-	BatchYear        int      `json:"batch_year"`
-	City             string   `json:"city"`
-	RequestedAt      string   `json:"requested_at"`
-	AttestationCount int      `json:"attestation_count"`
-	Required         int      `json:"required_attestations"`
-	Attesters        []string `json:"attesters,omitempty"`
-	AlreadyAttested  bool     `json:"already_attested"`
-	CanAttest        bool     `json:"can_attest"`
-	CanBootstrap     bool     `json:"can_bootstrap"` // first-member exception is still open
-	IsSelf           bool     `json:"is_self"`
+	ProfileID        string         `json:"profile_id"`
+	Name             string         `json:"name"`
+	BatchYear        int            `json:"batch_year"`
+	City             string         `json:"city"`
+	RequestedAt      string         `json:"requested_at"`
+	AttestationCount int            `json:"attestation_count"`
+	Required         int            `json:"required_attestations"`
+	Attesters        []attesterInfo `json:"attesters,omitempty"`
+	AlreadyAttested  bool           `json:"already_attested"`
+	CanAttest        bool           `json:"can_attest"`
+	CanBootstrap     bool           `json:"can_bootstrap"` // first-member exception is still open
+	IsSelf           bool           `json:"is_self"`
+}
+
+type attesterInfo struct {
+	Name     string `json:"name"`
+	Verified bool   `json:"verified"`
 }
 
 type callerProfile struct {
 	id        []byte
 	batchYear int
-	verified  bool
 }
 
 func (s *Service) loadCallerProfile(ctx context.Context, q interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }, accountID []byte) (callerProfile, bool, error) {
 	var profile callerProfile
-	var status string
 	err := q.QueryRowContext(ctx, `
-		SELECT id, batch_year, verification_status FROM alumni_profiles WHERE account_id = ?`,
-		accountID).Scan(&profile.id, &profile.batchYear, &status)
+		SELECT id, batch_year FROM alumni_profiles WHERE account_id = ?`,
+		accountID).Scan(&profile.id, &profile.batchYear)
 	if errors.Is(err, sql.ErrNoRows) {
 		return callerProfile{}, false, nil
 	}
 	if err != nil {
 		return callerProfile{}, false, fmt.Errorf("load caller profile: %w", err)
 	}
-	profile.verified = status == "verified"
 	return profile, true, nil
 }
 
@@ -196,7 +201,8 @@ func (s *Service) listPending(ctx context.Context, principal Principal, withAtte
 		SELECT ap.id, ap.account_id, ap.full_name, ap.batch_year, ap.city, vr.requested_at,
 			(` + fmt.Sprintf(validAttestationCount, "ap.id") + `),
 			EXISTS(SELECT 1 FROM alumni_attestations mine WHERE mine.profile_id = ap.id AND mine.attester_id = ?),
-			COALESCE((SELECT JSON_ARRAYAGG(x.full_name) FROM alumni_attestations xa
+			COALESCE((SELECT JSON_ARRAYAGG(JSON_OBJECT('name', x.full_name, 'verified', IF(x.verification_status = 'verified', CAST('true' AS JSON), CAST('false' AS JSON))))
+				FROM alumni_attestations xa
 				JOIN alumni_profiles x ON x.account_id = xa.attester_id
 				WHERE xa.profile_id = ap.id), JSON_ARRAY())
 		FROM verification_requests vr
@@ -236,7 +242,7 @@ func (s *Service) listPending(ctx context.Context, principal Principal, withAtte
 		if withAttesters {
 			_ = json.Unmarshal([]byte(attesters), &item.Attesters)
 		}
-		item.CanAttest = hasProfile && caller.verified && caller.batchYear == item.BatchYear && !item.IsSelf && !attested
+		item.CanAttest = hasProfile && caller.batchYear == item.BatchYear && !item.IsSelf && !attested
 		item.CanBootstrap = bootstrapOpen && !item.IsSelf
 		items = append(items, item)
 	}
@@ -246,7 +252,7 @@ func (s *Service) listPending(ctx context.Context, principal Principal, withAtte
 	return items, nil
 }
 
-// attest records one verified same-batch member's attestation for a pending
+// attest records one same-batch member's attestation for a pending
 // request. The request row is locked, so concurrent attestations serialize.
 func (s *Service) attest(ctx context.Context, attesterAccountID, profileID []byte) error {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -258,7 +264,7 @@ func (s *Service) attest(ctx context.Context, attesterAccountID, profileID []byt
 	if err != nil {
 		return err
 	}
-	if !hasProfile || !caller.verified {
+	if !hasProfile {
 		return ErrNotEligibleAttester
 	}
 	var targetAccount []byte
@@ -424,6 +430,57 @@ func (s *Service) finishDecision(ctx context.Context, tx *sql.Tx, actorID, profi
 	return nil
 }
 
+type verificationAuditEntry struct {
+	Action    string `json:"action"`
+	Kind      string `json:"kind,omitempty"`
+	Actor     string `json:"actor"`
+	Subject   string `json:"subject"`
+	CreatedAt string `json:"created_at"`
+}
+
+// listVerificationAudit returns the latest verification audit events so an
+// Admin can review who attested, approved, rejected or bootstrapped whom.
+func (s *Service) listVerificationAudit(ctx context.Context) ([]verificationAuditEntry, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT ae.action, ae.created_at, COALESCE(actor.name, ''), COALESCE(ap.full_name, ''),
+			COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ae.metadata, '$.kind')), '')
+		FROM audit_events ae
+		LEFT JOIN accounts actor ON actor.id = ae.actor_id
+		LEFT JOIN alumni_profiles ap ON ap.id = ae.resource_id
+		WHERE ae.action LIKE 'verification.%'
+		ORDER BY ae.created_at DESC, ae.id DESC
+		LIMIT 100`)
+	if err != nil {
+		return nil, fmt.Errorf("query verification audit: %w", err)
+	}
+	defer rows.Close()
+	entries := make([]verificationAuditEntry, 0)
+	for rows.Next() {
+		var entry verificationAuditEntry
+		var createdAt time.Time
+		if err := rows.Scan(&entry.Action, &createdAt, &entry.Actor, &entry.Subject, &entry.Kind); err != nil {
+			return nil, fmt.Errorf("scan verification audit: %w", err)
+		}
+		entry.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		entries = append(entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate verification audit: %w", err)
+	}
+	return entries, nil
+}
+
+func (h *Handler) verificationAudit(w http.ResponseWriter, r *http.Request) {
+	entries, err := h.service.listVerificationAudit(r.Context())
+	if err != nil {
+		h.reportFailure("verification_audit", err)
+		writeError(w, http.StatusInternalServerError, "could not load audit trail")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"message": "ok", "content": map[string]any{"items": entries}})
+}
+
 func (h *Handler) registerVerificationRoutes(router chi.Router) {
 	router.With(h.Authenticate).Get("/api/v1/verification/me", h.myVerification)
 	router.With(h.Authenticate).Post("/api/v1/verification/request", h.requestVerification)
@@ -431,6 +488,7 @@ func (h *Handler) registerVerificationRoutes(router chi.Router) {
 	router.With(h.RequireCapability(CapabilityAttest)).Post("/api/v1/verification/{profileID}/attest", h.attestProfile)
 	router.With(h.RequireCapability(CapabilityAttest)).Post("/api/v1/verification/{profileID}/bootstrap", h.bootstrapProfile)
 	router.With(h.RequireCapability(CapabilityVerifyAlumni)).Get("/api/v1/admin/verifications", h.adminVerifications)
+	router.With(h.RequireCapability(CapabilityVerifyAlumni)).Get("/api/v1/admin/verifications/audit", h.verificationAudit)
 	router.With(h.RequireCapability(CapabilityVerifyAlumni)).Post("/api/v1/admin/verifications/{profileID}/{decision}", h.decideVerification)
 	router.With(h.Authenticate).Get("/api/v1/auth/profile/photo", h.ownPhoto)
 	router.With(h.RequireCapability(CapabilityAttest)).Get("/api/v1/verification/{profileID}/photo", h.reviewPhoto)
@@ -516,7 +574,7 @@ func (h *Handler) attestProfile(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrSelfAttestation):
 		writeError(w, http.StatusForbidden, "you cannot vouch for yourself")
 	case errors.Is(err, ErrNotEligibleAttester):
-		writeError(w, http.StatusForbidden, "only verified alumni from the same batch can vouch for this alumnus")
+		writeError(w, http.StatusForbidden, "only members of the same batch can vouch for this alumnus")
 	case errors.Is(err, ErrAlreadyAttested):
 		writeError(w, http.StatusConflict, "you have already vouched for this alumnus")
 	case err != nil:
@@ -588,7 +646,7 @@ func (h *Handler) writeDecisionResult(w http.ResponseWriter, err error, message,
 	case errors.Is(err, ErrSelfAttestation):
 		writeError(w, http.StatusForbidden, "you cannot decide your own verification")
 	case errors.Is(err, ErrInsufficientAttestations):
-		writeError(w, http.StatusConflict, fmt.Sprintf("at least %d valid attestations from same-batch verified alumni are required", requiredAttestations))
+		writeError(w, http.StatusConflict, fmt.Sprintf("at least %d valid attestations from same-batch members are required", requiredAttestations))
 	case errors.Is(err, ErrBootstrapUnavailable):
 		writeError(w, http.StatusConflict, "first-member confirmation is only available while no alumnus is verified")
 	case errors.Is(err, ErrInvalidDecisionNote):

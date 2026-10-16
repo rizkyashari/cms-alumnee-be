@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/go-sql-driver/mysql"
@@ -86,12 +87,20 @@ func TestPeerVerificationWorkflow(t *testing.T) {
 	ctx := context.Background()
 	admin := seedMember(t, db, "Admin", 2000, "non_verified", "admin")
 	candidate := seedMember(t, db, "Calon", 2012, "non_verified")
+	// Classmates need not be verified themselves: three verified, two not.
 	peers := make([]seededMember, 5)
 	for i := range peers {
-		peers[i] = seedMember(t, db, "Teman", 2012, "verified")
+		status := "verified"
+		if i >= 3 {
+			status = "non_verified"
+		}
+		peers[i] = seedMember(t, db, "Teman", 2012, status)
 	}
 	otherBatch := seedMember(t, db, "Angkatan Lain", 2011, "verified")
-	unverifiedPeer := seedMember(t, db, "Belum", 2012, "non_verified")
+	noProfile := seedMember(t, db, "Admin Tanpa Profil", 2012, "non_verified", "officer")
+	if _, err := db.Exec(`DELETE FROM alumni_profiles WHERE account_id = ?`, noProfile.accountID); err != nil {
+		t.Fatal(err)
+	}
 
 	if got := verificationStatusOf(t, s, candidate); got.Status != "none" {
 		t.Fatalf("initial status = %q, want none", got.Status)
@@ -112,11 +121,11 @@ func TestPeerVerificationWorkflow(t *testing.T) {
 	if err := s.attest(ctx, otherBatch.accountID, candidate.profileID); !errors.Is(err, ErrNotEligibleAttester) {
 		t.Fatalf("other batch attest = %v, want ErrNotEligibleAttester", err)
 	}
-	if err := s.attest(ctx, unverifiedPeer.accountID, candidate.profileID); !errors.Is(err, ErrNotEligibleAttester) {
-		t.Fatalf("unverified attest = %v, want ErrNotEligibleAttester", err)
+	if err := s.attest(ctx, noProfile.accountID, candidate.profileID); !errors.Is(err, ErrNotEligibleAttester) {
+		t.Fatalf("attest without alumni profile = %v, want ErrNotEligibleAttester", err)
 	}
-	if err := s.attest(ctx, candidate.accountID, candidate.profileID); !errors.Is(err, ErrNotEligibleAttester) {
-		t.Fatalf("self attest by non-verified = %v, want ErrNotEligibleAttester", err)
+	if err := s.attest(ctx, candidate.accountID, candidate.profileID); !errors.Is(err, ErrSelfAttestation) {
+		t.Fatalf("self attest = %v, want ErrSelfAttestation", err)
 	}
 	for i := 0; i < 4; i++ {
 		if err := s.attest(ctx, peers[i].accountID, candidate.profileID); err != nil {
@@ -135,14 +144,14 @@ func TestPeerVerificationWorkflow(t *testing.T) {
 	if got := verificationStatusOf(t, s, candidate); got.AttestationCount != 5 || got.Status != "pending" {
 		t.Fatalf("status = %+v, want pending with 5 attestations", got)
 	}
-	// An attester who loses verified status no longer counts.
-	if _, err := db.Exec(`UPDATE alumni_profiles SET verification_status = 'non_verified' WHERE id = ?`, peers[4].profileID); err != nil {
+	// An attester whose account is disabled no longer counts.
+	if _, err := db.Exec(`UPDATE accounts SET status = 'disabled' WHERE id = ?`, peers[4].accountID); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.decide(ctx, admin.accountID, candidate.profileID, true, ""); !errors.Is(err, ErrInsufficientAttestations) {
-		t.Fatalf("approve after attester demoted = %v, want ErrInsufficientAttestations", err)
+		t.Fatalf("approve after attester disabled = %v, want ErrInsufficientAttestations", err)
 	}
-	if _, err := db.Exec(`UPDATE alumni_profiles SET verification_status = 'verified' WHERE id = ?`, peers[4].profileID); err != nil {
+	if _, err := db.Exec(`UPDATE accounts SET status = 'active' WHERE id = ?`, peers[4].accountID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -153,7 +162,7 @@ func TestPeerVerificationWorkflow(t *testing.T) {
 	if pending, err = s.listPending(ctx, Principal{AccountID: formatID(otherBatch.accountID), Role: RoleVerified}, false); err != nil || len(pending) != 0 {
 		t.Fatalf("other batch queue = %+v, %v; want empty", pending, err)
 	}
-	if pending, err = s.listPending(ctx, Principal{AccountID: formatID(admin.accountID), Role: RoleAdmin}, true); err != nil || len(pending) != 1 || len(pending[0].Attesters) != 5 {
+	if pending, err = s.listPending(ctx, Principal{AccountID: formatID(admin.accountID), Role: RoleAdmin}, true); err != nil || len(pending) != 1 || len(pending[0].Attesters) != 5 || pending[0].Attesters[0].Name == "" {
 		t.Fatalf("admin queue = %+v, %v; want one request with five attesters", pending, err)
 	}
 
@@ -309,5 +318,108 @@ func TestPhotoEndpointsRestrictAccess(t *testing.T) {
 	}
 	if code := get("/photo/not-an-id", Principal{AccountID: formatID(officer.accountID), Role: RoleOfficer}).Code; code != http.StatusNotFound {
 		t.Fatalf("malformed id = %d, want 404", code)
+	}
+}
+
+var testScenarioUsernames = []string{
+	"admin.uji", "pengurus.satu", "pengurus.dua", "alumni.satu", "alumni.dua",
+	"alumni.tiga", "alumni.empat", "alumni.lima", "alumni.enam", "alumni.tujuh",
+}
+
+func TestScenarioAccountsAndAuditTrail(t *testing.T) {
+	db := openVerificationDB(t)
+	s := &Service{db: db, now: time.Now}
+	ctx := context.Background()
+	if err := s.ProvisionScenarioAccounts(ctx, "short", testScenarioUsernames, false); err == nil {
+		t.Fatal("short scenario password accepted")
+	}
+	if err := s.ProvisionScenarioAccounts(ctx, "", testScenarioUsernames, false); err != nil {
+		t.Fatalf("empty password should be a no-op: %v", err)
+	}
+	if err := s.ProvisionScenarioAccounts(ctx, "scenario-password-1", testScenarioUsernames, false); err != nil {
+		t.Fatalf("provision: %v", err)
+	}
+	if err := s.ProvisionScenarioAccounts(ctx, "scenario-password-1", testScenarioUsernames, false); err != nil {
+		t.Fatalf("provision is not idempotent: %v", err)
+	}
+	var credentials, members int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM password_credentials WHERE is_enabled`).Scan(&credentials); err != nil || credentials != len(scenarioAccounts) {
+		t.Fatalf("enabled credentials = %d, %v", credentials, err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM alumni_profiles WHERE batch_year = ? AND verification_status = 'non_verified'`, scenarioBatchYear).Scan(&members); err != nil || members != 7 {
+		t.Fatalf("scenario members = %d, %v; want 7", members, err)
+	}
+	principal := func(username string) (Principal, []byte) {
+		var id []byte
+		if err := db.QueryRow(`SELECT account_id FROM password_credentials WHERE username = ?`, username).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		p, err := s.loadAccountPrincipal(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p, id
+	}
+	if p, _ := principal("admin.uji"); p.Role != RoleAdmin {
+		t.Fatalf("admin.uji role = %s", p.Role)
+	}
+	if p, _ := principal("pengurus.dua"); p.Role != RoleOfficer {
+		t.Fatalf("pengurus.dua role = %s", p.Role)
+	}
+
+	// Full walkthrough: first member via bootstrap, then a candidate with five attesters.
+	_, officer := principal("pengurus.satu")
+	_, admin := principal("admin.uji")
+	_, first := principal("alumni.satu")
+	_, second := principal("alumni.dua")
+	profileOf := func(account []byte) []byte {
+		var id []byte
+		if err := db.QueryRow(`SELECT id FROM alumni_profiles WHERE account_id = ?`, account).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	for _, account := range [][]byte{first, second} {
+		if err := s.requestVerification(ctx, account); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.bootstrapConfirm(ctx, officer, profileOf(first), "alumni pertama"); err != nil {
+		t.Fatalf("bootstrap: %v", err)
+	}
+	for _, username := range []string{"alumni.satu", "alumni.tiga", "alumni.empat", "alumni.lima", "alumni.enam"} {
+		_, attester := principal(username)
+		if err := s.attest(ctx, attester, profileOf(second)); err != nil {
+			t.Fatalf("%s attest: %v", username, err)
+		}
+	}
+	if err := s.decide(ctx, admin, profileOf(second), true, ""); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	entries, err := s.listVerificationAudit(ctx)
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	actions := map[string]int{}
+	for _, entry := range entries {
+		actions[entry.Action]++
+		if entry.Actor == "" || entry.Subject == "" {
+			t.Fatalf("audit entry missing actor or subject: %+v", entry)
+		}
+	}
+	if actions["verification.request"] != 2 || actions["verification.bootstrap_approve"] != 1 ||
+		actions["verification.attest"] != 5 || actions["verification.approve"] != 1 {
+		t.Fatalf("audit actions = %v", actions)
+	}
+
+	// Reset returns the cast to a clean state.
+	if err := s.ProvisionScenarioAccounts(ctx, "scenario-password-1", testScenarioUsernames, true); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	var verified, attestations int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM alumni_profiles WHERE verification_status = 'verified'`).Scan(&verified)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM alumni_attestations`).Scan(&attestations)
+	if verified != 0 || attestations != 0 {
+		t.Fatalf("after reset: %d verified, %d attestations", verified, attestations)
 	}
 }

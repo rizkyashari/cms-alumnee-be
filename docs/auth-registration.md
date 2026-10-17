@@ -200,15 +200,22 @@ codes. Provider credentials must never be exposed to the browser or logs.
 
 ### Profile photos
 
-MySQL storage is implemented in a separate photo table with binary data, MIME
-type, and update time; images are not stored as base64 or in
-`alumni_profiles`. The API re-encodes decoded JPEG/PNG, enforces a 2 MiB upload
-cap and dimension/pixel limits, and stores the profile image. This avoids a
-new storage service but makes database backups/restores larger and increases
-database traffic.
+Photos are files in a persistent directory (`FILE_STORAGE_DIR`; the
+`alumni-files` Docker volume in Compose). MySQL keeps only a server-generated
+file name (random hex plus `.jpg`/`.png`) and the MIME type in a separate photo
+table. The API re-encodes decoded JPEG/PNG, enforces a 2 MiB upload cap and
+dimension/pixel limits, writes the file (mode 0600, directory 0700) before the
+database transaction, and deletes it if the transaction fails. Photos are never
+served as static files: the same authorized endpoints read them from disk, and
+file names are validated so a stored value cannot point outside the directory.
 
-Object storage remains a long-term alternative if photo volume or backup
-growth warrants moving image bytes out of MySQL.
+On startup with `FILE_STORAGE_DIR` set, photos still stored as blobs are moved
+to disk once (idempotent). Without the setting, photos stay in the database as
+before.
+
+Back up the photo volume together with MySQL: the database row and the file
+must be restored as a pair. Object storage (S3-compatible) remains an option
+if the community outgrows a single server.
 
 ### Domisili
 

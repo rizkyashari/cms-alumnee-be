@@ -68,6 +68,20 @@ func main() {
 		logger.Error("could not provision scenario accounts", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	if cfg.FileStorageDir != "" {
+		if err := authService.SetPhotoDir(cfg.FileStorageDir); err != nil {
+			logger.Error("could not prepare file storage", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		moved, err := authService.MigratePhotosToFiles(ctx)
+		if err != nil {
+			logger.Error("could not move profile photos to file storage", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		if moved > 0 {
+			logger.Info("moved profile photos to file storage", slog.Int("count", moved))
+		}
+	}
 	authService.ConfigureIntegrations(auth.Integrations{
 		PublicBaseURL:       cfg.PublicBaseURL,
 		TurnstileSiteKey:    cfg.TurnstileSiteKey,

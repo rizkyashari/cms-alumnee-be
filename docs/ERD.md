@@ -90,6 +90,7 @@ erDiagram
     ALUMNI_PROFILE_PHOTOS {
         uuid account_id PK,FK
         string mime_type
+        string file_name
         bytes image_data
         datetime updated_at
     }
@@ -198,8 +199,11 @@ erDiagram
   tracks its purpose, expiry, attempt count, and consumption. The HMAC key is
   the private Resend API credential. `registration_tokens` stores only a hash
   of the one-use profile-registration token.
-- `alumni_profile_photos` stores sanitized JPEG/PNG bytes separately from
-  profile rows, with a 2 MiB upload limit. The image is not exposed in the
+- `alumni_profile_photos` references one sanitized JPEG/PNG per member, with a
+  2 MiB upload limit. With `FILE_STORAGE_DIR` set the image is a file on disk
+  and only a server-generated `file_name` is stored; otherwise (and for rows
+  written before file storage) the bytes are in `image_data`. A CHECK
+  constraint allows exactly one of the two. The image is not exposed in the
   directory projection.
 - A `sessions` row stores only a cryptographic hash of a high-entropy opaque
   session token, never the raw token. The browser receives the token only in a

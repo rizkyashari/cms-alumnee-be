@@ -47,7 +47,8 @@ from features that still need implementation.
 Most content remains mock data. The local demo login uses backend-issued,
 revocable `HttpOnly` sessions and server-side role capabilities; it is not a
 production credential system. Email OTP uses a configured Resend sender and
-the member profile photo is stored as sanitized JPEG/PNG bytes in MySQL. The
+the member profile photo is stored as a sanitized JPEG/PNG file in
+`FILE_STORAGE_DIR` (only its file name is in MySQL; blobs when unset). The
 first Admin bootstrap is restricted to the name/email configured by the
 operator and completes only after that mailbox verifies an OTP. OAuth login
 can be enabled with Google/Facebook credentials and server-verified Cloudflare

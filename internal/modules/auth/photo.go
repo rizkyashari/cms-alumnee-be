@@ -3,6 +3,7 @@ package auth
 import (
 	"database/sql"
 	"errors"
+	"io/fs"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,20 +29,12 @@ func (h *Handler) ownPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var mimeType string
-	var data []byte
+	var fileName sql.NullString
+	var blob []byte
 	err := h.service.db.QueryRowContext(r.Context(), `
-		SELECT mime_type, image_data FROM alumni_profile_photos WHERE account_id = ?`,
-		principalIDBytes(principal.AccountID)).Scan(&mimeType, &data)
-	if errors.Is(err, sql.ErrNoRows) {
-		writeError(w, http.StatusNotFound, "photo not found")
-		return
-	}
-	if err != nil {
-		h.reportFailure("read_own_photo", err)
-		writeError(w, http.StatusInternalServerError, "could not load photo")
-		return
-	}
-	servePhoto(w, mimeType, data)
+		SELECT mime_type, file_name, image_data FROM alumni_profile_photos WHERE account_id = ?`,
+		principalIDBytes(principal.AccountID)).Scan(&mimeType, &fileName, &blob)
+	h.respondWithPhoto(w, err, mimeType, fileName, blob, "read_own_photo")
 }
 
 // reviewPhoto returns the photo of a profile with a pending verification
@@ -59,22 +52,39 @@ func (h *Handler) reviewPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var mimeType string
-	var data []byte
+	var fileName sql.NullString
+	var blob []byte
 	err := h.service.db.QueryRowContext(r.Context(), `
-		SELECT p.mime_type, p.image_data
+		SELECT p.mime_type, p.file_name, p.image_data
 		FROM alumni_profiles ap
 		JOIN alumni_profile_photos p ON p.account_id = ap.account_id
 		JOIN verification_requests vr ON vr.profile_id = ap.id AND vr.status = 'pending'
 		WHERE ap.id = ?
 			AND (? NOT IN ('verified', 'non_verified') OR ap.batch_year = (
 				SELECT me.batch_year FROM alumni_profiles me WHERE me.account_id = ?))`,
-		profileID, string(principal.Role), principalIDBytes(principal.AccountID)).Scan(&mimeType, &data)
-	if errors.Is(err, sql.ErrNoRows) {
+		profileID, string(principal.Role), principalIDBytes(principal.AccountID)).Scan(&mimeType, &fileName, &blob)
+	h.respondWithPhoto(w, err, mimeType, fileName, blob, "read_review_photo")
+}
+
+// respondWithPhoto turns a photo row lookup into the HTTP response.
+func (h *Handler) respondWithPhoto(w http.ResponseWriter, lookupErr error, mimeType string, fileName sql.NullString, blob []byte, operation string) {
+	if errors.Is(lookupErr, sql.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "photo not found")
+		return
+	}
+	if lookupErr != nil {
+		h.reportFailure(operation, lookupErr)
+		writeError(w, http.StatusInternalServerError, "could not load photo")
+		return
+	}
+	data, err := h.service.photoBytes(fileName, blob)
+	if errors.Is(err, fs.ErrNotExist) {
+		h.reportFailure(operation, err)
 		writeError(w, http.StatusNotFound, "photo not found")
 		return
 	}
 	if err != nil {
-		h.reportFailure("read_review_photo", err)
+		h.reportFailure(operation, err)
 		writeError(w, http.StatusInternalServerError, "could not load photo")
 		return
 	}

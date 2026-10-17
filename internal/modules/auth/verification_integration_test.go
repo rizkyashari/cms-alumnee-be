@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -421,5 +423,118 @@ func TestScenarioAccountsAndAuditTrail(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM alumni_attestations`).Scan(&attestations)
 	if verified != 0 || attestations != 0 {
 		t.Fatalf("after reset: %d verified, %d attestations", verified, attestations)
+	}
+}
+
+func TestPhotosMoveToFilesAndAreServedFromDisk(t *testing.T) {
+	db := openVerificationDB(t)
+	dir := t.TempDir()
+	s := &Service{db: db, now: time.Now}
+	ctx := context.Background()
+	member := seedMember(t, db, "Calon", 2012, "non_verified")
+	reviewer := seedMember(t, db, "Pengurus", 2000, "non_verified", "officer")
+	photo := testPhoto(t)
+
+	// Legacy blob row, written before file storage existed.
+	if _, err := db.Exec(`INSERT INTO alumni_profile_photos (account_id, mime_type, image_data) VALUES (?, 'image/png', ?)`, member.accountID, photo); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetPhotoDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	moved, err := s.MigratePhotosToFiles(ctx)
+	if err != nil || moved != 1 {
+		t.Fatalf("MigratePhotosToFiles = %d, %v; want 1", moved, err)
+	}
+	if again, err := s.MigratePhotosToFiles(ctx); err != nil || again != 0 {
+		t.Fatalf("second migration = %d, %v; want 0 (idempotent)", again, err)
+	}
+	var fileName sql.NullString
+	var blob []byte
+	if err := db.QueryRow(`SELECT file_name, image_data FROM alumni_profile_photos WHERE account_id = ?`, member.accountID).Scan(&fileName, &blob); err != nil {
+		t.Fatal(err)
+	}
+	if !fileName.Valid || blob != nil {
+		t.Fatalf("row after migration: file_name=%v image_data=%d bytes; want file only", fileName, len(blob))
+	}
+	onDisk, err := os.ReadFile(filepath.Join(dir, fileName.String))
+	if err != nil || !bytes.Equal(onDisk, photo) {
+		t.Fatalf("file content differs from the original photo (%v)", err)
+	}
+
+	// Both endpoints now serve the bytes from disk.
+	h := &Handler{service: s}
+	router := chi.NewRouter()
+	var principal Principal
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalContextKey{}, principal)))
+		})
+	})
+	router.Get("/photo/me", h.ownPhoto)
+	router.Get("/photo/{profileID}", h.reviewPhoto)
+	principal = Principal{AccountID: formatID(member.accountID), Role: RoleNonVerified}
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/photo/me", nil))
+	if recorder.Code != http.StatusOK || !bytes.Equal(recorder.Body.Bytes(), photo) || recorder.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("own photo from disk: %d, %q", recorder.Code, recorder.Header().Get("Content-Type"))
+	}
+	if err := s.requestVerification(ctx, member.accountID); err != nil {
+		t.Fatal(err)
+	}
+	principal = Principal{AccountID: formatID(reviewer.accountID), Role: RoleOfficer}
+	recorder = httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/photo/"+formatID(member.profileID), nil))
+	if recorder.Code != http.StatusOK || !bytes.Equal(recorder.Body.Bytes(), photo) {
+		t.Fatalf("review photo from disk: %d", recorder.Code)
+	}
+	// A missing file is a 404, not a 500 or a leaked path.
+	if err := os.Remove(filepath.Join(dir, fileName.String)); err != nil {
+		t.Fatal(err)
+	}
+	recorder = httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/photo/"+formatID(member.profileID), nil))
+	if recorder.Code != http.StatusNotFound || strings.Contains(recorder.Body.String(), dir) {
+		t.Fatalf("missing file: %d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestStorePhotoDiscardsFileWhenTransactionRollsBack(t *testing.T) {
+	db := openVerificationDB(t)
+	dir := t.TempDir()
+	s := &Service{db: db, now: time.Now}
+	if err := s.SetPhotoDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	member := seedMember(t, db, "Calon", 2012, "non_verified")
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	discard, err := s.storePhoto(ctx, tx, member.accountID, testPhoto(t), "image/png")
+	if err != nil {
+		t.Fatalf("storePhoto: %v", err)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 {
+		t.Fatalf("files during transaction = %d, want 1", len(entries))
+	}
+	_ = tx.Rollback()
+	discard()
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("files after rollback = %d, want 0 (no orphan)", len(entries))
+	}
+
+	// Committed rows reference exactly one file; the table forbids both or neither.
+	tx, _ = db.BeginTx(ctx, nil)
+	if _, err := s.storePhoto(ctx, tx, member.accountID, testPhoto(t), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE alumni_profile_photos SET image_data = 'x' WHERE account_id = ?`, member.accountID); err == nil {
+		t.Fatal("row with both file_name and image_data accepted")
 	}
 }

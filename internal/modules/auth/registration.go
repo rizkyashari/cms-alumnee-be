@@ -367,11 +367,16 @@ func (s *Service) completeRegistration(ctx context.Context, token string, profil
 	if err := insertAlumniProfile(ctx, tx, profileID, accountID, profile); err != nil {
 		return Principal{}, "", time.Time{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO alumni_profile_photos (account_id, mime_type, image_data)
-		VALUES (?, ?, ?)`, accountID, profile.mimeType, profile.photo); err != nil {
+	discardPhoto, err := s.storePhoto(ctx, tx, accountID, profile.photo, profile.mimeType)
+	if err != nil {
 		return Principal{}, "", time.Time{}, fmt.Errorf("store alumni profile photo: %w", err)
 	}
+	committed := false
+	defer func() {
+		if !committed {
+			discardPhoto()
+		}
+	}()
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE registration_tokens SET consumed_at = UTC_TIMESTAMP(6)
 		WHERE token_hash = ? AND consumed_at IS NULL`, tokenHash[:]); err != nil {
@@ -383,6 +388,7 @@ func (s *Service) completeRegistration(ctx context.Context, token string, profil
 	if err := tx.Commit(); err != nil {
 		return Principal{}, "", time.Time{}, fmt.Errorf("commit alumni registration: %w", err)
 	}
+	committed = true
 	principal, err := s.loadAccountPrincipal(ctx, accountID)
 	if err != nil {
 		return Principal{}, "", time.Time{}, fmt.Errorf("load new alumni account: %w", err)
@@ -415,11 +421,16 @@ func (s *Service) completeOAuthProfile(ctx context.Context, accountID string, pr
 	if err := insertAlumniProfile(ctx, tx, profileID, principalIDBytes(accountID), profile); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO alumni_profile_photos (account_id, mime_type, image_data)
-		VALUES (?, ?, ?)`, principalIDBytes(accountID), profile.mimeType, profile.photo); err != nil {
+	discardPhoto, err := s.storePhoto(ctx, tx, principalIDBytes(accountID), profile.photo, profile.mimeType)
+	if err != nil {
 		return fmt.Errorf("store OAuth alumni profile photo: %w", err)
 	}
+	committed := false
+	defer func() {
+		if !committed {
+			discardPhoto()
+		}
+	}()
 	if _, err := tx.ExecContext(ctx, `UPDATE accounts SET name = ? WHERE id = ?`, profile.fullName, principalIDBytes(accountID)); err != nil {
 		return fmt.Errorf("update OAuth alumni account name: %w", err)
 	}
@@ -429,6 +440,7 @@ func (s *Service) completeOAuthProfile(ctx context.Context, accountID string, pr
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit OAuth profile completion: %w", err)
 	}
+	committed = true
 	return nil
 }
 

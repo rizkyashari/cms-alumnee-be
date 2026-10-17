@@ -41,6 +41,7 @@ type Config struct {
 	ScenarioPassword           string
 	ScenarioReset              bool
 	LoginRateLimitPerMinute    int
+	FileStorageDir             string
 	// ScenarioUsernames follows the order of the scenario cast: Admin, two
 	// Pengurus, then seven Non-verified members.
 	ScenarioUsernames []string
@@ -89,6 +90,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		BootstrapAdminEmail:        strings.ToLower(strings.TrimSpace(value(lookup, "BOOTSTRAP_ADMIN_EMAIL"))),
 		BootstrapAdminName:         strings.TrimSpace(value(lookup, "BOOTSTRAP_ADMIN_NAME")),
 		RegencyMasterPath:          strings.TrimSpace(value(lookup, "REGENCY_MASTER_PATH")),
+		FileStorageDir:             strings.TrimSpace(value(lookup, "FILE_STORAGE_DIR")),
 		ScenarioPassword:           value(lookup, "STAGING_SCENARIO_PASSWORD"),
 		ScenarioReset:              value(lookup, "STAGING_SCENARIO_RESET") == "true",
 	}

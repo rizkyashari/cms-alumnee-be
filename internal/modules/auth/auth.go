@@ -72,6 +72,7 @@ type Service struct {
 	integrations         Integrations
 	regencyCodes         map[string]struct{}
 	regionBaseURL        string
+	photoDir             string
 	regions              regionCache
 	now                  func() time.Time
 }

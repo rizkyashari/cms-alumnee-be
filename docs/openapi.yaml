@@ -416,6 +416,325 @@ paths:
           description: No pending request for that profile.
         "409":
           description: Fewer than five valid attestations.
+  /events:
+    get:
+      operationId: listEvents
+      summary: Published agenda (public); upcoming by default
+      parameters:
+        - {name: scope, in: query, schema: {type: string, enum: [upcoming, past, all]}}
+        - {name: category, in: query, schema: {type: string, enum: [reuni, karier, seminar, sosial, lainnya]}}
+        - {name: q, in: query, description: Matches title, venue and description., schema: {type: string}}
+        - {name: limit, in: query, description: Default 20, maximum 50., schema: {type: integer}}
+        - {name: offset, in: query, schema: {type: integer}}
+      responses:
+        "200":
+          description: One page of published events.
+    post:
+      operationId: createEventDraft
+      summary: Save an agenda draft (content:submit_event; verified members, Pengurus and Admin)
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "201":
+          description: Draft saved.
+        "401":
+          description: Authentication required.
+        "403":
+          description: Capability missing or request origin rejected.
+        "422":
+          description: Validation failed.
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      summary: One published event (public); other statuses return 404
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: The event.
+        "404":
+          description: Not found or not published.
+    put:
+      operationId: updateEventDraft
+      summary: Edit the caller's own draft or rejected event (a rejected event returns to draft)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "200":
+          description: Draft saved.
+        "404":
+          description: Not found or not owned by the caller.
+        "409":
+          description: Event is pending review, published or archived.
+        "422":
+          description: Validation failed.
+    delete:
+      operationId: deleteEventDraft
+      summary: Delete the caller's own draft or rejected event
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Event deleted and audited.
+        "404":
+          description: Not found or not owned by the caller.
+        "409":
+          description: Event is pending review, published or archived.
+  /events/{eventId}/submit:
+    post:
+      operationId: submitEvent
+      summary: Send the caller's draft to the admin review queue
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "202":
+          description: Event is now pending_review.
+        "404":
+          description: Not found or not owned by the caller.
+        "409":
+          description: Event is not a draft.
+        "422":
+          description: Event start time is not in the future.
+  /events/{eventId}/comments:
+    get:
+      operationId: listEventComments
+      summary: Comments on a published event (public)
+      description: Each item carries author_role (verified, officer, admin or empty) for the UI label. can_change is true only for a signed-in author or Admin; anonymous callers always get false.
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+        - {name: limit, in: query, description: Default 50, maximum 100., schema: {type: integer}}
+        - {name: offset, in: query, schema: {type: integer}}
+      responses:
+        "200":
+          description: One page of comments, oldest first.
+        "404":
+          description: Event not found or not published.
+    post:
+      operationId: addEventComment
+      summary: Comment on a published event (content:comment; verified members, Pengurus and Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventCommentInput"
+      responses:
+        "201":
+          description: Comment posted and audited.
+        "401":
+          description: Authentication required.
+        "403":
+          description: Anonymous and non-verified accounts are refused, or request origin rejected.
+        "409":
+          description: Event is not published.
+        "422":
+          description: Comment must be 1-1000 characters.
+        "429":
+          description: More than 10 comments per minute from one account.
+  /events/{eventId}/comments/{commentId}:
+    put:
+      operationId: editEventComment
+      summary: Edit a comment (its author, or an Admin for moderation)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+        - {name: commentId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventCommentInput"
+      responses:
+        "200":
+          description: Comment updated and audited (edited_at set).
+        "403":
+          description: Caller is neither the author nor an Admin.
+        "404":
+          description: Comment not found.
+        "422":
+          description: Comment must be 1-1000 characters.
+    delete:
+      operationId: deleteEventComment
+      summary: Delete a comment (its author, or an Admin for moderation)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+        - {name: commentId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Comment deleted and audited.
+        "403":
+          description: Caller is neither the author nor an Admin.
+        "404":
+          description: Comment not found.
+  /events/{eventId}/registration:
+    get:
+      operationId: getEventRegistration
+      summary: The caller's registration status for a published event (none, registered, cancelled, attended)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Registration status.
+        "403":
+          description: events:register capability required.
+        "404":
+          description: Event not found or not published.
+    post:
+      operationId: registerForEvent
+      summary: Register for a published event that has not finished (idempotent; re-opens a cancelled registration)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Registered (or already registered/attended).
+        "403":
+          description: Capability missing or request origin rejected.
+        "404":
+          description: Event not found or not published.
+        "409":
+          description: Alumni profile incomplete, or the event has finished.
+    delete:
+      operationId: cancelEventRegistration
+      summary: Cancel the caller's registration (not possible after attendance is recorded)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Registration cancelled (idempotent).
+        "404":
+          description: No registration for this event.
+        "409":
+          description: Attendance already recorded.
+  /me/registrations:
+    get:
+      operationId: listMyRegistrations
+      summary: The caller's active registrations for published events, upcoming first
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Items of {status, event}.
+  /events/{eventId}/attendees:
+    get:
+      operationId: listEventAttendees
+      summary: Active registrations with names and batch years (event author or Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Attendee list.
+        "403":
+          description: Caller is neither the author nor an Admin.
+  /events/{eventId}/attendees/{profileId}/attend:
+    post:
+      operationId: markEventAttendance
+      summary: Record that a registered member attended (author or Admin, after the event starts)
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+        - {name: profileId, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Attendance recorded and audited.
+        "403":
+          description: Caller is neither the author nor an Admin.
+        "404":
+          description: Registration not found.
+        "409":
+          description: Event has not started, or the registration was cancelled.
+  /me/events:
+    get:
+      operationId: listOwnEvents
+      summary: The caller's events in every status, including review notes
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [draft, pending_review, published, rejected, archived]}}
+        - {name: limit, in: query, schema: {type: integer}}
+        - {name: offset, in: query, schema: {type: integer}}
+      responses:
+        "200":
+          description: One page of events.
+  /admin/events:
+    get:
+      operationId: listEventsForReview
+      summary: Agenda review queue (content:review); pending_review by default
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [draft, pending_review, published, rejected, archived]}}
+        - {name: limit, in: query, schema: {type: integer}}
+        - {name: offset, in: query, schema: {type: integer}}
+      responses:
+        "200":
+          description: One page of events.
+        "403":
+          description: content:review capability required.
+  /admin/events/{eventId}/{decision}:
+    post:
+      operationId: decideEvent
+      summary: publish or reject a pending_review event, or archive a published one
+      security:
+        - sessionCookie: []
+      parameters:
+        - {name: eventId, in: path, required: true, schema: {type: string}}
+        - name: decision
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [publish, reject, archive]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventDecisionRequest"
+      responses:
+        "200":
+          description: Decision recorded and audited.
+        "403":
+          description: content:review capability required or request origin rejected.
+        "404":
+          description: Event or decision not found.
+        "409":
+          description: Event is not in a state that allows the decision.
+        "422":
+          description: A note is required when rejecting (max 500 characters).
   /auth/logout:
     post:
       operationId: authLogout
@@ -518,6 +837,28 @@ components:
       in: cookie
       name: alumnihub_session
   schemas:
+    EventCommentInput:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body: {type: string, minLength: 1, maxLength: 1000, description: Plain text; control characters are stripped. Render as text, never as HTML.}
+    EventInput:
+      type: object
+      required: [title, category, description, starts_at]
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 3, maxLength: 200}
+        category: {type: string, enum: [reuni, karier, seminar, sosial, lainnya]}
+        venue: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 5000}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: [string, "null"], format: date-time, description: Must be after starts_at.}
+    EventDecisionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: string, maxLength: 500, description: Required for reject; shown to the author.}
     HealthResponse:
       type: object
       required: [message, content]

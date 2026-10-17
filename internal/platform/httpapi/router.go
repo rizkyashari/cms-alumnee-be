@@ -13,13 +13,16 @@ func NewRouter(logger *slog.Logger, db health.ReadinessChecker) *chi.Mux {
 	return NewRouterWithAuth(logger, db, nil)
 }
 
-func NewRouterWithAuth(logger *slog.Logger, db health.ReadinessChecker, authHandler *auth.Handler) *chi.Mux {
+func NewRouterWithAuth(logger *slog.Logger, db health.ReadinessChecker, authHandler *auth.Handler, modules ...func(chi.Router)) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestLogger(logger))
 	router.Use(middleware.SafeRecovery(logger))
 	health.RegisterRoutes(router, db)
 	if authHandler != nil {
 		authHandler.RegisterRoutes(router)
+	}
+	for _, register := range modules {
+		register(router)
 	}
 	return router
 }

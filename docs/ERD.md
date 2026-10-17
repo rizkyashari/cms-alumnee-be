@@ -31,6 +31,8 @@ erDiagram
     ALUMNI_PROFILES ||--o{ ALUMNI_ATTESTATIONS : receives
     ACCOUNTS ||--o{ ALUMNI_ATTESTATIONS : gives
     ALUMNI_EVENTS ||--o{ EVENT_REGISTRATIONS : receives
+    ALUMNI_EVENTS ||--o{ EVENT_COMMENTS : has
+    ACCOUNTS ||--o{ EVENT_COMMENTS : writes
     ALUMNI_PROFILES ||--o{ BUSINESS_CAREER_LISTINGS : submits
     ACCOUNTS ||--o{ BUSINESS_CAREER_LISTINGS : reviews
 
@@ -136,15 +138,30 @@ erDiagram
         string title
         string category
         string venue
+        text description
         datetime starts_at
         datetime ends_at
         string status
+        string review_note
+        uuid reviewed_by FK
+        datetime reviewed_at
+        datetime published_at
+    }
+    EVENT_COMMENTS {
+        uuid id PK
+        uuid event_id FK
+        uuid author_id FK
+        text body
+        datetime created_at
+        datetime edited_at
     }
     EVENT_REGISTRATIONS {
         uuid id PK
         uuid event_id FK
-        uuid alumni_profile_id FK
+        uuid profile_id FK
         string status
+        datetime created_at
+        datetime updated_at
     }
     BUSINESS_CAREER_LISTINGS {
         uuid id PK

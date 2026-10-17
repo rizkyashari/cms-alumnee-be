@@ -18,10 +18,10 @@ func TestCapabilitiesForEffectiveRoles(t *testing.T) {
 	}{
 		{RolePublic, []Capability{CapabilityPublicContent}},
 		{RoleOnboarding, []Capability{CapabilityPublicContent}},
-		{RoleNonVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityAttest}},
-		{RoleVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityAttest}},
-		{RoleOfficer, []Capability{CapabilityPublicContent, CapabilityDocumentManage, CapabilityAttest}},
-		{RoleAdmin, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityDocumentManage, CapabilityAttest, CapabilityAdminManage, CapabilityVerifyAlumni}},
+		{RoleNonVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityEventRegister, CapabilityAttest}},
+		{RoleVerified, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityEventSubmit, CapabilityEventRegister, CapabilityAttest}},
+		{RoleOfficer, []Capability{CapabilityPublicContent, CapabilityComment, CapabilityEventSubmit, CapabilityEventRegister, CapabilityDocumentManage, CapabilityAttest}},
+		{RoleAdmin, []Capability{CapabilityPublicContent, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityDocumentManage, CapabilityAttest, CapabilityAdminManage, CapabilityVerifyAlumni, CapabilityEventSubmit, CapabilityEventRegister, CapabilityContentReview}},
 	}
 	for _, test := range tests {
 		t.Run(string(test.role), func(t *testing.T) {
@@ -53,7 +53,16 @@ func TestRoleCapabilityMatrix(t *testing.T) {
 			RolePublic: false, RoleNonVerified: false, RoleVerified: true, RoleOfficer: false, RoleAdmin: true,
 		},
 		CapabilityComment: {
-			RolePublic: false, RoleNonVerified: false, RoleVerified: true, RoleOfficer: false, RoleAdmin: true,
+			RolePublic: false, RoleNonVerified: false, RoleVerified: true, RoleOfficer: true, RoleAdmin: true,
+		},
+		CapabilityEventSubmit: {
+			RolePublic: false, RoleNonVerified: false, RoleVerified: true, RoleOfficer: true, RoleAdmin: true,
+		},
+		CapabilityEventRegister: {
+			RolePublic: false, RoleNonVerified: true, RoleVerified: true, RoleOfficer: true, RoleAdmin: true,
+		},
+		CapabilityContentReview: {
+			RolePublic: false, RoleNonVerified: false, RoleVerified: false, RoleOfficer: false, RoleAdmin: true,
 		},
 		CapabilityDocumentManage: {
 			RolePublic: false, RoleNonVerified: false, RoleVerified: false, RoleOfficer: true, RoleAdmin: true,

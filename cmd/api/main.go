@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rizkyashari/cms-alumnee-be/internal/modules/auth"
+	"github.com/rizkyashari/cms-alumnee-be/internal/modules/content"
 	"github.com/rizkyashari/cms-alumnee-be/internal/platform/config"
 	platformdb "github.com/rizkyashari/cms-alumnee-be/internal/platform/database"
 	"github.com/rizkyashari/cms-alumnee-be/internal/platform/httpapi"
@@ -110,7 +111,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewRouterWithAuth(logger, db, authHandler),
+		Handler:           httpapi.NewRouterWithAuth(logger, db, authHandler, content.NewHandler(content.NewService(db), authHandler, logger).RegisterRoutes),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

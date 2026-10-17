@@ -59,6 +59,12 @@ func (h *Handler) RegisterRoutes(router chi.Router) {
 	router.Post("/api/v1/auth/logout", h.logout)
 }
 
+// SameOriginRequest reports whether a state-changing request comes from the
+// configured public origin, for modules that mount their own routes.
+func (h *Handler) SameOriginRequest(r *http.Request) bool {
+	return h.service.sameOriginRequest(r)
+}
+
 func (h *Handler) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		principal, err := h.service.Authenticate(r)
@@ -69,6 +75,24 @@ func (h *Handler) Authenticate(next http.Handler) http.Handler {
 				return
 			}
 			writeError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalContextKey{}, principal)))
+	})
+}
+
+// OptionalAuthenticate loads the principal when a valid session exists and lets
+// anonymous requests through, so public endpoints can personalise responses.
+func (h *Handler) OptionalAuthenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		principal, err := h.service.Authenticate(r)
+		if err != nil {
+			if !errors.Is(err, ErrUnauthenticated) {
+				h.reportFailure("load_session", err)
+				writeError(w, http.StatusServiceUnavailable, "authentication service unavailable")
+				return
+			}
+			next.ServeHTTP(w, r)
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalContextKey{}, principal)))

@@ -43,6 +43,9 @@ const (
 	CapabilityAttest         Capability = "alumni:attest"
 	CapabilityAdminManage    Capability = "admin:manage"
 	CapabilityVerifyAlumni   Capability = "alumni:verify"
+	CapabilityEventSubmit    Capability = "content:submit_event"
+	CapabilityContentReview  Capability = "content:review"
+	CapabilityEventRegister  Capability = "events:register"
 )
 
 type Principal struct {
@@ -126,13 +129,13 @@ func CapabilitiesFor(role Role) []Capability {
 	case RoleOnboarding:
 		return capabilities
 	case RoleNonVerified:
-		return append(capabilities, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityAttest)
+		return append(capabilities, CapabilityDirectoryLite, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityEventRegister, CapabilityAttest)
 	case RoleVerified:
-		return append(capabilities, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityAttest)
+		return append(capabilities, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityEventSubmit, CapabilityEventRegister, CapabilityAttest)
 	case RoleOfficer:
-		return append(capabilities, CapabilityDocumentManage, CapabilityAttest)
+		return append(capabilities, CapabilityComment, CapabilityEventSubmit, CapabilityEventRegister, CapabilityDocumentManage, CapabilityAttest)
 	case RoleAdmin:
-		return append(capabilities, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityDocumentManage, CapabilityAttest, CapabilityAdminManage, CapabilityVerifyAlumni)
+		return append(capabilities, CapabilityDirectoryFull, CapabilityProfileEdit, CapabilityBusinessSubmit, CapabilityComment, CapabilityDocumentManage, CapabilityAttest, CapabilityAdminManage, CapabilityVerifyAlumni, CapabilityEventSubmit, CapabilityEventRegister, CapabilityContentReview)
 	default:
 		return capabilities
 	}

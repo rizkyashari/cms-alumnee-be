@@ -17,7 +17,7 @@ func main() {
 		logger.Error("invalid configuration", slog.String("error", err.Error()))
 		os.Exit(2)
 	}
-	db, err := platformdb.OpenMySQL(context.Background(), cfg)
+	db, err := platformdb.OpenMySQLForMigration(context.Background(), cfg)
 	if err != nil {
 		logger.Error("could not connect to MySQL", slog.String("error", err.Error()))
 		os.Exit(1)

@@ -11,7 +11,23 @@ import (
 	mysql "github.com/go-sql-driver/mysql"
 )
 
+// Request-time limits for the API; schema migrations get much longer ones.
+const (
+	apiIOTimeout       = 10 * time.Second
+	migrationIOTimeout = 15 * time.Minute
+)
+
 func OpenMySQL(ctx context.Context, cfg config.Config) (*sql.DB, error) {
+	return openMySQL(ctx, cfg, apiIOTimeout)
+}
+
+// OpenMySQLForMigration opens a connection whose read/write timeouts allow
+// long DDL such as ALTER TABLE rebuilding a table that holds image blobs.
+func OpenMySQLForMigration(ctx context.Context, cfg config.Config) (*sql.DB, error) {
+	return openMySQL(ctx, cfg, migrationIOTimeout)
+}
+
+func openMySQL(ctx context.Context, cfg config.Config, ioTimeout time.Duration) (*sql.DB, error) {
 	driverConfig := mysql.NewConfig()
 	driverConfig.User = cfg.MySQLUser
 	driverConfig.Passwd = cfg.MySQLPassword
@@ -21,8 +37,8 @@ func OpenMySQL(ctx context.Context, cfg config.Config) (*sql.DB, error) {
 	driverConfig.Params = map[string]string{"charset": "utf8mb4"}
 	driverConfig.ParseTime = true
 	driverConfig.Timeout = 5 * time.Second
-	driverConfig.ReadTimeout = 10 * time.Second
-	driverConfig.WriteTimeout = 10 * time.Second
+	driverConfig.ReadTimeout = ioTimeout
+	driverConfig.WriteTimeout = ioTimeout
 
 	db, err := sql.Open("mysql", driverConfig.FormatDSN())
 	if err != nil {

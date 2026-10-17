@@ -173,9 +173,9 @@ func (s *Service) sendEmailOTP(ctx context.Context, email, code string) error {
 		return fmt.Errorf("%w: %v", ErrEmailDeliveryUnavailable, err)
 	}
 	defer response.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
+	detail, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("%w: provider returned HTTP %d", ErrEmailDeliveryUnavailable, response.StatusCode)
+		return fmt.Errorf("%w: provider returned HTTP %d: %s", ErrEmailDeliveryUnavailable, response.StatusCode, strings.TrimSpace(string(detail)))
 	}
 	return nil
 }
